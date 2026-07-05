@@ -481,7 +481,7 @@ h3 {
 }
 
 .overview-link-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-items: start;
 }
 
@@ -491,6 +491,7 @@ h3 {
 
 .overview-link-grid .table-wrap {
   margin-inline: auto;
+  overflow-x: hidden;
 }
 
 .promoter-split {
@@ -705,11 +706,13 @@ h3 {
 }
 
 .overview-link-grid .sales-link-table table {
-  min-width: 720px;
+  min-width: 0;
+  width: 100%;
 }
 
 .overview-link-grid .courtesy-link-table table {
-  min-width: 560px;
+  min-width: 0;
+  width: 100%;
 }
 
 .courtesy-link-table table {
@@ -782,7 +785,7 @@ h3 {
 .overview-link-grid .sales-link-table td,
 .overview-link-grid .courtesy-link-table th,
 .overview-link-grid .courtesy-link-table td {
-  padding-inline: 14px;
+  padding-inline: 10px;
 }
 
 .overview-link-grid .sales-link-table th:nth-child(n + 2),
@@ -796,6 +799,55 @@ h3 {
 .overview-link-grid .sales-link-table td:nth-child(5) .rate-cell,
 .overview-link-grid .courtesy-link-table td:nth-child(4) .rate-cell {
   margin-inline: auto;
+}
+
+.overview-link-grid .sales-link-table .name-col {
+  width: 28%;
+}
+
+.overview-link-grid .sales-link-table .money-col {
+  width: 20%;
+}
+
+.overview-link-grid .sales-link-table .percent-col {
+  width: 19%;
+}
+
+.overview-link-grid .sales-link-table .count-col {
+  width: 14%;
+}
+
+.overview-link-grid .courtesy-link-table .name-col {
+  width: 34%;
+}
+
+.overview-link-grid .courtesy-link-table .count-col {
+  width: 19%;
+}
+
+.overview-link-grid .courtesy-link-table .percent-col {
+  width: 28%;
+}
+
+.overview-link-grid .rate-cell {
+  min-width: 0;
+  width: min(112px, 100%);
+}
+
+.overview-link-grid .rate-cell span {
+  font-size: 11px;
+}
+
+.overview-link-grid .bar.thin {
+  height: 5px;
+}
+
+.overview-link-grid th {
+  font-size: 10px;
+}
+
+.overview-link-grid td {
+  font-size: 12px;
 }
 
 .sales-link-table th:nth-child(3),
@@ -817,6 +869,13 @@ h3 {
 .courtesy-link-table th:nth-child(3),
 .courtesy-link-table td:nth-child(3) {
   min-width: 104px;
+}
+
+.overview-link-grid .sales-link-table th,
+.overview-link-grid .sales-link-table td,
+.overview-link-grid .courtesy-link-table th,
+.overview-link-grid .courtesy-link-table td {
+  min-width: 0;
 }
 
 .inline-section {
