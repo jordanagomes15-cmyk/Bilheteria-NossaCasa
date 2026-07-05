@@ -802,19 +802,19 @@ h3 {
 }
 
 .overview-link-grid .sales-link-table .name-col {
-  width: 28%;
+  width: 34%;
 }
 
 .overview-link-grid .sales-link-table .money-col {
-  width: 20%;
+  width: 25%;
 }
 
 .overview-link-grid .sales-link-table .percent-col {
-  width: 19%;
+  width: 24%;
 }
 
 .overview-link-grid .sales-link-table .count-col {
-  width: 14%;
+  width: 17%;
 }
 
 .overview-link-grid .courtesy-link-table .name-col {
@@ -822,11 +822,11 @@ h3 {
 }
 
 .overview-link-grid .courtesy-link-table .count-col {
-  width: 19%;
+  width: 20%;
 }
 
 .overview-link-grid .courtesy-link-table .percent-col {
-  width: 28%;
+  width: 26%;
 }
 
 .overview-link-grid .rate-cell {

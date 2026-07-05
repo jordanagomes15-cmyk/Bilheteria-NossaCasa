@@ -405,12 +405,13 @@ function salesBreakdown(events = filteredEvents()) {
   );
 }
 
-function rateCell(value, total, strong = false) {
+function rateCell(value, total, strong = false, mode = "count-rate") {
   if (!Number(total || 0)) return "-";
   const rate = safeRate(value, total);
+  const label = mode === "rate-only" ? pct(rate) : `${int(value)} (${pct(rate)})`;
   return `
     <div class="rate-cell">
-      <span class="${strong ? "strong" : ""}">${int(value)} (${pct(rate)})</span>
+      <span class="${strong ? "strong" : ""}">${label}</span>
       <div class="bar thin"><i style="width:${clampPercent(rate)}%"></i></div>
     </div>
   `;
@@ -636,11 +637,11 @@ function renderOverview() {
           <div class="toolbar">
             <div class="section-title"><h2>Vendas por link</h2><p>Participacao de cada link no faturamento do recorte.</p></div>
           </div>
-          ${renderSalesLinkTable(promoterRanking(events).filter((row) => row.revenue > 0 || row.sold > 0).slice(0, 18), sum.revenue)}
+          ${renderSalesLinkTable(promoterRanking(events).filter((row) => row.revenue > 0 || row.sold > 0).slice(0, 18), sum.revenue, { compact: true })}
         </div>
         <div class="card">
           <div class="section-title"><h2>Cortesias por link</h2><p>Quantidade emitida, validada e taxa de presenca.</p></div>
-          ${renderCourtesyLinkTable(promoterRanking(events).filter((row) => row.complimentary > 0).slice(0, 18))}
+          ${renderCourtesyLinkTable(promoterRanking(events).filter((row) => row.complimentary > 0).slice(0, 18), { compact: true })}
         </div>
       </div>
       <div class="card">
@@ -787,19 +788,20 @@ function renderRankingTable(rows) {
   `;
 }
 
-function renderSalesLinkTable(rows, totalRevenue) {
+function renderSalesLinkTable(rows, totalRevenue, options = {}) {
   if (!rows.length) return `<p class="notice">Nenhum link com venda registrada no recorte atual.</p>`;
+  const compact = Boolean(options.compact);
   return `
-    <div class="table-wrap compact-table sales-link-table">
+    <div class="table-wrap compact-table sales-link-table ${compact ? "overview-compact-table" : ""}">
       <table>
         <colgroup>
           <col class="name-col" />
           <col class="money-col" />
           <col class="percent-col" />
           <col class="count-col" />
-          <col class="percent-col" />
+          ${compact ? "" : `<col class="percent-col" />`}
         </colgroup>
-        <thead><tr><th>Link/comissario</th><th>Receita</th><th>% faturamento</th><th>Vendidos</th><th>Val. vendas</th></tr></thead>
+        <thead><tr><th>Link/comissario</th><th>Receita</th><th>% faturamento</th><th>Vendidos</th>${compact ? "" : "<th>Val. vendas</th>"}</tr></thead>
         <tbody>
           ${rows
             .map((row) => `
@@ -808,7 +810,7 @@ function renderSalesLinkTable(rows, totalRevenue) {
                 <td>${money(row.revenue)}</td>
                 <td>${shareCell(row.revenue, totalRevenue)}</td>
                 <td>${int(row.sold)}</td>
-                <td>${row.sold ? rateCell(row.soldValidated, row.sold) : "-"}</td>
+                ${compact ? "" : `<td>${row.sold ? rateCell(row.soldValidated, row.sold) : "-"}</td>`}
               </tr>
             `)
             .join("")}
@@ -818,10 +820,11 @@ function renderSalesLinkTable(rows, totalRevenue) {
   `;
 }
 
-function renderCourtesyLinkTable(rows) {
+function renderCourtesyLinkTable(rows, options = {}) {
   if (!rows.length) return `<p class="notice">Nenhuma cortesia por link no recorte atual.</p>`;
+  const compact = Boolean(options.compact);
   return `
-    <div class="table-wrap compact-table courtesy-link-table">
+    <div class="table-wrap compact-table courtesy-link-table ${compact ? "overview-compact-table" : ""}">
       <table>
         <colgroup>
           <col class="name-col" />
@@ -840,7 +843,7 @@ function renderCourtesyLinkTable(rows) {
                   <td><strong>${esc(row.name)}</strong></td>
                   <td>${int(row.complimentary)}</td>
                   <td>${int(row.complimentaryValidated)}</td>
-                  <td>${rateCell(row.complimentaryValidated, row.complimentary, true)}</td>
+                  <td>${rateCell(row.complimentaryValidated, row.complimentary, true, compact ? "rate-only" : "count-rate")}</td>
                 </tr>
               `;
             })
