@@ -1,4 +1,5 @@
 const SESSION_KEY = "nossa-casa-session-v1";
+const PROMOTER_SPLIT_KEY = "nossa-casa-promoter-split-v1";
 const embeddedData = globalThis.NOSSA_CASA_DATA || null;
 
 const fallbackEvents = [
@@ -159,6 +160,7 @@ const state = {
   expandedPromoter: "",
   drawerOpen: false,
   detailTab: "batches",
+  promoterSplit: loadPromoterSplit(),
   query: "",
   filters: {
     search: "",
@@ -171,6 +173,15 @@ let activeDataVersion = dataVersion(embeddedData);
 
 function loadEvents() {
   return embeddedData?.events?.length ? embeddedData.events : fallbackEvents;
+}
+
+function loadPromoterSplit() {
+  try {
+    const saved = Number(localStorage.getItem(PROMOTER_SPLIT_KEY));
+    return Number.isFinite(saved) ? Math.min(76, Math.max(48, saved)) : 63;
+  } catch {
+    return 63;
+  }
 }
 
 function dataVersion(data) {
@@ -229,6 +240,10 @@ function int(value) {
 
 function pct(value) {
   return `${Math.round(Number(value || 0))}%`;
+}
+
+function clampPercent(value) {
+  return Math.max(0, Math.min(100, Number(value || 0)));
 }
 
 function esc(value) {
@@ -388,6 +403,27 @@ function salesBreakdown(events = filteredEvents()) {
       soldValidated: 0
     }
   );
+}
+
+function rateCell(value, total, strong = false) {
+  if (!Number(total || 0)) return "-";
+  const rate = safeRate(value, total);
+  return `
+    <div class="rate-cell">
+      <span class="${strong ? "strong" : ""}">${int(value)} (${pct(rate)})</span>
+      <div class="bar thin"><i style="width:${clampPercent(rate)}%"></i></div>
+    </div>
+  `;
+}
+
+function shareCell(value, total) {
+  const rate = safeRate(value, total);
+  return `
+    <div class="rate-cell">
+      <span class="strong">${pct(rate)}</span>
+      <div class="bar thin"><i style="width:${clampPercent(rate)}%"></i></div>
+    </div>
+  `;
 }
 
 function promoterRanking(events = filteredEvents()) {
@@ -594,7 +630,8 @@ function renderOverview() {
         ${metric("Check-ins", int(sum.validated), `${pct(rate)} de presenca`)}
         ${metric("PNE inseridos", int(sum.pneInserted), `${int(sum.pneConverted)} convertidos`)}
       </div>
-      <div class="grid two">
+      ${renderSplitSummary(split, sum)}
+      <div class="grid two overview-link-grid">
         <div class="card">
           <div class="toolbar">
             <div class="section-title"><h2>Vendas por link</h2><p>Participacao de cada link no faturamento do recorte.</p></div>
@@ -608,10 +645,44 @@ function renderOverview() {
       </div>
       <div class="card">
         <div class="section-title"><h2>Eventos em destaque</h2><p>Ordenado pelos filtros atuais.</p></div>
-        ${events
-          .slice(0, 6)
-          .map((event) => eventMini(event))
-          .join("") || `<p class="notice">Nenhum evento encontrado com os filtros atuais.</p>`}
+        <div class="event-highlight-grid">
+          ${events
+            .slice(0, 6)
+            .map((event) => eventMini(event))
+            .join("") || `<p class="notice">Nenhum evento encontrado com os filtros atuais.</p>`}
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderSplitSummary(split, sum) {
+  const linkShare = safeRate(split.linkRevenue, sum.revenue);
+  const generalShare = safeRate(split.generalRevenue, sum.revenue);
+  const courtesyRate = safeRate(split.complimentaryValidated, split.complimentary);
+  const soldRate = safeRate(split.soldValidated, split.sold);
+  return `
+    <section class="insight-grid">
+      <div class="insight-card">
+        <span>Origem da receita</span>
+        <strong>${pct(linkShare)} via link</strong>
+        <div class="stacked-bar">
+          <i class="gold" style="width:${clampPercent(generalShare)}%"></i>
+          <i class="green" style="width:${clampPercent(linkShare)}%"></i>
+        </div>
+        <small>${money(split.generalRevenue)} geral / ${money(split.linkRevenue)} por link</small>
+      </div>
+      <div class="insight-card">
+        <span>Validacao paga</span>
+        <strong>${pct(soldRate)}</strong>
+        <div class="bar"><i style="width:${clampPercent(soldRate)}%"></i></div>
+        <small>${int(split.soldValidated)} de ${int(split.sold)} vendidos validados</small>
+      </div>
+      <div class="insight-card">
+        <span>Validacao cortesia</span>
+        <strong>${pct(courtesyRate)}</strong>
+        <div class="bar"><i style="width:${clampPercent(courtesyRate)}%"></i></div>
+        <small>${int(split.complimentaryValidated)} de ${int(split.complimentary)} cortesias validadas</small>
       </div>
     </section>
   `;
@@ -659,11 +730,21 @@ function metric(label, value, note) {
 function eventMini(event) {
   const total = Number(event.sold || 0) + Number(event.complimentary || 0);
   const rate = (Number(event.validated || 0) / Math.max(total, 1)) * 100;
+  const split = eventSalesBreakdown(event);
+  const linkShare = safeRate(split.linkRevenue, event.revenue);
   return `
     <button class="event-mini" data-event="${esc(event.id)}">
-      <h3>${esc(event.name)}</h3>
-      <div class="bar"><i style="width:${Math.min(100, rate)}%"></i></div>
-      <div class="muted">${money(event.revenue)} • ${int(event.validated)} check-ins</div>
+      <div>
+        <h3>${esc(event.name)}</h3>
+        <p class="muted">${money(event.revenue)} em receita</p>
+      </div>
+      <div class="event-mini-stats">
+        <span><b>${int(event.sold)}</b> vendidos</span>
+        <span><b>${int(event.complimentary)}</b> cortesias</span>
+        <span><b>${pct(rate)}</b> presenca</span>
+        <span><b>${pct(linkShare)}</b> por link</span>
+      </div>
+      <div class="bar"><i style="width:${clampPercent(rate)}%"></i></div>
     </button>
   `;
 }
@@ -686,11 +767,11 @@ function renderRankingTable(rows) {
                 <tr class="rank-row" data-promoter="${esc(key)}">
                   <td><strong>${index + 1}. ${esc(row.name)}</strong></td>
                   <td>${money(row.revenue)}</td>
-                  <td>${pct(safeRate(row.revenue, totalRevenue))}</td>
+                  <td>${shareCell(row.revenue, totalRevenue)}</td>
                   <td>${int(row.sold)}</td>
-                  <td>${row.sold ? `${int(row.soldValidated)} (${pct(soldRate)})` : "-"}</td>
+                  <td>${row.sold ? rateCell(row.soldValidated, row.sold) : "-"}</td>
                   <td>${int(row.complimentary)}</td>
-                  <td>${row.complimentary ? `${int(row.complimentaryValidated)} (${pct(courtesyRate)})` : "-"}</td>
+                  <td>${row.complimentary ? rateCell(row.complimentaryValidated, row.complimentary) : "-"}</td>
                 </tr>
                 ${
                   expanded
@@ -709,8 +790,15 @@ function renderRankingTable(rows) {
 function renderSalesLinkTable(rows, totalRevenue) {
   if (!rows.length) return `<p class="notice">Nenhum link com venda registrada no recorte atual.</p>`;
   return `
-    <div class="table-wrap compact-table">
+    <div class="table-wrap compact-table sales-link-table">
       <table>
+        <colgroup>
+          <col class="name-col" />
+          <col class="money-col" />
+          <col class="percent-col" />
+          <col class="count-col" />
+          <col class="percent-col" />
+        </colgroup>
         <thead><tr><th>Link/comissario</th><th>Receita</th><th>% faturamento</th><th>Vendidos</th><th>Val. vendas</th></tr></thead>
         <tbody>
           ${rows
@@ -718,9 +806,9 @@ function renderSalesLinkTable(rows, totalRevenue) {
               <tr>
                 <td><strong>${esc(row.name)}</strong></td>
                 <td>${money(row.revenue)}</td>
-                <td><span class="pill ${safeRate(row.revenue, totalRevenue) >= 10 ? "good" : ""}">${pct(safeRate(row.revenue, totalRevenue))}</span></td>
+                <td>${shareCell(row.revenue, totalRevenue)}</td>
                 <td>${int(row.sold)}</td>
-                <td>${row.sold ? `${int(row.soldValidated)} (${pct(safeRate(row.soldValidated, row.sold))})` : "-"}</td>
+                <td>${row.sold ? rateCell(row.soldValidated, row.sold) : "-"}</td>
               </tr>
             `)
             .join("")}
@@ -733,8 +821,14 @@ function renderSalesLinkTable(rows, totalRevenue) {
 function renderCourtesyLinkTable(rows) {
   if (!rows.length) return `<p class="notice">Nenhuma cortesia por link no recorte atual.</p>`;
   return `
-    <div class="table-wrap compact-table">
+    <div class="table-wrap compact-table courtesy-link-table">
       <table>
+        <colgroup>
+          <col class="name-col" />
+          <col class="count-col" />
+          <col class="count-col" />
+          <col class="percent-col" />
+        </colgroup>
         <thead><tr><th>Link/comissario</th><th>Cortesias</th><th>Validadas</th><th>% validacao</th></tr></thead>
         <tbody>
           ${rows
@@ -746,7 +840,7 @@ function renderCourtesyLinkTable(rows) {
                   <td><strong>${esc(row.name)}</strong></td>
                   <td>${int(row.complimentary)}</td>
                   <td>${int(row.complimentaryValidated)}</td>
-                  <td><span class="pill ${rate >= 55 ? "good" : "warn"}">${pct(rate)}</span></td>
+                  <td>${rateCell(row.complimentaryValidated, row.complimentary, true)}</td>
                 </tr>
               `;
             })
@@ -771,9 +865,9 @@ function renderPromoterEvents(events) {
                   <td><button class="ghost" data-event="${esc(event.id)}">${esc(event.name)}</button></td>
                   <td>${money(event.revenue)}</td>
                   <td>${int(event.sold)}</td>
-                  <td>${event.sold ? `${int(event.soldValidated)} (${pct(safeRate(event.soldValidated, event.sold))})` : "-"}</td>
+                  <td>${event.sold ? rateCell(event.soldValidated, event.sold) : "-"}</td>
                   <td>${int(event.complimentary)}</td>
-                  <td>${event.complimentary ? `${int(event.complimentaryValidated)} (${pct(safeRate(event.complimentaryValidated, event.complimentary))})` : "-"}</td>
+                  <td>${event.complimentary ? rateCell(event.complimentaryValidated, event.complimentary) : "-"}</td>
                 </tr>
               `
             )
@@ -792,7 +886,10 @@ function renderEvents() {
       <div class="grid event-list">
       ${events
         .map(
-          (event) => `
+          (event) => {
+            const rate = eventPresenceRate(event);
+            const split = eventSalesBreakdown(event);
+            return `
             <article class="card event-card">
               <h3>${esc(event.name)}</h3>
               <p class="muted">${esc(event.source || "Fonte da pasta de anexos")}</p>
@@ -802,9 +899,14 @@ function renderEvents() {
                 <div><span class="muted">Check-ins</span><strong>${int(event.validated)}</strong></div>
                 <div><span class="muted">PNE</span><strong>${event.pne ? `${int(event.pne.converted)}/${int(event.pne.inserted)}` : "-"}</strong></div>
               </div>
+              <div class="event-card-bars">
+                <div><span>Presenca</span>${shareCell(event.validated, Number(event.sold || 0) + Number(event.complimentary || 0))}</div>
+                <div><span>Receita por link</span>${shareCell(split.linkRevenue, event.revenue)}</div>
+              </div>
               <button class="primary" data-event="${esc(event.id)}">Abrir evento</button>
             </article>
-          `
+          `;
+          }
         )
         .join("") || `<p class="notice">Nenhum evento encontrado com os filtros atuais.</p>`}
       </div>
@@ -852,7 +954,7 @@ function renderValidation() {
                       <td><strong>${esc(event.name)}</strong></td>
                       <td>${int(event.total)}</td>
                       <td>${int(event.validated)}</td>
-                      <td><span class="pill ${event.rate >= 55 ? "good" : "warn"}">${pct(event.rate)}</span></td>
+                      <td>${rateCell(event.validated, event.total, true)}</td>
                       <td>${event.pne ? int(event.pne.inserted) : "-"}</td>
                       <td>${event.pne ? int(event.pne.converted) : "-"}</td>
                       <td><button class="ghost" data-event="${esc(event.id)}">Ver lotes</button></td>
@@ -956,12 +1058,19 @@ function eventPromoters(event) {
 function renderEventPromoterSplit(event) {
   const rows = eventPromoters(event);
   return `
-    <div class="grid two">
-      <div>
+    <div class="grid two promoter-split" style="--promoter-left:${state.promoterSplit}%">
+      <div class="promoter-pane">
         <div class="section-title inline-section"><h3>Vendas por link</h3><p>% sobre o faturamento deste evento.</p></div>
         ${renderSalesLinkTable(rows.filter((row) => row.revenue > 0 || row.sold > 0), Number(event.revenue || 0))}
       </div>
-      <div>
+      <button
+        class="split-resizer"
+        type="button"
+        data-action="resize-promoter-split"
+        aria-label="Redimensionar colunas"
+        title="Arraste para redimensionar"
+      ></button>
+      <div class="promoter-pane">
         <div class="section-title inline-section"><h3>Cortesias por link</h3><p>Validadas em quantidade e percentual.</p></div>
         ${renderCourtesyLinkTable(rows.filter((row) => row.complimentary > 0))}
       </div>
@@ -988,11 +1097,11 @@ function renderBatches(event) {
                 <tr>
                   <td><strong>${esc(batch.label)}</strong></td>
                   <td>${int(sold)}</td>
-                  <td>${sold ? `${int(soldValidated)} (${pct(soldRate)})` : "-"}</td>
+                  <td>${sold ? rateCell(soldValidated, sold) : "-"}</td>
                   <td>${int(complimentary)}</td>
-                  <td>${complimentary ? `<span class="pill ${courtesyRate >= 55 ? "good" : "warn"}">${int(complimentaryValidated)} (${pct(courtesyRate)})</span>` : "-"}</td>
+                  <td>${complimentary ? rateCell(complimentaryValidated, complimentary, true) : "-"}</td>
                   <td>${money(batch.revenue)}</td>
-                  <td>${Number(batch.revenue || 0) ? pct(safeRate(batch.revenue, event.revenue)) : "-"}</td>
+                  <td>${Number(batch.revenue || 0) ? shareCell(batch.revenue, event.revenue) : "-"}</td>
                 </tr>
               `;
             })
@@ -1063,6 +1172,68 @@ function bindActions() {
     state.filters.sort = event.target.value;
     render();
   });
+  bindPromoterSplitResize();
+}
+
+function setPromoterSplit(value, container) {
+  state.promoterSplit = Math.round(Math.min(76, Math.max(48, value)));
+  container?.style.setProperty("--promoter-left", `${state.promoterSplit}%`);
+  try {
+    localStorage.setItem(PROMOTER_SPLIT_KEY, String(state.promoterSplit));
+  } catch {
+    // O ajuste ainda vale na tela atual mesmo quando o navegador bloqueia armazenamento.
+  }
+}
+
+function bindPromoterSplitResize() {
+  const handle = document.querySelector("[data-action='resize-promoter-split']");
+  const container = handle?.closest(".promoter-split");
+  if (!handle || !container) return;
+
+  const updateFromPoint = (clientX) => {
+    const rect = container.getBoundingClientRect();
+    if (!rect.width) return;
+    setPromoterSplit(((clientX - rect.left) / rect.width) * 100, container);
+  };
+
+  handle.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    handle.setPointerCapture?.(event.pointerId);
+    document.body.classList.add("is-resizing");
+    updateFromPoint(event.clientX);
+
+    const onMove = (moveEvent) => updateFromPoint(moveEvent.clientX);
+    const onUp = () => {
+      document.body.classList.remove("is-resizing");
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp, { once: true });
+  });
+
+  handle.addEventListener("keydown", (event) => {
+    const step = event.shiftKey ? 6 : 3;
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      setPromoterSplit(state.promoterSplit - step, container);
+    }
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      setPromoterSplit(state.promoterSplit + step, container);
+    }
+    if (event.key === "Home") {
+      event.preventDefault();
+      setPromoterSplit(48, container);
+    }
+    if (event.key === "End") {
+      event.preventDefault();
+      setPromoterSplit(76, container);
+    }
+  });
+
+  handle.addEventListener("dblclick", () => setPromoterSplit(63, container));
 }
 
 render();
