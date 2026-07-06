@@ -649,9 +649,11 @@ function renderOverview() {
         </div>
       </div>
       <div class="card">
-        <div class="section-title"><h2>Eventos em destaque</h2><p>Ordenado pelos filtros atuais.</p></div>
+        <div class="section-title"><h2>Eventos em destaque</h2><p>Maiores faturamentos dentro do recorte filtrado.</p></div>
         <div class="event-highlight-grid">
           ${events
+            .slice()
+            .sort((a, b) => Number(b.revenue || 0) - Number(a.revenue || 0))
             .slice(0, 6)
             .map((event) => eventMini(event))
             .join("") || `<p class="notice">Nenhum evento encontrado com os filtros atuais.</p>`}
