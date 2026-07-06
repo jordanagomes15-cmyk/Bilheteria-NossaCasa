@@ -1023,7 +1023,7 @@ function renderDetail() {
 }
 
 function tabLabel(tab) {
-  return { batches: "Vendas por lote", promoters: "Comissarios/RPs", pne: "PNE", summary: "Resumo" }[tab] || tab;
+  return { batches: "Lote", promoters: "Link", pne: "PNE", summary: "Resumo" }[tab] || tab;
 }
 
 function renderPne(event) {
