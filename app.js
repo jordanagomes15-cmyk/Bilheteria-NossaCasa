@@ -165,7 +165,7 @@ const state = {
   filters: {
     search: "",
     pne: "all",
-    sort: "revenue"
+    sort: "date"
   }
 };
 
@@ -300,10 +300,16 @@ function filteredEvents() {
 }
 
 function sortEvents(a, b) {
+  if (state.filters.sort === "date") return eventDateValue(a) - eventDateValue(b) || String(a.name || "").localeCompare(String(b.name || ""), "pt-BR");
   if (state.filters.sort === "name") return String(a.name || "").localeCompare(String(b.name || ""), "pt-BR");
   if (state.filters.sort === "checkins") return Number(b.validated || 0) - Number(a.validated || 0);
   if (state.filters.sort === "presence") return eventPresenceRate(b) - eventPresenceRate(a);
   return Number(b.revenue || 0) - Number(a.revenue || 0);
+}
+
+function eventDateValue(event) {
+  const value = Date.parse(event?.eventDateTime || event?.eventDate || "");
+  return Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER;
 }
 
 function eventPresenceRate(event) {
@@ -710,6 +716,7 @@ function renderDashboardFilters(events) {
         <label class="filter-field">
           <span>Ordenar eventos</span>
           <select id="dashboardSort">
+            <option value="date" ${state.filters.sort === "date" ? "selected" : ""}>Data do evento</option>
             <option value="revenue" ${state.filters.sort === "revenue" ? "selected" : ""}>Receita</option>
             <option value="checkins" ${state.filters.sort === "checkins" ? "selected" : ""}>Check-ins</option>
             <option value="presence" ${state.filters.sort === "presence" ? "selected" : ""}>Presenca</option>

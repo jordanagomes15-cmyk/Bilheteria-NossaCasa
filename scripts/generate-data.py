@@ -16,6 +16,34 @@ OUT = Path("generated-data.js")
 WATCH_EXTENSIONS = {".xlsx", ".pdf"}
 
 
+def date_from_text(value):
+    text = str(value or "")
+    match = re.search(r"\b(\d{2})[-_/](\d{2})[-_/](\d{4})\b", text)
+    if not match:
+        return ""
+    day, month, year = match.groups()
+    try:
+        return datetime(int(year), int(month), int(day)).date().isoformat()
+    except ValueError:
+        return ""
+
+
+def datetime_from_text(value):
+    text = str(value or "")
+    date_match = re.search(r"\b(\d{2})[-_/](\d{2})[-_/](\d{4})\b", text)
+    if not date_match:
+        return ""
+    day, month, year = date_match.groups()
+    hour = minute = 0
+    time_match = re.search(r"\b\d{2}[-_/]\d{2}[-_/]\d{4}\s+(\d{1,2})h(\d{2})\b", text, re.I)
+    if time_match:
+        hour, minute = (int(part) for part in time_match.groups())
+    try:
+        return datetime(int(year), int(month), int(day), hour, minute).isoformat(timespec="minutes")
+    except ValueError:
+        return ""
+
+
 def normalize(value):
     value = str(value or "").strip().lower()
     value = unicodedata.normalize("NFD", value).encode("ascii", "ignore").decode("ascii")
@@ -184,6 +212,8 @@ def parse_xlsx(path):
         "id": slug(name),
         "name": name,
         "source": path.name,
+        "eventDate": date_from_text(path.name),
+        "eventDateTime": datetime_from_text(path.name),
         "sold": sold,
         "complimentary": complimentary,
         "validated": validated,
@@ -212,6 +242,8 @@ def parse_pne_pdf(path):
     return {
         "source": path.name,
         "eventName": event_name_from_pdf(path),
+        "eventDate": date_from_text(path.name),
+        "eventDateTime": datetime_from_text(path.name),
         "inserted": inserted,
         "converted": converted,
         "people": rows,
@@ -264,6 +296,11 @@ def main():
         event = best_event_match(events, pne)
         if event:
             event["pne"] = pne
+            if pne.get("eventDate"):
+                event["eventDate"] = pne["eventDate"]
+            if pne.get("eventDateTime"):
+                event["eventDateTime"] = pne["eventDateTime"]
+    events = sorted(events, key=lambda event: (event.get("eventDateTime") or event.get("eventDate") or "9999-12-31", normalize(event.get("name"))))
 
     payload = {
         "generatedAt": datetime.now().isoformat(timespec="seconds"),
