@@ -1353,21 +1353,24 @@ tr:last-child td {
   }
 
   .overview-link-grid .overview-compact-table tr {
+    display: grid;
+    gap: 6px;
     margin-bottom: 10px;
-    padding: 11px;
+    padding: 13px;
     border: 1px solid var(--line);
     border-radius: var(--radius);
     background: #fffdf8;
   }
 
   .overview-link-grid .overview-compact-table td {
-    min-height: 28px;
-    padding: 4px 0;
+    height: auto;
+    min-height: 26px;
+    padding: 2px 0;
     border-bottom: 0;
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    column-gap: 14px;
     text-align: right;
   }
 
@@ -1381,7 +1384,8 @@ tr:last-child td {
 
   .overview-link-grid .overview-compact-table td:first-child {
     display: block;
-    padding-bottom: 8px;
+    min-height: 0;
+    padding: 0 0 8px;
     text-align: left;
   }
 
@@ -1390,6 +1394,15 @@ tr:last-child td {
   }
 
   .overview-link-grid .overview-compact-table .rate-cell {
-    width: 126px;
+    width: 132px;
+    justify-items: end;
+  }
+
+  .overview-link-grid .overview-compact-table .rate-cell span {
+    text-align: right;
+  }
+
+  .overview-link-grid .overview-compact-table .rate-cell .bar {
+    width: 100%;
   }
 }
