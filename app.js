@@ -634,13 +634,11 @@ function renderOverview() {
       ${renderSplitSummary(split, sum)}
       <div class="grid two overview-link-grid">
         <div class="card">
-          <div class="toolbar">
-            <div class="section-title"><h2>Vendas por link</h2><p>Participacao de cada link no faturamento do recorte.</p></div>
-          </div>
+          <div class="section-title"><h2>Vendas por link</h2><p>Receita, volume vendido e participacao no faturamento.</p></div>
           ${renderSalesLinkTable(promoterRanking(events).filter((row) => row.revenue > 0 || row.sold > 0).slice(0, 18), sum.revenue, { compact: true })}
         </div>
         <div class="card">
-          <div class="section-title"><h2>Cortesias por link</h2><p>Quantidade emitida, validada e taxa de presenca.</p></div>
+          <div class="section-title"><h2>Cortesias por link</h2><p>Emitidas, validadas e taxa de presenca.</p></div>
           ${renderCourtesyLinkTable(promoterRanking(events).filter((row) => row.complimentary > 0).slice(0, 18), { compact: true })}
         </div>
       </div>
@@ -791,26 +789,39 @@ function renderRankingTable(rows) {
 function renderSalesLinkTable(rows, totalRevenue, options = {}) {
   if (!rows.length) return `<p class="notice">Nenhum link com venda registrada no recorte atual.</p>`;
   const compact = Boolean(options.compact);
-  return `
-    <div class="table-wrap compact-table sales-link-table ${compact ? "overview-compact-table" : ""}">
-      <table>
-        <colgroup>
+  const salesHeaders = compact
+    ? "<th>Link/comissario</th><th>Receita</th><th>Vendidos</th><th>% faturamento</th>"
+    : "<th>Link/comissario</th><th>Receita</th><th>% faturamento</th><th>Vendidos</th><th>Val. vendas</th>";
+  const salesCols = compact
+    ? `
+          <col class="name-col" />
+          <col class="money-col" />
+          <col class="count-col" />
+          <col class="percent-col" />`
+    : `
           <col class="name-col" />
           <col class="money-col" />
           <col class="percent-col" />
           <col class="count-col" />
-          ${compact ? "" : `<col class="percent-col" />`}
+          <col class="percent-col" />`;
+  return `
+    <div class="table-wrap compact-table sales-link-table ${compact ? "overview-compact-table" : ""}">
+      <table>
+        <colgroup>
+          ${salesCols}
         </colgroup>
-        <thead><tr><th>Link/comissario</th><th>Receita</th><th>% faturamento</th><th>Vendidos</th>${compact ? "" : "<th>Val. vendas</th>"}</tr></thead>
+        <thead><tr>${salesHeaders}</tr></thead>
         <tbody>
           ${rows
             .map((row) => `
               <tr>
-                <td><strong>${esc(row.name)}</strong></td>
-                <td>${money(row.revenue)}</td>
-                <td>${shareCell(row.revenue, totalRevenue)}</td>
-                <td>${int(row.sold)}</td>
-                ${compact ? "" : `<td>${row.sold ? rateCell(row.soldValidated, row.sold) : "-"}</td>`}
+                <td data-label="Link/comissario"><strong>${esc(row.name)}</strong></td>
+                <td data-label="Receita">${money(row.revenue)}</td>
+                ${
+                  compact
+                    ? `<td data-label="Vendidos">${int(row.sold)}</td><td data-label="% faturamento">${shareCell(row.revenue, totalRevenue)}</td>`
+                    : `<td data-label="% faturamento">${shareCell(row.revenue, totalRevenue)}</td><td data-label="Vendidos">${int(row.sold)}</td><td data-label="Val. vendas">${row.sold ? rateCell(row.soldValidated, row.sold) : "-"}</td>`
+                }
               </tr>
             `)
             .join("")}
@@ -832,18 +843,18 @@ function renderCourtesyLinkTable(rows, options = {}) {
           <col class="count-col" />
           <col class="percent-col" />
         </colgroup>
-        <thead><tr><th>Link/comissario</th><th>Cortesias</th><th>Validadas</th><th>% validacao</th></tr></thead>
+        <thead><tr><th>Link/comissario</th><th>Emitidas</th><th>Validadas</th><th>% validacao</th></tr></thead>
         <tbody>
           ${rows
-            .sort((a, b) => b.complimentary - a.complimentary || b.complimentaryValidated - a.complimentaryValidated)
+            .sort((a, b) => b.complimentaryValidated - a.complimentaryValidated || b.complimentary - a.complimentary)
             .map((row) => {
               const rate = safeRate(row.complimentaryValidated, row.complimentary);
               return `
                 <tr>
-                  <td><strong>${esc(row.name)}</strong></td>
-                  <td>${int(row.complimentary)}</td>
-                  <td>${int(row.complimentaryValidated)}</td>
-                  <td>${rateCell(row.complimentaryValidated, row.complimentary, true, compact ? "rate-only" : "count-rate")}</td>
+                  <td data-label="Link/comissario"><strong>${esc(row.name)}</strong></td>
+                  <td data-label="Cortesias emitidas">${int(row.complimentary)}</td>
+                  <td data-label="Validadas">${int(row.complimentaryValidated)}</td>
+                  <td data-label="% validacao">${rateCell(row.complimentaryValidated, row.complimentary, true, compact ? "rate-only" : "count-rate")}</td>
                 </tr>
               `;
             })

@@ -487,11 +487,41 @@ h3 {
 
 .overview-link-grid .card {
   height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 14px;
+  align-content: start;
+}
+
+.overview-link-grid .section-title {
+  min-height: 62px;
+  align-content: start;
 }
 
 .overview-link-grid .table-wrap {
   margin-inline: auto;
   overflow-x: hidden;
+}
+
+.overview-link-grid .overview-compact-table {
+  max-height: 548px;
+  overflow-y: auto;
+}
+
+.overview-link-grid .overview-compact-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.overview-link-grid .overview-compact-table th {
+  height: 46px;
+  vertical-align: middle;
+}
+
+.overview-link-grid .overview-compact-table td {
+  height: 54px;
+  vertical-align: middle;
 }
 
 .promoter-split {
@@ -785,7 +815,15 @@ h3 {
 .overview-link-grid .sales-link-table td,
 .overview-link-grid .courtesy-link-table th,
 .overview-link-grid .courtesy-link-table td {
-  padding-inline: 10px;
+  padding: 9px 10px;
+}
+
+.overview-link-grid .sales-link-table th:first-child,
+.overview-link-grid .sales-link-table td:first-child,
+.overview-link-grid .courtesy-link-table th:first-child,
+.overview-link-grid .courtesy-link-table td:first-child {
+  padding-left: 14px;
+  text-align: left;
 }
 
 .overview-link-grid .sales-link-table th:nth-child(n + 2),
@@ -796,25 +834,36 @@ h3 {
 }
 
 .overview-link-grid .sales-link-table td:nth-child(3) .rate-cell,
+.overview-link-grid .sales-link-table td:nth-child(4) .rate-cell,
 .overview-link-grid .sales-link-table td:nth-child(5) .rate-cell,
 .overview-link-grid .courtesy-link-table td:nth-child(4) .rate-cell {
   margin-inline: auto;
 }
 
+.overview-link-grid .sales-link-table td:nth-child(2),
+.overview-link-grid .sales-link-table td:nth-child(3),
+.overview-link-grid .sales-link-table td:nth-child(4),
+.overview-link-grid .courtesy-link-table td:nth-child(2),
+.overview-link-grid .courtesy-link-table td:nth-child(3),
+.overview-link-grid .courtesy-link-table td:nth-child(4) {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .overview-link-grid .sales-link-table .name-col {
-  width: 34%;
+  width: 33%;
 }
 
 .overview-link-grid .sales-link-table .money-col {
-  width: 25%;
-}
-
-.overview-link-grid .sales-link-table .percent-col {
   width: 24%;
 }
 
+.overview-link-grid .sales-link-table .percent-col {
+  width: 25%;
+}
+
 .overview-link-grid .sales-link-table .count-col {
-  width: 17%;
+  width: 18%;
 }
 
 .overview-link-grid .courtesy-link-table .name-col {
@@ -831,7 +880,8 @@ h3 {
 
 .overview-link-grid .rate-cell {
   min-width: 0;
-  width: min(112px, 100%);
+  width: min(104px, 100%);
+  justify-items: center;
 }
 
 .overview-link-grid .rate-cell span {
@@ -839,7 +889,7 @@ h3 {
 }
 
 .overview-link-grid .bar.thin {
-  height: 5px;
+  height: 4px;
 }
 
 .overview-link-grid th {
@@ -1272,5 +1322,74 @@ tr:last-child td {
 
   .metric strong {
     font-size: 24px;
+  }
+
+  .overview-link-grid .section-title {
+    min-height: 0;
+  }
+
+  .overview-link-grid .overview-compact-table {
+    max-height: none;
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .overview-link-grid .overview-compact-table table,
+  .overview-link-grid .overview-compact-table thead,
+  .overview-link-grid .overview-compact-table tbody,
+  .overview-link-grid .overview-compact-table tr,
+  .overview-link-grid .overview-compact-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .overview-link-grid .overview-compact-table table {
+    min-width: 0;
+  }
+
+  .overview-link-grid .overview-compact-table thead {
+    display: none;
+  }
+
+  .overview-link-grid .overview-compact-table tr {
+    margin-bottom: 10px;
+    padding: 11px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: #fffdf8;
+  }
+
+  .overview-link-grid .overview-compact-table td {
+    min-height: 28px;
+    padding: 4px 0;
+    border-bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    text-align: right;
+  }
+
+  .overview-link-grid .overview-compact-table td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 820;
+    text-transform: uppercase;
+  }
+
+  .overview-link-grid .overview-compact-table td:first-child {
+    display: block;
+    padding-bottom: 8px;
+    text-align: left;
+  }
+
+  .overview-link-grid .overview-compact-table td:first-child::before {
+    display: none;
+  }
+
+  .overview-link-grid .overview-compact-table .rate-cell {
+    width: 126px;
   }
 }
