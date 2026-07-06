@@ -17,7 +17,28 @@ Enquanto esse processo estiver rodando, novos arquivos nessas pastas regeneram `
 
 O site publicado e estatico. Ele nao consegue ler sozinho a pasta `Documentos` do computador.
 
-Fluxo atual para publicar a versao mais recente localmente:
+Para deixar o terminal publicando automaticamente quando uma planilha ou PDF entrar nas pastas, rode:
+
+```bash
+npm run watch:publish
+```
+
+Enquanto esse processo estiver aberto, ele monitora:
+
+- `Documentos/Nossa Casa/Gandaya`
+- `Documentos/Nossa Casa/PNE`
+
+Quando detectar mudanca, ele:
+
+1. regenera `generated-data.js`;
+2. roda o build;
+3. cria um commit com os dados atualizados;
+4. envia para o GitLab;
+5. o Render publica a nova versao automaticamente.
+
+Para parar, pressione `Ctrl+C` no terminal.
+
+Fluxo manual para publicar a versao mais recente localmente:
 
 ```bash
 npm run generate:data
@@ -36,9 +57,9 @@ O deploy usa a pasta `dist`.
 4. Depois de atualizar as planilhas/PDFs no computador, rode:
 
 ```bash
-npm run generate:data
+npm run watch:publish
 ```
 
-5. Envie o arquivo `generated-data.js` atualizado para o GitLab. O Render publica a nova versao automaticamente a cada novo push.
+5. Mantenha esse terminal aberto. O Render publica a nova versao automaticamente a cada novo push.
 
 Para atualizacao publicada automatica, a base precisa sair do computador e ir para uma fonte online, como GitLab com deploy automatico, Google Drive conectado por backend, Supabase ou outro banco/API.
