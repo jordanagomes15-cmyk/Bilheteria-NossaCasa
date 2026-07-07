@@ -695,6 +695,37 @@ h3 {
   min-width: 0;
 }
 
+.mailing-toolbar,
+.mailing-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.mailing-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.compact-select {
+  min-width: min(360px, 100%);
+}
+
+.mailing-table table {
+  min-width: 920px;
+}
+
+.mailing-table td:nth-child(5),
+.mailing-table td:nth-child(6) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .tabs {
   display: flex;
   gap: 8px;
@@ -1039,6 +1070,34 @@ tr:last-child td {
   background: #f8e6bf;
 }
 
+.pill.muted-pill,
+.muted-pill {
+  color: var(--muted);
+  background: #eee7db;
+}
+
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 5px;
+}
+
+.check-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.check-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .event-list {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
   align-items: stretch;
@@ -1046,10 +1105,11 @@ tr:last-child td {
 
 .event-card {
   min-width: 0;
-  min-height: 300px;
+  min-height: 260px;
   display: grid;
   grid-template-rows: auto auto 1fr auto auto;
   gap: 14px;
+  cursor: pointer;
 }
 
 .event-card h3 {
@@ -1173,6 +1233,79 @@ tr:last-child td {
   background: #fff8ec;
 }
 
+.recurring-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+}
+
+.recurring-grid .card {
+  display: grid;
+  gap: 14px;
+}
+
+.recurring-table {
+  max-height: 620px;
+  overflow-y: auto;
+}
+
+.recurring-table table {
+  min-width: 1080px;
+}
+
+.recurring-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.audience-table table {
+  min-width: 1120px;
+}
+
+.audience-row {
+  cursor: pointer;
+}
+
+.audience-row:hover td {
+  background: #fff6e8;
+}
+
+.mini-toggle {
+  min-height: 28px;
+  margin-top: 6px;
+  padding: 6px 9px;
+  font-size: 11px;
+}
+
+.audience-detail-row td {
+  background: #fff8ec;
+}
+
+.audience-detail-row:hover td {
+  background: #fff8ec;
+}
+
+.audience-entry-list {
+  display: grid;
+  gap: 8px;
+}
+
+.audience-entry {
+  min-width: 0;
+  padding: 9px 10px;
+  display: grid;
+  gap: 3px;
+  border: 1px solid rgba(222, 208, 183, 0.72);
+  border-radius: var(--radius);
+  background: rgba(255, 253, 248, 0.72);
+}
+
+.audience-entry span,
+.audience-entry small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .event-mini h3 {
   display: -webkit-box;
   overflow: hidden;
@@ -1195,6 +1328,7 @@ tr:last-child td {
 
 @media (max-width: 1100px) {
   .two,
+  .recurring-grid,
   .promoter-split {
     grid-template-columns: 1fr;
   }
@@ -1290,6 +1424,10 @@ tr:last-child td {
 }
 
 @media (max-width: 640px) {
+  body {
+    font-size: 13px;
+  }
+
   .login {
     padding: 14px;
   }
@@ -1304,16 +1442,41 @@ tr:last-child td {
 
   .topbar {
     display: grid;
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 10px 12px;
   }
 
   .topbar .source-status {
     grid-column: 1 / -1;
     justify-self: start;
+    max-width: 100%;
+    min-height: 32px;
+    padding: 6px 10px;
+    font-size: 11px;
+    white-space: normal;
+  }
+
+  .topbar .section-title {
+    align-self: center;
+  }
+
+  .topbar .section-title h1 {
+    font-size: 26px;
+    line-height: 1.02;
+  }
+
+  .topbar .section-title p {
+    font-size: 12px;
+    line-height: 1.25;
   }
 
   .card {
-    padding: 15px;
+    padding: 14px;
+  }
+
+  .main {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
   }
 
   .metric {
@@ -1354,9 +1517,9 @@ tr:last-child td {
 
   .overview-link-grid .overview-compact-table tr {
     display: grid;
-    gap: 6px;
-    margin-bottom: 10px;
-    padding: 13px;
+    gap: 3px;
+    margin-bottom: 8px;
+    padding: 9px 12px 10px;
     border: 1px solid var(--line);
     border-radius: var(--radius);
     background: #fffdf8;
@@ -1364,13 +1527,13 @@ tr:last-child td {
 
   .overview-link-grid .overview-compact-table td {
     height: auto;
-    min-height: 26px;
-    padding: 2px 0;
+    min-height: 20px;
+    padding: 1px 0;
     border-bottom: 0;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    column-gap: 14px;
+    column-gap: 12px;
     text-align: right;
   }
 
@@ -1378,6 +1541,7 @@ tr:last-child td {
     content: attr(data-label);
     color: var(--muted);
     font-size: 10px;
+    line-height: 1.1;
     font-weight: 820;
     text-transform: uppercase;
   }
@@ -1385,7 +1549,7 @@ tr:last-child td {
   .overview-link-grid .overview-compact-table td:first-child {
     display: block;
     min-height: 0;
-    padding: 0 0 8px;
+    padding: 0 0 5px;
     text-align: left;
   }
 
@@ -1393,16 +1557,218 @@ tr:last-child td {
     display: none;
   }
 
+  .overview-link-grid .overview-compact-table td:first-child strong {
+    display: block;
+    font-size: 13px;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+
   .overview-link-grid .overview-compact-table .rate-cell {
-    width: 132px;
+    width: 96px;
+    gap: 3px;
     justify-items: end;
   }
 
   .overview-link-grid .overview-compact-table .rate-cell span {
     text-align: right;
+    font-size: 11px;
+    line-height: 1;
   }
 
   .overview-link-grid .overview-compact-table .rate-cell .bar {
     width: 100%;
+    height: 4px;
+  }
+
+  .recurring-table {
+    max-height: none;
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .recurring-table table,
+  .recurring-table thead,
+  .recurring-table tbody,
+  .recurring-table tr,
+  .recurring-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .recurring-table table {
+    min-width: 0;
+  }
+
+  .recurring-table thead {
+    display: none;
+  }
+
+  .recurring-table tr {
+    display: grid;
+    gap: 4px;
+    margin-bottom: 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: #fffdf8;
+  }
+
+  .recurring-table td {
+    min-height: 20px;
+    padding: 1px 0;
+    border-bottom: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 12px;
+    text-align: right;
+  }
+
+  .recurring-table td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 10px;
+    line-height: 1.1;
+    font-weight: 820;
+    text-transform: uppercase;
+  }
+
+  .recurring-table td:first-child {
+    display: block;
+    min-height: 0;
+    padding: 0 0 5px;
+    text-align: left;
+  }
+
+  .recurring-table td:first-child::before {
+    display: none;
+  }
+
+  .recurring-table td:first-child strong {
+    display: block;
+    font-size: 13px;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+
+  .recurring-table td:last-child {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.25;
+    text-align: left;
+  }
+
+  .recurring-table td:last-child::before {
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .recurring-table .rate-cell {
+    width: 96px;
+    gap: 3px;
+    justify-items: end;
+  }
+
+  .recurring-table .rate-cell span {
+    text-align: right;
+    font-size: 11px;
+    line-height: 1;
+  }
+
+  .recurring-table .rate-cell .bar {
+    width: 100%;
+    height: 4px;
+  }
+
+  .recurring-table .audience-detail-row {
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .recurring-table .audience-detail-row td {
+    display: block;
+    text-align: left;
+  }
+
+  .recurring-table .audience-detail-row td::before {
+    display: none;
+  }
+
+  .mailing-toolbar,
+  .mailing-header,
+  .mailing-actions {
+    align-items: stretch;
+  }
+
+  .mailing-actions,
+  .mailing-actions button {
+    width: 100%;
+  }
+
+  .mailing-table {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .mailing-table table,
+  .mailing-table thead,
+  .mailing-table tbody,
+  .mailing-table tr,
+  .mailing-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .mailing-table table {
+    min-width: 0;
+  }
+
+  .mailing-table thead {
+    display: none;
+  }
+
+  .mailing-table tr {
+    display: grid;
+    gap: 4px;
+    margin-bottom: 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: #fffdf8;
+  }
+
+  .mailing-table td {
+    min-height: 20px;
+    padding: 1px 0;
+    border-bottom: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 12px;
+    text-align: right;
+  }
+
+  .mailing-table td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 10px;
+    line-height: 1.1;
+    font-weight: 820;
+    text-transform: uppercase;
+  }
+
+  .mailing-table td:first-child {
+    display: block;
+    padding-bottom: 5px;
+    text-align: left;
+  }
+
+  .mailing-table td:first-child::before {
+    display: none;
   }
 }

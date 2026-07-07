@@ -162,10 +162,18 @@ const state = {
   detailTab: "batches",
   promoterSplit: loadPromoterSplit(),
   query: "",
+  expandedAudienceKey: "",
+  mailingEventId: "all",
   filters: {
     search: "",
     pne: "all",
     sort: "date"
+  },
+  recurrenceFilters: {
+    eventId: "all",
+    type: "all",
+    min: "2",
+    validatedOnly: false
   }
 };
 
@@ -411,6 +419,355 @@ function salesBreakdown(events = filteredEvents()) {
   );
 }
 
+function recurringPeople(events = filteredEvents()) {
+  const map = new Map();
+  events.forEach((event) => {
+    (event.attendees || []).forEach((person) => {
+      const key = person.key || normalizeText(person.name);
+      if (!key) return;
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          name: person.name || "Sem nome",
+          eventIds: new Set(),
+          paidEventIds: new Set(),
+          courtesyEventIds: new Set(),
+          sold: 0,
+          soldValidated: 0,
+          complimentary: 0,
+          complimentaryValidated: 0,
+          validated: 0,
+          revenue: 0,
+          transferRecipients: new Set(),
+          transferSenders: new Set(),
+          transferQuantity: 0,
+          courtesyContexts: new Set(),
+          courtesyLabels: new Set(),
+          events: []
+        });
+      }
+      const row = map.get(key);
+      const sold = Number(person.sold || 0);
+      const soldValidated = rowSoldValidated(person);
+      const complimentary = Number(person.complimentary || 0);
+      const complimentaryValidated = rowComplimentaryValidated(person);
+      const eventId = person.eventId || event.id;
+      const eventName = person.eventName || event.name;
+      row.eventIds.add(eventId);
+      if (sold > 0) row.paidEventIds.add(eventId);
+      if (complimentary > 0) row.courtesyEventIds.add(eventId);
+      row.sold += sold;
+      row.soldValidated += soldValidated;
+      row.complimentary += complimentary;
+      row.complimentaryValidated += complimentaryValidated;
+      row.validated += Number(person.validated || 0);
+      row.revenue += Number(person.revenue || 0);
+      (person.transferRecipients || []).forEach((name) => row.transferRecipients.add(name));
+      (person.transferSenders || []).forEach((name) => row.transferSenders.add(name));
+      (person.courtesyContexts || []).forEach((context) => row.courtesyContexts.add(context));
+      (person.courtesyLabels || []).forEach((label) => row.courtesyLabels.add(label));
+      row.transferQuantity += Number(person.transferQuantity || 0);
+      row.events.push({
+        id: eventId,
+        name: eventName,
+        sold,
+        soldValidated,
+        complimentary,
+        complimentaryValidated,
+        revenue: Number(person.revenue || 0),
+        transferRecipients: person.transferRecipients || [],
+        transferSenders: person.transferSenders || [],
+        courtesyLabels: person.courtesyLabels || []
+      });
+    });
+  });
+  return [...map.values()].map((row) => ({
+    ...row,
+    transferRecipients: [...row.transferRecipients],
+    transferSenders: [...row.transferSenders],
+    courtesyContexts: [...row.courtesyContexts],
+    courtesyLabels: [...row.courtesyLabels],
+    eventCount: row.eventIds.size,
+    paidEventCount: row.paidEventIds.size,
+    courtesyEventCount: row.courtesyEventIds.size,
+    courtesyContextCount: row.courtesyContexts.size
+  }));
+}
+
+function recurringAnalysis(events = filteredEvents()) {
+  const people = recurringPeople(events);
+  const buyers = people
+    .filter((row) => row.paidEventCount > 1)
+    .sort((a, b) => b.revenue - a.revenue || b.sold - a.sold || b.paidEventCount - a.paidEventCount);
+  const courtesy = people
+    .filter((row) => row.courtesyContextCount > 1 && row.complimentaryValidated > 0)
+    .sort((a, b) => b.complimentaryValidated - a.complimentaryValidated || b.courtesyContextCount - a.courtesyContextCount || b.courtesyEventCount - a.courtesyEventCount);
+  return { buyers, courtesy, people };
+}
+
+function normalizeParticipantKey(participant) {
+  const email = String(participant?.email || "").trim().toLowerCase();
+  if (email) return `email:${email}`;
+  return `name:${normalizeText(participant?.name || participant?.participantKey || "sem nome")}`;
+}
+
+function normalizePhone(value) {
+  return String(value || "").replace(/\D+/g, "");
+}
+
+function personMailingKey(entry) {
+  const email = String(entry?.email || "").trim().toLowerCase();
+  if (email) return `email:${email}`;
+  const name = normalizeText(entry?.name || "");
+  const phone = normalizePhone(entry?.phone);
+  if (name && phone) return `name-phone:${name}:${phone}`;
+  if (name) return `possible-name:${name}`;
+  return "";
+}
+
+function eventAudienceSummary(event) {
+  const all = new Set();
+  const buyers = new Set();
+  const courtesy = new Set();
+  (event?.audience || []).forEach((entry) => {
+    const key = personMailingKey(entry) || normalizeParticipantKey(entry);
+    if (!key) return;
+    all.add(key);
+    if (entry.type === "purchase") buyers.add(key);
+    if (entry.type === "courtesy") courtesy.add(key);
+  });
+  return {
+    uniquePeople: all.size,
+    uniqueBuyers: buyers.size,
+    uniqueCourtesy: courtesy.size
+  };
+}
+
+function audienceEntriesFromEvents(events) {
+  return events.flatMap((event) =>
+    (event.audience || []).map((entry) => ({
+      ...entry,
+      eventId: event.id,
+      eventName: event.name,
+      eventDate: event.eventDateTime || event.eventDate || ""
+    }))
+  );
+}
+
+function buildMailingRows(events = filteredEvents(), eventId = "all") {
+  const rows = new Map();
+  audienceEntriesFromEvents(events).forEach((entry) => {
+    if (eventId !== "all" && entry.eventId !== eventId) return;
+    const key = personMailingKey(entry);
+    if (!key) return;
+    if (!rows.has(key)) {
+      rows.set(key, {
+        key,
+        name: entry.name || "Sem nome",
+        email: String(entry.email || "").trim().toLowerCase(),
+        phone: normalizePhone(entry.phone),
+        possibleDuplicate: key.startsWith("possible-name:"),
+        events: new Set(),
+        eventDates: [],
+        participationTypes: new Set(),
+        validationCount: 0,
+        origins: new Set(),
+        tickets: 0,
+        lastAppearance: ""
+      });
+    }
+    const row = rows.get(key);
+    row.name = row.name || entry.name || "Sem nome";
+    row.email = row.email || String(entry.email || "").trim().toLowerCase();
+    row.phone = row.phone || normalizePhone(entry.phone);
+    row.events.add(entry.eventName || entry.eventId);
+    row.participationTypes.add(entry.type === "courtesy" ? "Cortesia" : "Compra");
+    row.tickets += 1;
+    if (entry.validated) row.validationCount += 1;
+    if (entry.linkOrCommissioner) row.origins.add(displayName(entry.linkOrCommissioner));
+    const date = entry.date || entry.eventDate || "";
+    if (date) row.eventDates.push(date);
+    if (!row.lastAppearance || entryDateValue({ date }) > entryDateValue({ date: row.lastAppearance })) {
+      row.lastAppearance = date;
+    }
+  });
+  return [...rows.values()]
+    .map((row) => ({
+      ...row,
+      events: [...row.events],
+      eventCount: row.events.size,
+      participationType:
+        row.participationTypes.has("Compra") && row.participationTypes.has("Cortesia")
+          ? "Compra e cortesia"
+          : [...row.participationTypes][0] || "-",
+      origins: [...row.origins]
+    }))
+    .sort((a, b) => b.eventCount - a.eventCount || b.validationCount - a.validationCount || a.name.localeCompare(b.name, "pt-BR"));
+}
+
+function csvValue(value) {
+  return `"${String(value ?? "").replaceAll('"', '""')}"`;
+}
+
+function slugFileName(value) {
+  return normalizeText(value).replace(/\s+/g, "-") || "mailing";
+}
+
+function downloadTextFile(filename, content) {
+  const blob = new Blob([content], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function exportMailingCsv(eventId = "all") {
+  const events = filteredEvents();
+  const selected = eventId === "all" ? null : events.find((event) => event.id === eventId) || state.events.find((event) => event.id === eventId);
+  const scopeEvents = selected ? [selected] : events;
+  const rows = buildMailingRows(scopeEvents, selected ? selected.id : "all");
+  const headers = [
+    "Nome",
+    "E-mail",
+    "Telefone",
+    "Eventos",
+    "Quantidade de eventos",
+    "Tipo de participacao",
+    "Ingressos",
+    "Validacoes",
+    "Ultima aparicao",
+    "Origem/link/comissario",
+    "Possivel duplicidade"
+  ];
+  const lines = [
+    headers.map(csvValue).join(";"),
+    ...rows.map((row) =>
+      [
+        row.name,
+        row.email,
+        row.phone,
+        row.events.join(", "),
+        row.eventCount,
+        row.participationType,
+        row.tickets,
+        row.validationCount,
+        formatDate(row.lastAppearance),
+        row.origins.join(", "),
+        row.possibleDuplicate ? "Sim" : "Nao"
+      ]
+        .map(csvValue)
+        .join(";")
+    )
+  ];
+  const filename = selected ? `mailing-${slugFileName(selected.name)}.csv` : "mailing-consolidado-nossa-casa.csv";
+  downloadTextFile(filename, `\uFEFF${lines.join("\n")}`);
+}
+
+function formatDate(value) {
+  const date = new Date(value || "");
+  if (!Number.isFinite(date.getTime())) return "-";
+  return date.toLocaleDateString("pt-BR");
+}
+
+function entryDateValue(entry) {
+  const value = Date.parse(entry.date || entry.eventDate || "");
+  return Number.isFinite(value) ? value : 0;
+}
+
+function getAudienceRecurrence(events = filteredEvents()) {
+  const people = new Map();
+  events.forEach((event) => {
+    (event.audience || []).forEach((entry) => {
+      if (entry.type !== "purchase") return;
+      const participantKey = normalizeParticipantKey(entry);
+      if (!participantKey || participantKey === "name:") return;
+      if (!people.has(participantKey)) {
+        people.set(participantKey, {
+          name: entry.name || "Sem nome",
+          email: entry.email || "",
+          participantKey,
+          possibleDuplicate: !entry.email,
+          eventIds: new Set(),
+          appearanceKeys: new Set(),
+          recurrenceTypes: new Set(),
+          validatedEventIds: new Set(),
+          appearancesCount: 0,
+          lastAppearance: "",
+          eventNames: [],
+          entries: [],
+          ticketIds: new Set()
+        });
+      }
+      const row = people.get(participantKey);
+      const ticketKey = entry.ticketId || `${event.id}:${entry.batchKey}:${entry.type}:${entry.date}`;
+      if (row.ticketIds.has(ticketKey)) return;
+      row.ticketIds.add(ticketKey);
+      row.name = row.name || entry.name || "Sem nome";
+      row.email = row.email || entry.email || "";
+      row.possibleDuplicate = row.possibleDuplicate || !entry.email;
+      row.eventIds.add(event.id);
+      row.appearanceKeys.add(`${event.id}:${entry.batchKey || entry.batchName || "sem lote"}`);
+      if (!row.eventNames.includes(event.name)) row.eventNames.push(event.name);
+      row.recurrenceTypes.add("purchase");
+      if (entry.validated) {
+        row.validatedEventIds.add(event.id);
+        row.recurrenceTypes.add("validated");
+      }
+      const fullEntry = {
+        eventId: event.id,
+        eventName: event.name,
+        date: entry.date || event.eventDateTime || event.eventDate || "",
+        type: "purchase",
+        validated: Boolean(entry.validated),
+        ticketId: entry.ticketId || "",
+        batchName: entry.batchName || "Sem lote",
+        linkOrCommissioner: entry.linkOrCommissioner || ""
+      };
+      row.entries.push(fullEntry);
+      if (!row.lastAppearance || entryDateValue(fullEntry) > Date.parse(row.lastAppearance || "")) {
+        row.lastAppearance = fullEntry.date;
+      }
+    });
+  });
+  return [...people.values()]
+    .map((row) => ({
+      ...row,
+      totalEvents: row.eventIds.size,
+      appearancesCount: row.eventIds.size,
+      validationsCount: row.validatedEventIds.size,
+      recurrenceTypes: [...row.recurrenceTypes],
+      entries: row.entries.sort((a, b) => entryDateValue(b) - entryDateValue(a))
+    }))
+    .filter((row) => row.appearancesCount > 1)
+    .sort((a, b) => b.totalEvents - a.totalEvents || b.validationsCount - a.validationsCount || b.appearancesCount - a.appearancesCount);
+}
+
+function filteredAudienceRecurrence(events = filteredEvents()) {
+  const filters = state.recurrenceFilters;
+  const min = Math.max(2, Number(filters.min || 2));
+  return getAudienceRecurrence(events).filter((row) => {
+    const entries = row.entries.filter((entry) => filters.eventId === "all" || entry.eventId === filters.eventId);
+    if (!entries.length) return false;
+    const typeMatch = filters.type === "all" || filters.type === "purchase" || (filters.type === "validated" && row.validationsCount > 0);
+    if (!typeMatch) return false;
+    if (filters.validatedOnly && !entries.some((entry) => entry.validated)) return false;
+    const scopedAppearances = new Set(entries.map((entry) => entry.eventId)).size;
+    return scopedAppearances >= min || (filters.eventId === "all" && row.appearancesCount >= min);
+  });
+}
+
+function typeBadges(types, validatedCount = 0) {
+  const items = [];
+  if (types.includes("purchase")) items.push(`<span class="pill good">Compra</span>`);
+  if (types.includes("courtesy")) items.push(`<span class="pill warn">Cortesia</span>`);
+  items.push(`<span class="pill ${validatedCount ? "good" : "muted-pill"}">${validatedCount ? "Validado" : "Nao validado"}</span>`);
+  return `<div class="badge-row">${items.join("")}</div>`;
+}
+
 function rateCell(value, total, strong = false, mode = "count-rate") {
   if (!Number(total || 0)) return "-";
   const rate = safeRate(value, total);
@@ -532,7 +889,11 @@ function renderKeepingFocus(id) {
   element.focus();
   if (typeof element.setSelectionRange === "function") {
     const end = String(element.value || "").length;
-    element.setSelectionRange(end, end);
+    try {
+      element.setSelectionRange(end, end);
+    } catch {
+      // Alguns inputs numericos nao aceitam selecao de texto programatica.
+    }
   }
 }
 
@@ -569,6 +930,8 @@ function renderSidebar() {
     ["overview", "Visao geral"],
     ["events", "Eventos"],
     ["commissioners", "Comissarios"],
+    ["mailing", "Mailing"],
+    ["audienceRecurrence", "Recorrencia"],
     ["validation", "Validacao"]
   ];
   return `
@@ -596,6 +959,8 @@ function renderTopbar() {
     overview: ["Visao geral", "Resumo consolidado de todos os eventos"],
     events: ["Eventos", "Compare resultados e abra o detalhe de cada evento"],
     commissioners: ["Comissarios/RPs", "Ranking geral com parcial por evento"],
+    mailing: ["Mailing", "Contatos finais deduplicados por evento ou consolidado"],
+    audienceRecurrence: ["Recorrencia de Compradores", "Clientes com compra paga em mais de um evento"],
     validation: ["Validacao", "Leitura consolidada de check-ins e lotes"],
     detail: [selectedEvent()?.name || "Evento", "Detalhe de vendas, lotes e validacoes"]
   };
@@ -615,6 +980,8 @@ function renderTopbar() {
 function renderView() {
   if (state.view === "events") return renderEvents();
   if (state.view === "commissioners") return renderCommissioners();
+  if (state.view === "mailing") return renderMailingPage();
+  if (state.view === "audienceRecurrence") return renderAudienceRecurrence();
   if (state.view === "validation") return renderValidation();
   if (state.view === "detail") return renderDetail();
   return renderOverview();
@@ -906,25 +1273,33 @@ function renderEvents() {
   return `
     <section class="grid">
       ${renderDashboardFilters(events)}
+      <div class="card mailing-toolbar">
+        <div class="section-title">
+          <h2>Mailing consolidado</h2>
+          <p>Participantes finais deduplicados por e-mail, telefone ou nome.</p>
+        </div>
+        <div class="mailing-actions">
+          <button class="secondary" data-action="export-mailing" data-mailing-scope="all">Exportar mailing total</button>
+        </div>
+      </div>
       <div class="grid event-list">
       ${events
         .map(
           (event) => {
             const rate = eventPresenceRate(event);
-            const split = eventSalesBreakdown(event);
+            const totalTickets = Number(event.sold || 0) + Number(event.complimentary || 0);
             return `
-            <article class="card event-card">
+            <article class="card event-card" data-event="${esc(event.id)}">
               <h3>${esc(event.name)}</h3>
-              <p class="muted">${esc(event.source || "Fonte da pasta de anexos")}</p>
+              <p class="muted">${formatDate(event.eventDateTime || event.eventDate)} · ${esc(event.source || "Fonte da pasta de anexos")}</p>
               <div class="event-stats">
+                <div><span class="muted">Ingressos</span><strong>${int(totalTickets)}</strong></div>
+                <div><span class="muted">Validados</span><strong>${int(event.validated)}</strong></div>
+                <div><span class="muted">Taxa</span><strong>${pct(rate)}</strong></div>
                 <div><span class="muted">Receita</span><strong>${money(event.revenue)}</strong></div>
-                <div><span class="muted">Vendidos</span><strong>${int(event.sold)}</strong></div>
-                <div><span class="muted">Check-ins</span><strong>${int(event.validated)}</strong></div>
-                <div><span class="muted">PNE</span><strong>${event.pne ? `${int(event.pne.converted)}/${int(event.pne.inserted)}` : "-"}</strong></div>
               </div>
               <div class="event-card-bars">
-                <div><span>Presenca</span>${shareCell(event.validated, Number(event.sold || 0) + Number(event.complimentary || 0))}</div>
-                <div><span>Receita por link</span>${shareCell(split.linkRevenue, event.revenue)}</div>
+                <div><span>Validacao</span>${shareCell(event.validated, totalTickets)}</div>
               </div>
               <button class="primary" data-event="${esc(event.id)}">Abrir evento</button>
             </article>
@@ -951,6 +1326,243 @@ function renderCommissioners() {
         ${renderRankingTable(rows)}
       </div>
     </section>
+  `;
+}
+
+function renderMailingPage() {
+  const events = filteredEvents();
+  const selectedEvent = state.mailingEventId === "all" ? null : state.events.find((event) => event.id === state.mailingEventId);
+  const scopeEvents = selectedEvent ? [selectedEvent] : events;
+  const rows = buildMailingRows(scopeEvents, selectedEvent ? selectedEvent.id : "all");
+  const buyers = rows.filter((row) => row.participationType.includes("Compra")).length;
+  const courtesy = rows.filter((row) => row.participationType.includes("Cortesia")).length;
+  const validated = rows.filter((row) => row.validationCount > 0).length;
+  const possibleDuplicates = rows.filter((row) => row.possibleDuplicate).length;
+  return `
+    <section class="grid">
+      ${renderDashboardFilters(events)}
+      <div class="card">
+        <div class="toolbar mailing-header">
+          <div class="section-title">
+            <h2>Mailing</h2>
+            <p>${selectedEvent ? esc(selectedEvent.name) : "Todos os eventos do recorte atual"} · ${int(rows.length)} contatos unicos</p>
+          </div>
+          <div class="mailing-actions">
+            <label class="filter-field compact-select">
+              <span>Evento</span>
+              <select id="mailingEvent">
+                <option value="all" ${state.mailingEventId === "all" ? "selected" : ""}>Todos os eventos</option>
+                ${state.events.map((event) => `<option value="${esc(event.id)}" ${state.mailingEventId === event.id ? "selected" : ""}>${esc(event.name)}</option>`).join("")}
+              </select>
+            </label>
+            <button class="secondary" data-action="export-mailing" data-mailing-scope="${selectedEvent ? "event" : "all"}" ${selectedEvent ? `data-event-id="${esc(selectedEvent.id)}"` : ""}>
+              ${selectedEvent ? "Exportar evento" : "Exportar total"}
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="grid cards">
+        ${metric("Contatos unicos", int(rows.length), "Deduplicados por e-mail/telefone")}
+        ${metric("Compradores", int(buyers), "Participantes com compra paga")}
+        ${metric("Convidados", int(courtesy), "Participantes com cortesia")}
+        ${metric("Com validacao", int(validated), "Pessoas com check-in")}
+        ${metric("Possiveis duplicados", int(possibleDuplicates), "Sem e-mail nem telefone")}
+      </div>
+      ${renderMailingTable(rows)}
+    </section>
+  `;
+}
+
+function recurringEventNames(row, limit = 3) {
+  const names = [];
+  row.events.forEach((event) => {
+    if ((event.sold > 0 || event.complimentary > 0 || event.complimentaryValidated > 0) && !names.includes(event.name)) {
+      names.push(event.name);
+    }
+  });
+  const visible = names.slice(0, limit).map((name) => esc(name)).join(", ");
+  const extra = names.length > limit ? ` +${names.length - limit}` : "";
+  return visible ? `${visible}${extra}` : "-";
+}
+
+function renderAudienceFilters(events) {
+  const filters = state.recurrenceFilters;
+  return `
+    <section class="card filter-panel">
+      <div class="section-title">
+        <h2>Filtros de recorrencia</h2>
+        <p>Recorte especifico para compradores pagos.</p>
+      </div>
+      <div class="filter-grid recurrence-filter-grid">
+        <label class="filter-field">
+          <span>Evento</span>
+          <select id="recurrenceEvent">
+            <option value="all" ${filters.eventId === "all" ? "selected" : ""}>Todos</option>
+            ${events.map((event) => `<option value="${esc(event.id)}" ${filters.eventId === event.id ? "selected" : ""}>${esc(event.name)}</option>`).join("")}
+          </select>
+        </label>
+        <label class="filter-field">
+          <span>Tipo de participacao</span>
+          <select id="recurrenceType">
+            <option value="all" ${filters.type === "all" ? "selected" : ""}>Compra</option>
+            <option value="purchase" ${filters.type === "purchase" ? "selected" : ""}>Compra</option>
+            <option value="validated" ${filters.type === "validated" ? "selected" : ""}>Validacao</option>
+          </select>
+        </label>
+        <label class="filter-field">
+          <span>Minimo de recorrencia</span>
+          <input id="recurrenceMin" type="number" min="2" value="${esc(filters.min)}" />
+        </label>
+      </div>
+      <div class="check-row">
+        <label><input id="recurrenceValidatedOnly" type="checkbox" ${filters.validatedOnly ? "checked" : ""} /> Somente quem validou presenca</label>
+      </div>
+    </section>
+  `;
+}
+
+function renderAudienceRecurrence() {
+  const events = filteredEvents();
+  const rows = filteredAudienceRecurrence(events);
+  const validated = rows.filter((row) => row.validationsCount > 0).length;
+  const maxEvents = rows.reduce((max, row) => Math.max(max, row.totalEvents), 0);
+  const totalTickets = rows.reduce((acc, row) => acc + row.entries.length, 0);
+  return `
+    <section class="grid">
+      ${renderDashboardFilters(events)}
+      ${renderAudienceFilters(events)}
+      <div class="grid cards">
+        ${metric("Compradores recorrentes", int(rows.length), "Compra paga em 2+ eventos/lotes")}
+        ${metric("Ingressos comprados", int(totalTickets), "Compras dos recorrentes")}
+        ${metric("Validaram presenca", int(validated), "Compradores com check-in")}
+        ${metric("Max. eventos/pessoa", int(maxEvents), "Maior recorrencia encontrada")}
+      </div>
+      <div class="card">
+        <div class="section-title"><h2>Recorrencia de Compradores</h2><p>${int(rows.length)} compradores no recorte atual.</p></div>
+        ${renderAudienceTable(rows)}
+      </div>
+    </section>
+  `;
+}
+
+function renderAudienceTable(rows) {
+  if (!rows.length) return `<p class="notice">Nenhum comprador recorrente encontrado com os filtros atuais.</p>`;
+  return `
+    <div class="table-wrap compact-table audience-table recurring-table">
+      <table>
+        <thead><tr><th>Comprador</th><th>E-mail</th><th>Eventos</th><th>Tipo</th><th>Validacoes</th><th>Ultima aparicao</th></tr></thead>
+        <tbody>
+          ${rows
+            .slice(0, 120)
+            .map((row) => {
+              const expanded = state.expandedAudienceKey === row.participantKey;
+              return `
+                <tr class="audience-row" data-audience-key="${esc(row.participantKey)}">
+                  <td data-label="Comprador"><strong>${esc(row.name)}</strong>${row.possibleDuplicate ? `<span class="pill warn">Possivel duplicidade</span>` : ""}</td>
+                  <td data-label="E-mail">${row.email ? esc(row.email) : "-"}</td>
+                  <td data-label="Eventos">${int(row.totalEvents)}</td>
+                  <td data-label="Tipo">${typeBadges(row.recurrenceTypes, row.validationsCount)}</td>
+                  <td data-label="Validacoes">${int(row.validationsCount)}</td>
+                  <td data-label="Ultima aparicao">${formatDate(row.lastAppearance)}</td>
+                </tr>
+                ${expanded ? `<tr class="audience-detail-row"><td colspan="6">${renderAudienceEntries(row.entries)}</td></tr>` : ""}
+              `;
+            })
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderAudienceEntries(entries) {
+  const grouped = new Map();
+  entries.forEach((entry) => {
+    const key = normalizeText(entry.eventName || entry.eventId);
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        eventName: entry.eventName,
+        date: entry.date,
+        validatedCount: 0,
+        ticketCount: 0,
+        batches: new Set(),
+        links: new Set()
+      });
+    }
+    const row = grouped.get(key);
+    row.ticketCount += 1;
+    if (entry.validated) row.validatedCount += 1;
+    if (entryDateValue(entry) > entryDateValue(row)) row.date = entry.date;
+    if (entry.batchName) row.batches.add(entry.batchName);
+    if (entry.linkOrCommissioner) row.links.add(displayName(entry.linkOrCommissioner));
+  });
+  return `
+    <div class="audience-entry-list">
+      ${[...grouped.values()]
+        .sort((a, b) => entryDateValue(b) - entryDateValue(a))
+        .map(
+          (entry) => `
+            <div class="audience-entry">
+              <strong>${esc(entry.eventName)}</strong>
+              <span>Compra · ${int(entry.ticketCount)} ingresso${entry.ticketCount > 1 ? "s" : ""} · ${int(entry.validatedCount)} validado${entry.validatedCount === 1 ? "" : "s"}</span>
+              <small>${esc([...entry.batches].join(", ") || "Sem lote")}${entry.links.size ? ` · ${esc([...entry.links].join(", "))}` : ""} · ${formatDate(entry.date)}</small>
+            </div>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderRecurringBuyers() {
+  const events = filteredEvents();
+  const analysis = recurringAnalysis(events);
+  const buyers = analysis.buyers;
+  const recurringRevenue = buyers.reduce((acc, row) => acc + Number(row.revenue || 0), 0);
+  const recurringSold = buyers.reduce((acc, row) => acc + Number(row.sold || 0), 0);
+  const recurringSoldValidated = buyers.reduce((acc, row) => acc + Number(row.soldValidated || 0), 0);
+  return `
+    <section class="grid">
+      ${renderDashboardFilters(events)}
+      <div class="grid cards">
+        ${metric("Compradores recorrentes", int(buyers.length), "Compra paga em 2+ eventos")}
+        ${metric("Receita recorrente", money(recurringRevenue), `${int(recurringSold)} ingressos pagos`)}
+        ${metric("Ingressos validados", int(recurringSoldValidated), `${pct(safeRate(recurringSoldValidated, recurringSold))} de presenca paga`)}
+        ${metric("Media por cliente", money(buyers.length ? recurringRevenue / buyers.length : 0), "Receita recorrente / clientes")}
+      </div>
+      <div class="card">
+        <div class="section-title"><h2>Compradores recorrentes</h2><p>Clientes com compra paga em dois ou mais eventos, ordenados por receita.</p></div>
+        ${renderRecurringBuyersTable(buyers)}
+      </div>
+    </section>
+  `;
+}
+
+function renderRecurringBuyersTable(rows) {
+  if (!rows.length) return `<p class="notice">Nenhum comprador recorrente encontrado no recorte atual.</p>`;
+  return `
+    <div class="table-wrap compact-table recurring-table">
+      <table>
+        <thead><tr><th>Comprador</th><th>Eventos</th><th>Ingressos</th><th>Validados</th><th>Receita</th><th>Eventos recentes</th></tr></thead>
+        <tbody>
+          ${rows
+            .slice(0, 60)
+            .map(
+              (row) => `
+                <tr>
+                  <td data-label="Comprador"><strong>${esc(row.name)}</strong></td>
+                  <td data-label="Eventos">${int(row.paidEventCount)}</td>
+                  <td data-label="Ingressos">${int(row.sold)}</td>
+                  <td data-label="Validados">${row.sold ? rateCell(row.soldValidated, row.sold) : "-"}</td>
+                  <td data-label="Receita">${money(row.revenue)}</td>
+                  <td data-label="Eventos recentes">${recurringEventNames(row)}</td>
+                </tr>
+              `
+            )
+            .join("")}
+        </tbody>
+      </table>
+    </div>
   `;
 }
 
@@ -999,14 +1611,19 @@ function renderDetail() {
   const total = Number(event.sold || 0) + Number(event.complimentary || 0);
   const rate = (Number(event.validated || 0) / Math.max(total, 1)) * 100;
   const split = eventSalesBreakdown(event);
+  const audienceSummary = eventAudienceSummary(event);
   return `
     <section class="grid">
       <div class="grid cards">
+        ${metric("Ingressos emitidos", int(total), `${int(event.sold)} vendas / ${int(event.complimentary)} cortesias`)}
         ${metric("Faturamento", money(event.revenue), "Receita total do evento")}
         ${metric("Venda geral", money(split.generalRevenue), `${int(split.generalSold)} ingressos sem link`)}
         ${metric("Venda por link", money(split.linkRevenue), `${pct(safeRate(split.linkRevenue, event.revenue))} do faturamento`)}
         ${metric("Cortesias", int(event.complimentary), `${int(split.complimentaryValidated)} validadas (${pct(safeRate(split.complimentaryValidated, event.complimentary))})`)}
         ${metric("Check-ins", int(event.validated), `${pct(rate)} de presenca`)}
+        ${metric("Compradores unicos", int(audienceSummary.uniqueBuyers), "Participantes finais com compra")}
+        ${metric("Convidados unicos", int(audienceSummary.uniqueCourtesy), "Participantes finais com cortesia")}
+        ${metric("Pessoas unicas", int(audienceSummary.uniquePeople), "Deduplicadas para mailing")}
         ${metric("PNE", event.pne ? `${int(event.pne.converted)}/${int(event.pne.inserted)}` : "-", "Convertidos / inseridos")}
       </div>
       <div class="card">
@@ -1135,6 +1752,64 @@ function renderBatches(event) {
   `;
 }
 
+function renderMailingTable(rows, limit = 120) {
+  return `
+    <div class="table-wrap compact-table mailing-table">
+      <table>
+        <thead><tr><th>Nome</th><th>E-mail</th><th>Telefone</th><th>Tipo</th><th>Ingressos</th><th>Validacoes</th><th>Origem/link</th></tr></thead>
+        <tbody>
+          ${rows
+            .slice(0, limit)
+            .map(
+              (row) => `
+                <tr>
+                  <td data-label="Nome"><strong>${esc(row.name)}</strong>${row.possibleDuplicate ? `<span class="pill warn">Possivel duplicidade</span>` : ""}</td>
+                  <td data-label="E-mail">${row.email ? esc(row.email) : "-"}</td>
+                  <td data-label="Telefone">${row.phone ? esc(row.phone) : "-"}</td>
+                  <td data-label="Tipo">${esc(row.participationType)}</td>
+                  <td data-label="Ingressos">${int(row.tickets)}</td>
+                  <td data-label="Validacoes">${int(row.validationCount)}</td>
+                  <td data-label="Origem/link">${esc(row.origins.slice(0, 3).join(", ") || "-")}</td>
+                </tr>
+              `
+            )
+            .join("") || `<tr><td colspan="7">Nenhum participante encontrado.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderMailing(event) {
+  const rows = buildMailingRows([event], event.id);
+  const buyers = rows.filter((row) => row.participationType.includes("Compra")).length;
+  const courtesy = rows.filter((row) => row.participationType.includes("Cortesia")).length;
+  const validated = rows.filter((row) => row.validationCount > 0).length;
+  const possibleDuplicates = rows.filter((row) => row.possibleDuplicate).length;
+  return `
+    <div class="grid mailing-panel">
+      <div class="toolbar mailing-header">
+        <div class="section-title">
+          <h3>Mailing do evento</h3>
+          <p>Participantes finais deduplicados. Cortesias consideram quem recebeu o ingresso, nao quem enviou.</p>
+        </div>
+        <div class="mailing-actions">
+          <button class="secondary" data-action="export-mailing" data-mailing-scope="event" data-event-id="${esc(event.id)}">Exportar evento</button>
+          <button class="ghost" data-action="export-mailing" data-mailing-scope="all">Exportar total</button>
+        </div>
+      </div>
+      <div class="grid cards">
+        ${metric("Contatos unicos", int(rows.length), "Deduplicados no evento")}
+        ${metric("Compradores", int(buyers), "Participantes com compra paga")}
+        ${metric("Convidados", int(courtesy), "Participantes com cortesia")}
+        ${metric("Com validacao", int(validated), "Pessoas com check-in")}
+        ${metric("Possiveis duplicados", int(possibleDuplicates), "Sem e-mail nem telefone")}
+      </div>
+      ${renderMailingTable(rows, 80)}
+    </div>
+  `;
+}
+
 function renderEventSummary(event) {
   return `
     <div class="grid two">
@@ -1172,10 +1847,22 @@ function bindActions() {
       render();
     });
   });
+  document.querySelectorAll(".audience-row").forEach((row) => {
+    row.addEventListener("click", () => {
+      state.expandedAudienceKey = state.expandedAudienceKey === row.dataset.audienceKey ? "" : row.dataset.audienceKey;
+      render();
+    });
+  });
   document.querySelectorAll("[data-action='toggle-drawer']").forEach((button) => {
     button.addEventListener("click", () => {
       state.drawerOpen = !state.drawerOpen;
       render();
+    });
+  });
+  document.querySelectorAll("[data-action='export-mailing']").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      exportMailingCsv(button.dataset.mailingScope === "event" ? button.dataset.eventId : "all");
     });
   });
   document.querySelector("[data-action='logout']")?.addEventListener("click", logout);
@@ -1193,6 +1880,30 @@ function bindActions() {
   });
   document.getElementById("dashboardSort")?.addEventListener("change", (event) => {
     state.filters.sort = event.target.value;
+    render();
+  });
+  document.getElementById("recurrenceEvent")?.addEventListener("change", (event) => {
+    state.recurrenceFilters.eventId = event.target.value;
+    state.expandedAudienceKey = "";
+    render();
+  });
+  document.getElementById("recurrenceType")?.addEventListener("change", (event) => {
+    state.recurrenceFilters.type = event.target.value;
+    state.expandedAudienceKey = "";
+    render();
+  });
+  document.getElementById("recurrenceMin")?.addEventListener("input", (event) => {
+    state.recurrenceFilters.min = event.target.value;
+    state.expandedAudienceKey = "";
+    renderKeepingFocus("recurrenceMin");
+  });
+  document.getElementById("recurrenceValidatedOnly")?.addEventListener("change", (event) => {
+    state.recurrenceFilters.validatedOnly = event.target.checked;
+    state.expandedAudienceKey = "";
+    render();
+  });
+  document.getElementById("mailingEvent")?.addEventListener("change", (event) => {
+    state.mailingEventId = event.target.value;
     render();
   });
   bindPromoterSplitResize();

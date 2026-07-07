@@ -14,6 +14,7 @@ GANDAYA_DIR = ROOT / "Gandaya"
 PNE_DIR = ROOT / "PNE"
 OUT = Path("generated-data.js")
 WATCH_EXTENSIONS = {".xlsx", ".pdf"}
+DATA_SCHEMA_VERSION = "audience-mailing-v1"
 
 
 def date_from_text(value):
@@ -58,6 +59,24 @@ def slug(value):
 def display(value):
     value = str(value or "").replace("-", " ").strip()
     return re.sub(r"\s+", " ", value).title() or "Sem nome"
+
+
+def clean_email(value):
+    return str(value or "").strip().lower()
+
+
+def clean_phone(value):
+    text = str(value or "").strip()
+    if text.endswith(".0"):
+        text = text[:-2]
+    return re.sub(r"\D+", "", text)
+
+
+def anonymous_person_key(user_id, email, name):
+    base = normalize(user_id) or normalize(email) or normalize(name)
+    if not base:
+        return ""
+    return hashlib.sha256(base.encode("utf-8")).hexdigest()[:14]
 
 
 def event_name_from_xlsx(path):
@@ -141,11 +160,107 @@ def add_promoter(promoters, name, sold=0, complimentary=0, validated=0, sold_val
     row["revenue"] += revenue
 
 
+def append_unique(values, value):
+    if value and value != "Sem Nome" and value not in values:
+        values.append(value)
+
+
+def build_transfer_map(envios):
+    transfers = {}
+    for _, row in envios.iterrows():
+        if normalize(get_cell(row, "Tipo de envio")) != "cortesia":
+            continue
+        name = get_cell(row, "Nome")
+        key = anonymous_person_key(get_cell(row, "Identificador do usuário"), get_cell(row, "E-mail"), name)
+        if not key:
+            continue
+        current = transfers.setdefault(key, {"recipients": [], "senders": [], "quantity": 0})
+        append_unique(current["recipients"], display(name))
+        append_unique(current["senders"], display(get_cell(row, "Enviado por")))
+        current["quantity"] += int(as_number(get_cell(row, "Quantidade")))
+    return transfers
+
+
+def build_contact_map(*tables):
+    contacts = {}
+    for table in tables:
+        for _, row in table.iterrows():
+            key = anonymous_person_key(get_cell(row, "Identificador do usuário"), get_cell(row, "E-mail"), get_cell(row, "Nome"))
+            if not key:
+                continue
+            current = contacts.setdefault(key, {"phone": ""})
+            phone = clean_phone(get_cell(row, "Celular"))
+            if phone and not current["phone"]:
+                current["phone"] = phone
+    return contacts
+
+
+def add_attendee(
+    attendees,
+    row,
+    event_id,
+    event_name,
+    transfer=None,
+    sold=0,
+    complimentary=0,
+    validated=0,
+    sold_validated=0,
+    complimentary_validated=0,
+    revenue=0,
+    courtesy_context="",
+    courtesy_label="",
+):
+    name = get_cell(row, "Nome")
+    key = anonymous_person_key(get_cell(row, "Identificador do usuário"), get_cell(row, "E-mail"), name)
+    if not key:
+        return
+    current = attendees.setdefault(
+        key,
+        {
+            "key": key,
+            "name": display(name),
+            "sold": 0,
+            "complimentary": 0,
+            "validated": 0,
+            "soldValidated": 0,
+            "complimentaryValidated": 0,
+            "revenue": 0,
+            "eventId": event_id,
+            "eventName": event_name,
+            "transferRecipients": [],
+            "transferSenders": [],
+            "transferQuantity": 0,
+            "courtesyContexts": [],
+            "courtesyLabels": [],
+        },
+    )
+    current["sold"] += sold
+    current["complimentary"] += complimentary
+    current["validated"] += validated
+    current["soldValidated"] += sold_validated
+    current["complimentaryValidated"] += complimentary_validated
+    current["revenue"] += revenue
+    if courtesy_context:
+        append_unique(current["courtesyContexts"], courtesy_context)
+    if courtesy_label:
+        append_unique(current["courtesyLabels"], courtesy_label)
+    if transfer and (complimentary or complimentary_validated):
+        for recipient in transfer.get("recipients", []):
+            append_unique(current["transferRecipients"], recipient)
+        for sender in transfer.get("senders", []):
+            append_unique(current["transferSenders"], sender)
+        current["transferQuantity"] = max(current["transferQuantity"], int(transfer.get("quantity") or 0))
+
+
 def parse_xlsx(path):
     name = event_name_from_xlsx(path)
+    event_id = slug(name)
     ingressos = read_sheet(path, "Ingressos")
     resumo = read_sheet(path, "Resumo de ingressos")
     compras = read_sheet(path, "Compras")
+    usuarios = read_sheet(path, "Usuários")
+    envios = read_sheet(path, "Envios")
+    contact_by_key = build_contact_map(usuarios, envios)
 
     price_by_batch = {}
     for _, row in resumo.iterrows():
@@ -154,6 +269,8 @@ def parse_xlsx(path):
 
     batches = {}
     promoters = {}
+    attendees = {}
+    audience = []
     sold = complimentary = validated = 0
     revenue = 0.0
 
@@ -176,7 +293,22 @@ def parse_xlsx(path):
             },
         )
         promoter = promoter_from(description, get_cell(row, "Link"), complimentary_ticket)
-
+        participant_key = anonymous_person_key(get_cell(row, "Identificador do usuário"), get_cell(row, "E-mail"), get_cell(row, "Nome"))
+        audience.append(
+            {
+                "name": display(get_cell(row, "Nome")),
+                "email": clean_email(get_cell(row, "E-mail")),
+                "phone": contact_by_key.get(participant_key, {}).get("phone", ""),
+                "participantKey": participant_key,
+                "ticketId": str(get_cell(row, "Identificador do ingresso") or "").strip(),
+                "batchName": display(batch_key),
+                "batchKey": batch_key,
+                "type": "courtesy" if complimentary_ticket else "purchase",
+                "validated": bool(validated_ticket),
+                "date": str(get_cell(row, "Data de compra") or ""),
+                "linkOrCommissioner": promoter,
+            }
+        )
         if complimentary_ticket:
             complimentary += 1
             batch["complimentary"] += 1
@@ -187,6 +319,7 @@ def parse_xlsx(path):
             batch["sold"] += 1
             batch["revenue"] += price
             add_promoter(promoters, promoter, sold=1, revenue=price)
+            add_attendee(attendees, row, event_id, name, sold=1, revenue=price)
 
         if validated_ticket:
             validated += 1
@@ -197,6 +330,7 @@ def parse_xlsx(path):
             else:
                 batch["soldValidated"] += 1
                 add_promoter(promoters, promoter, validated=1, sold_validated=1)
+                add_attendee(attendees, row, event_id, name, validated=1, sold_validated=1)
 
     for _, row in compras.iterrows():
         promoter = normalize(str(get_cell(row, "Link")).replace("-", ""))
@@ -209,7 +343,7 @@ def parse_xlsx(path):
         current["revenue"] = max(current["revenue"], total)
 
     return {
-        "id": slug(name),
+        "id": event_id,
         "name": name,
         "source": path.name,
         "eventDate": date_from_text(path.name),
@@ -220,6 +354,8 @@ def parse_xlsx(path):
         "revenue": round(revenue, 2),
         "batches": sorted(batches.values(), key=lambda x: (-x["revenue"], -x["sold"], -x["validated"])),
         "promoters": promoters,
+        "attendees": sorted(attendees.values(), key=lambda x: (-x["revenue"], -x["sold"], -x["complimentaryValidated"], x["name"])),
+        "audience": audience,
         "pne": None,
     }
 
@@ -271,7 +407,7 @@ def best_event_match(events, pne):
 
 
 def source_signature():
-    items = []
+    items = [{"path": "__schema__", "size": 0, "modified": DATA_SCHEMA_VERSION}]
     for folder in (GANDAYA_DIR, PNE_DIR):
         for path in sorted(folder.glob("*")):
             if path.name.startswith("~$") or path.suffix.lower() not in WATCH_EXTENSIONS:
