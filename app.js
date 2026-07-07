@@ -1457,7 +1457,7 @@ function renderAudienceTable(rows) {
             .map((row) => {
               const expanded = state.expandedAudienceKey === row.participantKey;
               return `
-                <tr class="audience-row" data-audience-key="${esc(row.participantKey)}">
+                <tr class="audience-row ${expanded ? "is-expanded" : ""}" data-audience-key="${esc(row.participantKey)}">
                   <td data-label="Comprador"><strong>${esc(row.name)}</strong>${row.possibleDuplicate ? `<span class="pill warn">Possivel duplicidade</span>` : ""}</td>
                   <td data-label="E-mail">${row.email ? esc(row.email) : "-"}</td>
                   <td data-label="Eventos">${int(row.totalEvents)}</td>
@@ -1465,7 +1465,7 @@ function renderAudienceTable(rows) {
                   <td data-label="Validacoes">${int(row.validationsCount)}</td>
                   <td data-label="Ultima aparicao">${formatDate(row.lastAppearance)}</td>
                 </tr>
-                ${expanded ? `<tr class="audience-detail-row"><td colspan="6">${renderAudienceEntries(row.entries)}</td></tr>` : ""}
+                <tr class="audience-detail-row" data-audience-detail="${esc(row.participantKey)}" ${expanded ? "" : "hidden"}><td colspan="6">${renderAudienceEntries(row.entries)}</td></tr>
               `;
             })
             .join("")}
@@ -1828,6 +1828,18 @@ function renderEventSummary(event) {
   `;
 }
 
+function toggleAudienceRow(row) {
+  const key = row.dataset.audienceKey;
+  const nextKey = state.expandedAudienceKey === key ? "" : key;
+  state.expandedAudienceKey = nextKey;
+  document.querySelectorAll(".audience-row").forEach((item) => {
+    item.classList.toggle("is-expanded", item.dataset.audienceKey === nextKey);
+  });
+  document.querySelectorAll(".audience-detail-row").forEach((detail) => {
+    detail.hidden = detail.dataset.audienceDetail !== nextKey;
+  });
+}
+
 function bindActions() {
   document.querySelectorAll("[data-view]").forEach((button) => {
     button.addEventListener("click", () => setView(button.dataset.view));
@@ -1849,8 +1861,7 @@ function bindActions() {
   });
   document.querySelectorAll(".audience-row").forEach((row) => {
     row.addEventListener("click", () => {
-      state.expandedAudienceKey = state.expandedAudienceKey === row.dataset.audienceKey ? "" : row.dataset.audienceKey;
-      render();
+      toggleAudienceRow(row);
     });
   });
   document.querySelectorAll("[data-action='toggle-drawer']").forEach((button) => {
