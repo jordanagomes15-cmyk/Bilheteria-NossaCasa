@@ -1173,12 +1173,6 @@ function app() {
 }
 
 function render() {
-  if (!isLoggedIn()) {
-    app().innerHTML = renderLogin();
-    bindLogin();
-    return;
-  }
-
   app().innerHTML = `
     <div class="drawer-backdrop ${state.drawerOpen ? "show" : ""}" data-action="toggle-drawer"></div>
     <div class="app-shell">
@@ -1290,7 +1284,6 @@ function renderSidebar() {
         <strong>${state.events.length} eventos</strong><br />
         Gandaya + PNE sincronizados.
       </div>
-      <button class="ghost" data-action="logout">Sair</button>
     </aside>
   `;
 }
