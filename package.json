@@ -3,9 +3,10 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "build": "mkdir -p dist/assets && cp index.html styles.css app.js generated-data.js dist/ && cp assets/nossa-casa-logo.jpeg dist/assets/",
+    "build": "mkdir -p dist/assets dist/vendor && cp index.html styles.css app.js generated-data.js dist/ && cp assets/nossa-casa-logo.jpeg dist/assets/ && cp vendor/xlsx.full.min.js dist/vendor/",
     "generate:data": "/Users/jordanagomes/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 scripts/generate-data.py",
     "watch:data": "python3 scripts/watch-data.py",
+    "watch:netlify": "python3 scripts/watch-netlify.py",
     "watch:publish": "python3 scripts/watch-publish.py",
     "dev": "python3 -m http.server 4175",
     "preview": "python3 -m http.server 4175 -d dist"
