@@ -1797,6 +1797,42 @@ function renderAudienceSegmentTable(rows, total) {
   `;
 }
 
+function renderProfileBarChart(title, subtitle, rows, total, options = {}) {
+  const limit = options.limit || 6;
+  const visibleRows = rows.filter((row) => Number(row.peopleCount || 0) > 0).slice(0, limit);
+  const chartTotal = total || visibleRows.reduce((sum, row) => sum + Number(row.peopleCount || 0), 0);
+  if (!visibleRows.length) {
+    return `
+      <div class="card profile-chart">
+        <div class="section-title"><h3>${esc(title)}</h3><p>${esc(subtitle)}</p></div>
+        <p class="notice">Sem dados para este recorte.</p>
+      </div>
+    `;
+  }
+  return `
+    <div class="card profile-chart">
+      <div class="section-title"><h3>${esc(title)}</h3><p>${esc(subtitle)}</p></div>
+      <div class="chart-bars">
+        ${visibleRows
+          .map((row) => {
+            const rate = safeRate(row.peopleCount, chartTotal);
+            return `
+              <div class="chart-row">
+                <div class="chart-label">
+                  <strong>${esc(row.label)}</strong>
+                  <span>${int(row.peopleCount)} pessoas · ${int(row.tickets)} ingressos</span>
+                </div>
+                <div class="chart-track" aria-hidden="true"><i style="width:${clampPercent(rate)}%"></i></div>
+                <b>${pct(rate)}</b>
+              </div>
+            `;
+          })
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
 function renderAudienceProfile() {
   const events = filteredEvents();
   const selectedEvent = state.profileEventId === "all" ? null : state.events.find((event) => event.id === state.profileEventId);
@@ -1868,6 +1904,11 @@ function renderAudienceProfile() {
         ${metric("Convidados", int(summary.courtesy), "Pessoas com cortesia")}
         ${metric("Idade media", avgAge, `${int(summary.knownAges)} perfis com idade`)}
         ${metric("Genero principal", summary.dominantGender, `${int(summary.knownGender)} perfis com genero`)}
+      </div>
+      <div class="grid profile-chart-grid">
+        ${renderProfileBarChart("Genero", "Participacao por pessoas unicas.", profile.genderRows, summary.uniquePeople, { limit: 4 })}
+        ${renderProfileBarChart("Faixa etaria", "Distribuicao por idade declarada.", profile.ageRows, summary.uniquePeople)}
+        ${renderProfileBarChart("Tipo de ingresso", "Compras, cortesias e validacoes.", profile.typeRows, summary.uniquePeople, { limit: 4 })}
       </div>
       <div class="card">
         <div class="toolbar">

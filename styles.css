@@ -777,6 +777,77 @@ h3 {
   align-items: start;
 }
 
+.profile-chart-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.profile-chart {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  min-height: 100%;
+}
+
+.chart-bars {
+  display: grid;
+  gap: 12px;
+}
+
+.chart-row {
+  display: grid;
+  grid-template-columns: minmax(128px, 1fr) minmax(112px, 0.9fr) 48px;
+  align-items: center;
+  gap: 12px;
+}
+
+.chart-label {
+  min-width: 0;
+}
+
+.chart-label strong {
+  display: block;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chart-label span {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chart-track {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-3);
+}
+
+.chart-track i {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--gold), var(--brand-3));
+}
+
+.chart-row b {
+  color: var(--ink);
+  font-size: 13px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .profile-table table {
   min-width: 760px;
 }
@@ -1742,7 +1813,8 @@ tr:last-child td {
   }
 
   .event-highlight-grid,
-  .insight-grid {
+  .insight-grid,
+  .profile-chart-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -1877,6 +1949,33 @@ tr:last-child td {
 
   .card {
     padding: 14px;
+  }
+
+  .profile-chart {
+    gap: 12px;
+  }
+
+  .chart-bars {
+    gap: 10px;
+  }
+
+  .chart-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 10px;
+  }
+
+  .chart-track {
+    grid-column: 1 / -1;
+    height: 7px;
+  }
+
+  .chart-label strong,
+  .chart-row b {
+    font-size: 12px;
+  }
+
+  .chart-label span {
+    font-size: 10px;
   }
 
   .main {
