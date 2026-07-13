@@ -2029,7 +2029,7 @@ function renderBatches(event) {
         </label>
       </div>
       <div class="detail-metrics batch-filter-summary">
-        <span><b>${money(filteredTotals.revenue)}</b><small>Receita filtrada</small></span>
+        <span><b>${money(filteredTotals.revenue)}</b><small>Receita total</small></span>
         <span><b>${int(filteredTotals.sold)}</b><small>Vendidos</small></span>
         <span><b>${int(filteredTotals.complimentary)}</b><small>Cortesias</small></span>
         <span><b>${int(filteredTotals.validated)}</b><small>Validados</small></span>
