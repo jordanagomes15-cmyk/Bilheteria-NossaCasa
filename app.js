@@ -161,7 +161,7 @@ const state = {
   events: loadEvents(),
   selectedEventId: null,
   expandedPromoter: "",
-  expandedSalesCode: "",
+  salesCodeDrawerKey: "",
   expandedBatchGroup: "",
   batchDrawerGroupKey: "",
   drawerOpen: false,
@@ -1210,6 +1210,8 @@ function setLoginError(message) {
 
 function setView(view) {
   state.view = view;
+  state.salesCodeDrawerKey = "";
+  state.batchDrawerGroupKey = "";
   state.drawerOpen = false;
   render();
 }
@@ -1218,6 +1220,7 @@ function openEvent(id) {
   state.selectedEventId = id;
   state.view = "detail";
   state.expandedBatchGroup = "";
+  state.salesCodeDrawerKey = "";
   state.batchDrawerGroupKey = "";
   state.drawerOpen = false;
   render();
@@ -1237,6 +1240,7 @@ function render() {
         ${renderView()}
       </main>
     </div>
+    ${renderSalesCodeDrawer()}
     ${renderBatchLotDrawer()}
   `;
   bindActions();
@@ -1610,7 +1614,6 @@ function renderSalesLinkTable(rows, totalRevenue, options = {}) {
   if (!rows.length) return `<p class="notice">Nenhum link com venda registrada no recorte atual.</p>`;
   const compact = Boolean(options.compact);
   const showConversion = compact && state.codeRankingSort === "conversion";
-  const colspan = compact ? 4 : 5;
   const salesHeaders = compact
     ? `<th>Link/comissario</th><th>Receita</th><th>Vendidos</th><th>${showConversion ? "% conversao" : "% faturamento"}</th>`
     : "<th>Link/comissario</th><th>Receita</th><th>% faturamento</th><th>Vendidos</th><th>Val. vendas</th>";
@@ -1637,19 +1640,16 @@ function renderSalesLinkTable(rows, totalRevenue, options = {}) {
           ${rows
             .map((row) => {
               const key = salesCodeKey(row.name);
-              const expanded = state.expandedSalesCode === key;
+              const expanded = state.salesCodeDrawerKey === key;
               return `
               <tr class="sales-code-row ${expanded ? "is-expanded" : ""}" data-sales-code="${esc(key)}" title="Clique para ver detalhes">
-                <td data-label="Link/comissario"><strong>${esc(row.name)}</strong><span class="row-hint">${expanded ? "Ocultar detalhes" : "Ver detalhes"}</span></td>
+                <td data-label="Link/comissario"><strong>${esc(row.name)}</strong><span class="row-hint">${expanded ? "Detalhes abertos" : "Ver detalhes"}</span></td>
                 <td data-label="Receita"><span class="cell-value">${money(row.revenue)}</span></td>
                 ${
                   compact
                     ? `<td data-label="Vendidos"><span class="cell-value">${int(row.sold)}</span></td><td data-label="${showConversion ? "% conversao" : "% faturamento"}">${showConversion ? rateCell(row.soldValidated, row.sold, true, "rate-only") : shareCell(row.revenue, totalRevenue)}</td>`
                     : `<td data-label="% faturamento">${shareCell(row.revenue, totalRevenue)}</td><td data-label="Vendidos"><span class="cell-value">${int(row.sold)}</span></td><td data-label="Val. vendas">${row.sold ? rateCell(row.soldValidated, row.sold) : `<span class="cell-value">-</span>`}</td>`
                 }
-              </tr>
-              <tr class="sales-code-detail-row" data-sales-code-detail="${esc(key)}" ${expanded ? "" : "hidden"}>
-                <td colspan="${colspan}">${renderSalesCodeDetail(row, totalRevenue)}</td>
               </tr>
             `;
             })
@@ -1689,6 +1689,41 @@ function renderSalesCodeDetail(row, totalRevenue) {
         </table>
       </div>
     </div>
+  `;
+}
+
+function salesCodeDrawerContext() {
+  if (!state.salesCodeDrawerKey) return null;
+  if (!["overview", "detail"].includes(state.view)) return null;
+  const currentEvent = selectedEvent();
+  const isDetail = state.view === "detail" && currentEvent;
+  const scopeEvents = isDetail ? [currentEvent] : filteredEvents();
+  const rows = isDetail ? eventPromoters(currentEvent) : promoterRanking(scopeEvents);
+  const row = rows.find((item) => salesCodeKey(item.name) === state.salesCodeDrawerKey);
+  if (!row) return null;
+  const totalRevenue = isDetail
+    ? Number(currentEvent.revenue || 0)
+    : scopeEvents.reduce((sum, event) => sum + Number(event.revenue || 0), 0);
+  return { row, totalRevenue, scopeTitle: isDetail ? currentEvent.name : "Visao geral" };
+}
+
+function renderSalesCodeDrawer() {
+  const context = salesCodeDrawerContext();
+  if (!context) return "";
+  const { row, totalRevenue, scopeTitle } = context;
+  return `
+    <div class="batch-drawer-backdrop" data-action="close-sales-code-drawer"></div>
+    <aside class="batch-drawer" role="dialog" aria-modal="true" aria-label="Detalhes do link">
+      <div class="batch-drawer-head">
+        <div>
+          <span class="eyebrow">${esc(scopeTitle || "Recorte atual")}</span>
+          <h3>${esc(row.name)}</h3>
+          <p>${int(row.sold)} vendidos · ${int(row.soldValidated)} validados · ${money(row.revenue)} · ${pct(safeRate(row.revenue, totalRevenue))}</p>
+        </div>
+        <button class="ghost icon-button" data-action="close-sales-code-drawer" aria-label="Fechar detalhes">×</button>
+      </div>
+      ${renderSalesCodeDetail(row, totalRevenue)}
+    </aside>
   `;
 }
 
@@ -2712,13 +2747,21 @@ function bindActions() {
   document.querySelectorAll("[data-sales-code]").forEach((row) => {
     row.addEventListener("click", () => {
       const key = row.dataset.salesCode;
-      state.expandedSalesCode = state.expandedSalesCode === key ? "" : key;
+      state.salesCodeDrawerKey = key;
+      state.batchDrawerGroupKey = "";
       renderPreservingElement(dataSelector("data-sales-code", key));
+    });
+  });
+  document.querySelectorAll("[data-action='close-sales-code-drawer']").forEach((element) => {
+    element.addEventListener("click", () => {
+      state.salesCodeDrawerKey = "";
+      renderPreservingScroll();
     });
   });
   document.querySelectorAll("[data-batch-group]").forEach((row) => {
     row.addEventListener("click", () => {
       const key = row.dataset.batchGroup;
+      state.salesCodeDrawerKey = "";
       state.batchDrawerGroupKey = key;
       renderPreservingElement(dataSelector("data-batch-group", key));
     });
