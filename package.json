@@ -7,6 +7,7 @@
     "generate:data": "/Users/jordanagomes/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 scripts/generate-data.py",
     "watch:data": "python3 scripts/watch-data.py",
     "watch:netlify": "python3 scripts/watch-netlify.py",
+    "watch:vercel": "python3 scripts/watch-vercel.py",
     "watch:publish": "python3 scripts/watch-publish.py",
     "dev": "python3 -m http.server 4175",
     "preview": "python3 -m http.server 4175 -d dist"
