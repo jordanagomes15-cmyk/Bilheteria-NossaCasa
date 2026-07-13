@@ -2484,14 +2484,19 @@ function renderBatches(event) {
 	  `;
 }
 
-function renderBatchGroupDetail(event, group) {
+function renderBatchGroupDetail(event, group, options = {}) {
+  const showHeader = options.showHeader !== false;
   return `
     <div class="batch-group-detail">
       <div class="batch-detail-block">
-        <div class="batch-detail-head">
-          <h4>${esc(group.label)}</h4>
-          <p>${int(group.batches.length)} lotes com nomenclatura do Excel.</p>
-        </div>
+        ${
+          showHeader
+            ? `<div class="batch-detail-head">
+                <h4>${esc(group.label)}</h4>
+                <p>${int(group.batches.length)} lotes com nomenclatura do Excel.</p>
+              </div>`
+            : ""
+        }
         <div class="table-wrap nested-detail-table batch-lot-table">
           <table>
             <thead><tr><th>Lote</th><th>Vendas</th><th>Cortesias</th><th>Total val.</th><th>Presenca</th><th>Receita</th></tr></thead>
@@ -2536,7 +2541,7 @@ function renderBatchLotDrawer() {
         </div>
         <button class="ghost icon-button" data-action="close-batch-drawer" aria-label="Fechar detalhes">×</button>
       </div>
-      ${renderBatchGroupDetail(event, group)}
+      ${renderBatchGroupDetail(event, group, { showHeader: false })}
     </aside>
   `;
 }
