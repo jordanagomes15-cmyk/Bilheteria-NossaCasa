@@ -2754,18 +2754,76 @@ tr:last-child td {
     width: 100%;
   }
 
-  .mailing-table,
+  .responsive-table {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .responsive-table table,
+  .responsive-table thead,
+  .responsive-table tbody,
+  .responsive-table tr,
+  .responsive-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .responsive-table table {
+    min-width: 0;
+  }
+
+  .responsive-table thead {
+    display: none;
+  }
+
+  .responsive-table tr {
+    display: grid;
+    gap: 4px;
+    margin-bottom: 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: #fffdf8;
+  }
+
+  .responsive-table td {
+    min-height: 20px;
+    padding: 1px 0;
+    border-bottom: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 12px;
+    text-align: right;
+  }
+
+  .responsive-table td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.1;
+    font-weight: 820;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  .responsive-table td:first-child {
+    display: block;
+    padding-bottom: 5px;
+    text-align: left;
+  }
+
+  .responsive-table td:first-child::before {
+    display: none;
+  }
+
   .profile-table {
     overflow: visible;
     border: 0;
     background: transparent;
   }
 
-  .mailing-table table,
-  .mailing-table thead,
-  .mailing-table tbody,
-  .mailing-table tr,
-  .mailing-table td,
   .profile-table table,
   .profile-table thead,
   .profile-table tbody,
@@ -2775,17 +2833,14 @@ tr:last-child td {
     width: 100%;
   }
 
-  .mailing-table table,
   .profile-table table {
     min-width: 0;
   }
 
-  .mailing-table thead,
   .profile-table thead {
     display: none;
   }
 
-  .mailing-table tr,
   .profile-table tr {
     display: grid;
     gap: 4px;
@@ -2796,7 +2851,6 @@ tr:last-child td {
     background: #fffdf8;
   }
 
-  .mailing-table td,
   .profile-table td {
     min-height: 20px;
     padding: 1px 0;
@@ -2808,7 +2862,6 @@ tr:last-child td {
     text-align: right;
   }
 
-  .mailing-table td::before,
   .profile-table td::before {
     content: attr(data-label);
     color: var(--muted);
@@ -2818,14 +2871,12 @@ tr:last-child td {
     text-transform: uppercase;
   }
 
-  .mailing-table td:first-child,
   .profile-table td:first-child {
     display: block;
     padding-bottom: 5px;
     text-align: left;
   }
 
-  .mailing-table td:first-child::before,
   .profile-table td:first-child::before {
     display: none;
   }
