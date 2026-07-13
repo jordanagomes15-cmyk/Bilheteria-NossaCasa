@@ -199,6 +199,14 @@ h3 {
   max-width: 320px;
 }
 
+.login-error {
+  min-height: 20px;
+  margin: -4px 0 0;
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 760;
+}
+
 .primary,
 .secondary,
 .ghost,
@@ -458,6 +466,25 @@ h3 {
   font-size: 12px;
   font-weight: 820;
   white-space: nowrap;
+}
+
+.source-status.ok {
+  border-color: rgba(13, 94, 80, 0.16);
+  color: var(--good);
+  background: #dff1ed;
+}
+
+.source-status.syncing {
+  border-color: rgba(214, 155, 53, 0.24);
+  color: var(--warn);
+  background: #f8e6bf;
+}
+
+.source-status.error {
+  border-color: rgba(140, 47, 34, 0.26);
+  color: var(--danger);
+  background: #f7ddd7;
+  white-space: normal;
 }
 
 .filter-panel {

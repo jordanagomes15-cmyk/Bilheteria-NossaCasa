@@ -1,6 +1,8 @@
 const SESSION_KEY = "nossa-casa-session-v1";
 const PROMOTER_SPLIT_KEY = "nossa-casa-promoter-split-v1";
 const SIDEBAR_COLLAPSED_KEY = "nossa-casa-sidebar-collapsed-v1";
+const LOGIN_EMAIL_KEY = "nossa-casa-login-email-v1";
+const LOGIN_PASSWORD_HASH_KEY = "nossa-casa-login-password-sha256-v1";
 const embeddedData = globalThis.NOSSA_CASA_DATA || null;
 
 const fallbackEvents = [
@@ -164,6 +166,7 @@ const state = {
   batchDrawerGroupKey: "",
   drawerOpen: false,
   sidebarCollapsed: loadSidebarCollapsed(),
+  syncStatus: "ok",
   detailTab: "batches",
   promoterSplit: loadPromoterSplit(),
   query: "",
@@ -249,14 +252,32 @@ function applyGeneratedData(data) {
   render();
 }
 
+function setSyncStatus(status, options = {}) {
+  const shouldRender = options.render !== false;
+  if (state.syncStatus === status) return;
+  state.syncStatus = status;
+  if (shouldRender) render();
+}
+
 async function refreshGeneratedData() {
   if (location.protocol === "file:") return;
+  const previousStatus = state.syncStatus;
+  state.syncStatus = "syncing";
   try {
     const response = await fetch(`generated-data.js?sync=${Date.now()}`, { cache: "no-store" });
-    if (!response.ok) return;
+    if (!response.ok) throw new Error(`Falha ao buscar generated-data.js: ${response.status}`);
     applyGeneratedData(parseGeneratedDataScript(await response.text()));
+    if (previousStatus === "ok") {
+      state.syncStatus = "ok";
+    } else {
+      setSyncStatus("ok");
+    }
   } catch {
-    // A preview may be temporarily unavailable while the local files are being rebuilt.
+    if (previousStatus === "error") {
+      state.syncStatus = "error";
+    } else {
+      setSyncStatus("error");
+    }
   }
 }
 
@@ -1165,6 +1186,28 @@ function logout() {
   render();
 }
 
+async function sha256Hex(value) {
+  if (!globalThis.crypto?.subtle) return "";
+  const bytes = new TextEncoder().encode(String(value || ""));
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function clientLoginConfig() {
+  try {
+    const email = localStorage.getItem(LOGIN_EMAIL_KEY);
+    const passwordHash = localStorage.getItem(LOGIN_PASSWORD_HASH_KEY);
+    return email && passwordHash ? { email, passwordHash } : null;
+  } catch {
+    return null;
+  }
+}
+
+function setLoginError(message) {
+  const error = document.getElementById("loginError");
+  if (error) error.textContent = message;
+}
+
 function setView(view) {
   state.view = view;
   state.drawerOpen = false;
@@ -1255,10 +1298,11 @@ function renderLogin() {
         </div>
         <form class="login-form" id="loginForm">
           <h2>Acesso</h2>
-          <label class="field">E-mail<input type="email" value="jordanagomes15@gmail.com" /></label>
-          <label class="field">Senha<input type="password" value="admjo123" /></label>
+          <label class="field">E-mail<input id="loginEmail" name="email" type="email" autocomplete="username" required /></label>
+          <label class="field">Senha<input id="loginPassword" name="password" type="password" autocomplete="current-password" required /></label>
+          <p class="login-error" id="loginError" aria-live="polite"></p>
           <button class="primary" type="submit">Entrar</button>
-          <p class="muted">Os dados sao lidos automaticamente das pastas Gandaya e PNE.</p>
+          <p class="muted">Login client-side basico. Nao substitui autenticacao real com backend.</p>
         </form>
       </div>
     </section>
@@ -1266,9 +1310,23 @@ function renderLogin() {
 }
 
 function bindLogin() {
-  document.getElementById("loginForm").addEventListener("submit", (event) => {
+  document.getElementById("loginForm").addEventListener("submit", async (event) => {
     event.preventDefault();
-    login();
+    setLoginError("");
+    // Autenticacao client-side e apenas uma barreira cosmetica. Use backend/auth real para proteger dados sensiveis.
+    const config = clientLoginConfig();
+    if (!config) {
+      setLoginError("Acesso nao configurado neste navegador.");
+      return;
+    }
+    const email = document.getElementById("loginEmail")?.value?.trim() || "";
+    const password = document.getElementById("loginPassword")?.value || "";
+    const passwordHash = await sha256Hex(password);
+    if (email === config.email && passwordHash && passwordHash === config.passwordHash) {
+      login();
+      return;
+    }
+    setLoginError("E-mail ou senha invalidos.");
   });
 }
 
@@ -1282,6 +1340,15 @@ function renderSidebar() {
     ["audienceRecurrence", "Recorrencia"],
     ["validation", "Validacao"]
   ];
+  const navIcons = {
+    overview: "Vg",
+    events: "Ev",
+    commissioners: "Co",
+    audienceProfile: "Pf",
+    mailing: "Ml",
+    audienceRecurrence: "Rc",
+    validation: "Val"
+  };
   return `
     <aside class="sidebar ${state.drawerOpen ? "open" : ""} ${state.sidebarCollapsed ? "collapsed" : ""}">
       <div class="brand-row">
@@ -1291,7 +1358,7 @@ function renderSidebar() {
       </div>
       <nav class="nav">
         ${items
-          .map(([id, label]) => `<button class="${state.view === id ? "active" : ""}" data-view="${id}" title="${esc(label)}"><span class="nav-icon">${esc(label.slice(0, 1))}</span><span class="nav-label">${esc(label)}</span></button>`)
+          .map(([id, label]) => `<button class="${state.view === id ? "active" : ""}" data-view="${id}" title="${esc(label)}"><span class="nav-icon">${esc(navIcons[id])}</span><span class="nav-label">${esc(label)}</span></button>`)
           .join("")}
       </nav>
       <div class="sidebar-foot">
@@ -1314,6 +1381,12 @@ function renderTopbar() {
     detail: [selectedEvent()?.name || "Evento", "Detalhe de vendas, lotes e validacoes"]
   };
   const [title, subtitle] = titles[state.view] || titles.overview;
+  const syncLabels = {
+    ok: "Anexos em tempo real",
+    syncing: "Sincronizando anexos...",
+    error: "Sincronizacao com falha - dados podem estar desatualizados"
+  };
+  const syncStatus = syncLabels[state.syncStatus] ? state.syncStatus : "ok";
   return `
     <header class="topbar">
       <button class="secondary mobile-menu" data-action="toggle-drawer">Menu</button>
@@ -1321,7 +1394,7 @@ function renderTopbar() {
         <h1>${esc(title)}</h1>
         <p>${esc(subtitle)}</p>
       </div>
-      <div class="source-status">Anexos em tempo real</div>
+      <div class="source-status ${esc(syncStatus)}">${esc(syncLabels[syncStatus])}</div>
     </header>
   `;
 }
