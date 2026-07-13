@@ -166,6 +166,7 @@ const state = {
   query: "",
   expandedAudienceKey: "",
   mailingEventId: "all",
+  profileEventId: "all",
   codeRankingSort: "revenue",
   promoterLinkSearch: "",
   batchFilters: {
@@ -612,6 +613,157 @@ function buildMailingRows(events = filteredEvents(), eventId = "all") {
       origins: [...row.origins]
     }))
     .sort((a, b) => b.eventCount - a.eventCount || b.validationCount - a.validationCount || a.name.localeCompare(b.name, "pt-BR"));
+}
+
+function cleanAudienceGender(value) {
+  const normalized = normalizeText(value);
+  if (!normalized) return "Nao informado";
+  if (normalized.startsWith("masc") || normalized === "m") return "Masculino";
+  if (normalized.startsWith("fem") || normalized === "f") return "Feminino";
+  if (normalized.includes("nao") || normalized.includes("prefiro")) return "Nao informado";
+  return displayName(value);
+}
+
+function audienceAgeBand(age) {
+  const value = Number(age || 0);
+  if (!value || value < 1) return "Nao informado";
+  if (value <= 17) return "Ate 17";
+  if (value <= 24) return "18 a 24";
+  if (value <= 34) return "25 a 34";
+  if (value <= 44) return "35 a 44";
+  return "45+";
+}
+
+function audienceLabel(value, fallback = "Nao informado") {
+  const text = String(value || "").trim();
+  return text ? displayName(text) : fallback;
+}
+
+function incrementAudienceBucket(map, key, ticket = null) {
+  if (!map.has(key)) {
+    map.set(key, {
+      label: key,
+      people: new Set(),
+      tickets: 0,
+      validated: 0,
+      purchases: 0,
+      courtesy: 0
+    });
+  }
+  const row = map.get(key);
+  if (!ticket) return row;
+  row.tickets += 1;
+  if (ticket.validated) row.validated += 1;
+  if (ticket.type === "purchase") row.purchases += 1;
+  if (ticket.type === "courtesy") row.courtesy += 1;
+  if (ticket.personKey) row.people.add(ticket.personKey);
+  return row;
+}
+
+function collectAudienceProfile(events) {
+  const people = new Map();
+  const gender = new Map();
+  const ages = new Map();
+  const ticketTypes = new Map();
+  const links = new Map();
+  const batches = new Map();
+  const entries = audienceEntriesFromEvents(events);
+
+  entries.forEach((entry, index) => {
+    const personKey = personMailingKey(entry) || normalizeParticipantKey(entry) || `ticket:${entry.ticketId || index}`;
+    if (!people.has(personKey)) {
+      people.set(personKey, {
+        key: personKey,
+        name: entry.name || "Sem nome",
+        email: String(entry.email || "").trim().toLowerCase(),
+        phone: normalizePhone(entry.phone),
+        age: Number(entry.age || 0),
+        gender: cleanAudienceGender(entry.gender),
+        tickets: 0,
+        purchases: 0,
+        courtesy: 0,
+        validated: 0,
+        events: new Set()
+      });
+    }
+    const person = people.get(personKey);
+    person.name = person.name || entry.name || "Sem nome";
+    person.email = person.email || String(entry.email || "").trim().toLowerCase();
+    person.phone = person.phone || normalizePhone(entry.phone);
+    if (!person.age && Number(entry.age || 0) > 0) person.age = Number(entry.age || 0);
+    if (person.gender === "Nao informado" && cleanAudienceGender(entry.gender) !== "Nao informado") {
+      person.gender = cleanAudienceGender(entry.gender);
+    }
+    person.tickets += 1;
+    if (entry.type === "purchase") person.purchases += 1;
+    if (entry.type === "courtesy") person.courtesy += 1;
+    if (entry.validated) person.validated += 1;
+    if (entry.eventName || entry.eventId) person.events.add(entry.eventName || entry.eventId);
+
+    const ticket = { ...entry, personKey };
+    incrementAudienceBucket(gender, cleanAudienceGender(entry.gender), ticket);
+    incrementAudienceBucket(ages, audienceAgeBand(entry.age), ticket);
+    incrementAudienceBucket(ticketTypes, entry.type === "courtesy" ? "Cortesia" : "Compra", ticket);
+    incrementAudienceBucket(links, audienceLabel(entry.linkOrCommissioner, "Sem link"), ticket);
+    incrementAudienceBucket(batches, entry.rawBatchName || entry.batchName || "Sem lote", ticket);
+  });
+
+  const peopleRows = [...people.values()];
+  const knownAges = peopleRows.map((row) => Number(row.age || 0)).filter((age) => age > 0);
+  const knownGenderRows = [...gender.values()].filter((row) => row.label !== "Nao informado");
+  const dominantGender = knownGenderRows.sort((a, b) => b.people.size - a.people.size)[0]?.label || "-";
+  const avgAge = knownAges.length ? knownAges.reduce((acc, age) => acc + age, 0) / knownAges.length : 0;
+  const buyers = peopleRows.filter((row) => row.purchases > 0).length;
+  const courtesy = peopleRows.filter((row) => row.courtesy > 0).length;
+  const validatedPeople = peopleRows.filter((row) => row.validated > 0).length;
+
+  const normalizeRows = (map, totalPeople = peopleRows.length) =>
+    [...map.values()]
+      .map((row) => ({
+        ...row,
+        peopleCount: row.people.size,
+        share: safeRate(row.people.size, totalPeople)
+      }))
+      .sort((a, b) => b.peopleCount - a.peopleCount || b.tickets - a.tickets || String(a.label).localeCompare(String(b.label), "pt-BR"));
+
+  return {
+    entries,
+    peopleRows,
+    summary: {
+      uniquePeople: peopleRows.length,
+      tickets: entries.length,
+      buyers,
+      courtesy,
+      validatedPeople,
+      validatedTickets: entries.filter((entry) => entry.validated).length,
+      avgAge,
+      knownAges: knownAges.length,
+      knownGender: knownGenderRows.reduce((acc, row) => acc + row.people.size, 0),
+      dominantGender
+    },
+    genderRows: normalizeRows(gender),
+    ageRows: normalizeRows(ages),
+    typeRows: normalizeRows(ticketTypes),
+    linkRows: normalizeRows(links).slice(0, 12),
+    batchRows: normalizeRows(batches).slice(0, 12)
+  };
+}
+
+function buildAudienceProfile(events = filteredEvents()) {
+  const profile = collectAudienceProfile(events);
+  profile.eventRows = events
+    .map((event) => {
+      const eventProfile = collectAudienceProfile([event]);
+      return {
+        id: event.id,
+        name: event.name,
+        revenue: Number(event.revenue || 0),
+        ...eventProfile.summary,
+        presenceRate: safeRate(eventProfile.summary.validatedTickets, eventProfile.summary.tickets)
+      };
+    })
+    .sort((a, b) => b.uniquePeople - a.uniquePeople || b.tickets - a.tickets || b.revenue - a.revenue);
+  return profile;
 }
 
 function csvValue(value) {
@@ -1102,6 +1254,7 @@ function renderSidebar() {
     ["overview", "Visao geral"],
     ["events", "Eventos"],
     ["commissioners", "Comissarios"],
+    ["audienceProfile", "Perfil"],
     ["mailing", "Mailing"],
     ["audienceRecurrence", "Recorrencia"],
     ["validation", "Validacao"]
@@ -1131,6 +1284,7 @@ function renderTopbar() {
     overview: ["Visao geral", "Resumo consolidado de todos os eventos"],
     events: ["Eventos", "Compare resultados e abra o detalhe de cada evento"],
     commissioners: ["Comissarios/RPs", "Ranking geral com parcial por evento"],
+    audienceProfile: ["Perfil do publico", "Mapeamento demografico por evento e consolidado"],
     mailing: ["Mailing", "Contatos finais deduplicados por evento ou consolidado"],
     audienceRecurrence: ["Recorrencia de Compradores", "Clientes com compra paga em mais de um evento"],
     validation: ["Validacao", "Leitura consolidada de check-ins e lotes"],
@@ -1152,6 +1306,7 @@ function renderTopbar() {
 function renderView() {
   if (state.view === "events") return renderEvents();
   if (state.view === "commissioners") return renderCommissioners();
+  if (state.view === "audienceProfile") return renderAudienceProfile();
   if (state.view === "mailing") return renderMailingPage();
   if (state.view === "audienceRecurrence") return renderAudienceRecurrence();
   if (state.view === "validation") return renderValidation();
@@ -1554,6 +1709,135 @@ function renderCommissioners() {
         </div>
         ${renderRankingTable(rows)}
       </div>
+    </section>
+  `;
+}
+
+function renderAudienceProfileRows(rows, total, valueLabel = "Pessoas") {
+  if (!rows.length) return `<p class="notice">Nao ha dados suficientes para este recorte.</p>`;
+  return `
+    <div class="table-wrap compact-table profile-table">
+      <table>
+        <thead><tr><th>Perfil</th><th>${esc(valueLabel)}</th><th>Ingressos</th><th>Validados</th><th>Participacao</th></tr></thead>
+        <tbody>
+          ${rows
+            .map(
+              (row) => `
+                <tr>
+                  <td data-label="Perfil"><strong>${esc(row.label)}</strong></td>
+                  <td data-label="${esc(valueLabel)}"><span class="cell-value">${int(row.peopleCount)}</span></td>
+                  <td data-label="Ingressos"><span class="cell-value">${int(row.tickets)}</span></td>
+                  <td data-label="Validados"><span class="cell-value">${int(row.validated)}</span></td>
+                  <td data-label="Participacao">${shareCell(row.peopleCount, total)}</td>
+                </tr>
+              `
+            )
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderAudienceProfile() {
+  const events = filteredEvents();
+  const selectedEvent = state.profileEventId === "all" ? null : state.events.find((event) => event.id === state.profileEventId);
+  const scopeEvents = selectedEvent ? [selectedEvent] : events;
+  const profile = buildAudienceProfile(scopeEvents);
+  const summary = profile.summary;
+  const title = selectedEvent ? selectedEvent.name : "Todos os eventos do recorte atual";
+  const avgAge = summary.avgAge ? `${Math.round(summary.avgAge)} anos` : "-";
+  const validationRate = safeRate(summary.validatedTickets, summary.tickets);
+  return `
+    <section class="grid">
+      ${renderDashboardFilters(events)}
+      <div class="card">
+        <div class="toolbar mailing-header">
+          <div class="section-title">
+            <h2>Perfil do publico</h2>
+            <p>${esc(title)} · ${int(summary.uniquePeople)} pessoas unicas mapeadas</p>
+          </div>
+          <div class="mailing-actions">
+            <label class="filter-field compact-select">
+              <span>Evento</span>
+              <select id="profileEvent">
+                <option value="all" ${state.profileEventId === "all" ? "selected" : ""}>Todos os eventos</option>
+                ${state.events.map((event) => `<option value="${esc(event.id)}" ${state.profileEventId === event.id ? "selected" : ""}>${esc(event.name)}</option>`).join("")}
+              </select>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="grid cards">
+        ${metric("Publico unico", int(summary.uniquePeople), "Deduplicado por e-mail, telefone ou nome")}
+        ${metric("Ingressos", int(summary.tickets), "Compras e cortesias do recorte")}
+        ${metric("Compradores", int(summary.buyers), "Pessoas com compra paga")}
+        ${metric("Convidados", int(summary.courtesy), "Pessoas com cortesia")}
+        ${metric("Idade media", avgAge, `${int(summary.knownAges)} perfis com idade`)}
+        ${metric("Genero principal", summary.dominantGender, `${int(summary.knownGender)} perfis com genero`)}
+      </div>
+      <div class="grid two profile-grid">
+        <div class="card">
+          <div class="section-title"><h2>Genero</h2><p>Distribuicao por pessoas unicas.</p></div>
+          ${renderAudienceProfileRows(profile.genderRows, summary.uniquePeople)}
+        </div>
+        <div class="card">
+          <div class="section-title"><h2>Faixa etaria</h2><p>Distribuicao por idade declarada.</p></div>
+          ${renderAudienceProfileRows(profile.ageRows, summary.uniquePeople)}
+        </div>
+        <div class="card">
+          <div class="section-title"><h2>Tipo de ingresso</h2><p>Compra paga e cortesia sem mistura de regra.</p></div>
+          ${renderAudienceProfileRows(profile.typeRows, summary.uniquePeople)}
+        </div>
+        <div class="card">
+          <div class="section-title"><h2>Validacao</h2><p>${int(summary.validatedTickets)} de ${int(summary.tickets)} ingressos validados.</p></div>
+          <div class="insight-card compact-insight">
+            <span>Taxa de presenca</span>
+            <strong>${pct(validationRate)}</strong>
+            <div class="bar"><i style="width:${clampPercent(validationRate)}%"></i></div>
+            <small>${int(summary.validatedPeople)} pessoas tiveram ao menos uma validacao</small>
+          </div>
+        </div>
+      </div>
+      <div class="grid two profile-grid">
+        <div class="card">
+          <div class="section-title"><h2>Links e comissarios</h2><p>Principais origens do publico.</p></div>
+          ${renderAudienceProfileRows(profile.linkRows, summary.uniquePeople)}
+        </div>
+        <div class="card">
+          <div class="section-title"><h2>Lotes</h2><p>Nomenclaturas originais dos anexos.</p></div>
+          ${renderAudienceProfileRows(profile.batchRows, summary.uniquePeople)}
+        </div>
+      </div>
+      ${
+        selectedEvent
+          ? ""
+          : `<div class="card">
+              <div class="section-title"><h2>Perfil por evento</h2><p>Resumo comparativo do publico mapeado.</p></div>
+              <div class="table-wrap compact-table profile-table event-profile-table">
+                <table>
+                  <thead><tr><th>Evento</th><th>Publico</th><th>Compradores</th><th>Convidados</th><th>Idade media</th><th>Genero principal</th><th>Presenca</th></tr></thead>
+                  <tbody>
+                    ${profile.eventRows
+                      .map(
+                        (row) => `
+                          <tr>
+                            <td data-label="Evento"><button class="ghost" data-event="${esc(row.id)}">${esc(row.name)}</button></td>
+                            <td data-label="Publico"><span class="cell-value">${int(row.uniquePeople)}</span></td>
+                            <td data-label="Compradores"><span class="cell-value">${int(row.buyers)}</span></td>
+                            <td data-label="Convidados"><span class="cell-value">${int(row.courtesy)}</span></td>
+                            <td data-label="Idade media"><span class="cell-value">${row.avgAge ? `${Math.round(row.avgAge)} anos` : "-"}</span></td>
+                            <td data-label="Genero principal"><span class="cell-value">${esc(row.dominantGender)}</span></td>
+                            <td data-label="Presenca">${shareCell(row.validatedTickets, row.tickets)}</td>
+                          </tr>
+                        `
+                      )
+                      .join("")}
+                  </tbody>
+                </table>
+              </div>
+            </div>`
+      }
     </section>
   `;
 }
@@ -2303,6 +2587,10 @@ function bindActions() {
   });
   document.getElementById("mailingEvent")?.addEventListener("change", (event) => {
     state.mailingEventId = event.target.value;
+    render();
+  });
+  document.getElementById("profileEvent")?.addEventListener("change", (event) => {
+    state.profileEventId = event.target.value;
     render();
   });
   bindHorizontalDetailScroll();

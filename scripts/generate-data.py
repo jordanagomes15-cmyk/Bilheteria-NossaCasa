@@ -14,7 +14,7 @@ GANDAYA_DIR = ROOT / "Gandaya"
 PNE_DIR = ROOT / "PNE"
 OUT = Path("generated-data.js")
 WATCH_EXTENSIONS = {".xlsx", ".pdf"}
-DATA_SCHEMA_VERSION = "batch-excel-label-v2"
+DATA_SCHEMA_VERSION = "audience-profile-v1"
 
 
 def date_from_text(value):
@@ -251,10 +251,16 @@ def build_contact_map(*tables):
             key = anonymous_person_key(get_cell(row, "Identificador do usuário"), get_cell(row, "E-mail"), get_cell(row, "Nome"))
             if not key:
                 continue
-            current = contacts.setdefault(key, {"phone": ""})
+            current = contacts.setdefault(key, {"phone": "", "age": 0, "gender": ""})
             phone = clean_phone(get_cell(row, "Celular"))
             if phone and not current["phone"]:
                 current["phone"] = phone
+            age = int(as_number(get_cell(row, "Idade")) or 0)
+            if age > 0 and not current["age"]:
+                current["age"] = age
+            gender = display(get_cell(row, "Gênero"))
+            if gender != "Sem Nome" and not current["gender"]:
+                current["gender"] = gender
     return contacts
 
 
@@ -430,11 +436,14 @@ def parse_xlsx(path):
             },
         )
         promoter = promoter_from(description, get_cell(row, "Link"), complimentary_ticket)
+        contact = contact_by_key.get(participant_key, {})
         audience.append(
             {
                 "name": display(get_cell(row, "Nome")),
                 "email": clean_email(get_cell(row, "E-mail")),
-                "phone": contact_by_key.get(participant_key, {}).get("phone", ""),
+                "phone": contact.get("phone", ""),
+                "age": contact.get("age", 0),
+                "gender": contact.get("gender", ""),
                 "participantKey": participant_key,
                 "ticketId": str(get_cell(row, "Identificador do ingresso") or "").strip(),
                 "batchName": batch_label,

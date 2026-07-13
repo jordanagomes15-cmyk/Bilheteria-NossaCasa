@@ -741,6 +741,28 @@ h3 {
   min-width: 920px;
 }
 
+.profile-grid {
+  align-items: start;
+}
+
+.profile-table table {
+  min-width: 760px;
+}
+
+.profile-table td:nth-child(n + 2),
+.profile-table th:nth-child(n + 2) {
+  text-align: right;
+}
+
+.event-profile-table table {
+  min-width: 980px;
+}
+
+.compact-insight {
+  min-height: 148px;
+  justify-content: center;
+}
+
 .mailing-table td:nth-child(5),
 .mailing-table td:nth-child(6) {
   text-align: right;
@@ -2371,7 +2393,8 @@ tr:last-child td {
     width: 100%;
   }
 
-  .mailing-table {
+  .mailing-table,
+  .profile-table {
     overflow: visible;
     border: 0;
     background: transparent;
@@ -2381,20 +2404,28 @@ tr:last-child td {
   .mailing-table thead,
   .mailing-table tbody,
   .mailing-table tr,
-  .mailing-table td {
+  .mailing-table td,
+  .profile-table table,
+  .profile-table thead,
+  .profile-table tbody,
+  .profile-table tr,
+  .profile-table td {
     display: block;
     width: 100%;
   }
 
-  .mailing-table table {
+  .mailing-table table,
+  .profile-table table {
     min-width: 0;
   }
 
-  .mailing-table thead {
+  .mailing-table thead,
+  .profile-table thead {
     display: none;
   }
 
-  .mailing-table tr {
+  .mailing-table tr,
+  .profile-table tr {
     display: grid;
     gap: 4px;
     margin-bottom: 8px;
@@ -2404,7 +2435,8 @@ tr:last-child td {
     background: #fffdf8;
   }
 
-  .mailing-table td {
+  .mailing-table td,
+  .profile-table td {
     min-height: 20px;
     padding: 1px 0;
     border-bottom: 0;
@@ -2415,7 +2447,8 @@ tr:last-child td {
     text-align: right;
   }
 
-  .mailing-table td::before {
+  .mailing-table td::before,
+  .profile-table td::before {
     content: attr(data-label);
     color: var(--muted);
     font-size: 10px;
@@ -2424,13 +2457,15 @@ tr:last-child td {
     text-transform: uppercase;
   }
 
-  .mailing-table td:first-child {
+  .mailing-table td:first-child,
+  .profile-table td:first-child {
     display: block;
     padding-bottom: 5px;
     text-align: left;
   }
 
-  .mailing-table td:first-child::before {
+  .mailing-table td:first-child::before,
+  .profile-table td:first-child::before {
     display: none;
   }
 }

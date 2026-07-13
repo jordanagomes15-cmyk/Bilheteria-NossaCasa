@@ -14,7 +14,7 @@ GANDAYA_DIR = ROOT / "Gandaya"
 PNE_DIR = ROOT / "PNE"
 EXTENSIONS = {".xlsx", ".pdf"}
 GENERATED = Path("generated-data.js")
-DATA_SCHEMA_VERSION = "batch-excel-label-v2"
+DATA_SCHEMA_VERSION = "audience-profile-v1"
 PYTHON_BIN = os.environ.get(
     "NOSSA_CASA_PYTHON",
     "/Users/jordanagomes/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3",
