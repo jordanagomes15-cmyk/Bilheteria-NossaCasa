@@ -1,5 +1,6 @@
 const SESSION_KEY = "nossa-casa-session-v1";
 const PROMOTER_SPLIT_KEY = "nossa-casa-promoter-split-v1";
+const SIDEBAR_COLLAPSED_KEY = "nossa-casa-sidebar-collapsed-v1";
 const embeddedData = globalThis.NOSSA_CASA_DATA || null;
 
 const fallbackEvents = [
@@ -160,7 +161,9 @@ const state = {
   expandedPromoter: "",
   expandedSalesCode: "",
   expandedBatchGroup: "",
+  batchDrawerGroupKey: "",
   drawerOpen: false,
+  sidebarCollapsed: loadSidebarCollapsed(),
   detailTab: "batches",
   promoterSplit: loadPromoterSplit(),
   query: "",
@@ -205,6 +208,14 @@ function loadPromoterSplit() {
     return Number.isFinite(saved) ? Math.min(78, Math.max(22, saved)) : 63;
   } catch {
     return 63;
+  }
+}
+
+function loadSidebarCollapsed() {
+  try {
+    return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1";
+  } catch {
+    return false;
   }
 }
 
@@ -1164,6 +1175,7 @@ function openEvent(id) {
   state.selectedEventId = id;
   state.view = "detail";
   state.expandedBatchGroup = "";
+  state.batchDrawerGroupKey = "";
   state.drawerOpen = false;
   render();
 }
@@ -1175,13 +1187,14 @@ function app() {
 function render() {
   app().innerHTML = `
     <div class="drawer-backdrop ${state.drawerOpen ? "show" : ""}" data-action="toggle-drawer"></div>
-    <div class="app-shell">
+    <div class="app-shell ${state.sidebarCollapsed ? "sidebar-collapsed" : ""}">
       ${renderSidebar()}
       <main class="main">
         ${renderTopbar()}
         ${renderView()}
       </main>
     </div>
+    ${renderBatchLotDrawer()}
   `;
   bindActions();
 }
@@ -1270,14 +1283,15 @@ function renderSidebar() {
     ["validation", "Validacao"]
   ];
   return `
-    <aside class="sidebar ${state.drawerOpen ? "open" : ""}">
+    <aside class="sidebar ${state.drawerOpen ? "open" : ""} ${state.sidebarCollapsed ? "collapsed" : ""}">
       <div class="brand-row">
         <img class="logo-img" src="/assets/nossa-casa-logo.jpeg" alt="Nossa Casa" />
         <div><strong>Nossa Casa</strong><span>Performance de eventos</span></div>
       </div>
+      <button class="sidebar-toggle" data-action="toggle-sidebar" aria-label="${state.sidebarCollapsed ? "Expandir menu" : "Recolher menu"}">${state.sidebarCollapsed ? "›" : "‹"}</button>
       <nav class="nav">
         ${items
-          .map(([id, label]) => `<button class="${state.view === id ? "active" : ""}" data-view="${id}">${label}</button>`)
+          .map(([id, label]) => `<button class="${state.view === id ? "active" : ""}" data-view="${id}" title="${esc(label)}"><span class="nav-icon">${esc(label.slice(0, 1))}</span><span class="nav-label">${esc(label)}</span></button>`)
           .join("")}
       </nav>
       <div class="sidebar-foot">
@@ -2068,7 +2082,7 @@ function renderAudienceTable(rows) {
   return `
     <div class="table-wrap compact-table audience-table recurring-table">
       <table>
-        <thead><tr><th>Comprador</th><th>E-mail</th><th>Eventos</th><th>Tipo</th><th>Validacoes</th><th>Ultima aparicao</th></tr></thead>
+        <thead><tr><th>Comprador</th><th>E-mail</th><th>Historico</th><th>Tipo</th><th>Ultima aparicao</th></tr></thead>
         <tbody>
           ${rows
             .slice(0, 120)
@@ -2078,12 +2092,11 @@ function renderAudienceTable(rows) {
                 <tr class="audience-row ${expanded ? "is-expanded" : ""}" data-audience-key="${esc(row.participantKey)}">
                   <td data-label="Comprador"><strong>${esc(row.name)}</strong>${row.possibleDuplicate ? `<span class="pill warn">Possivel duplicidade</span>` : ""}</td>
                   <td data-label="E-mail">${row.email ? esc(row.email) : "-"}</td>
-                  <td data-label="Eventos">${int(row.totalEvents)}</td>
+                  <td data-label="Historico"><strong>${int(row.totalEvents)} eventos</strong><small>${int(row.validationsCount)} validacoes</small></td>
                   <td data-label="Tipo">${typeBadges(row.recurrenceTypes, row.validationsCount)}</td>
-                  <td data-label="Validacoes">${int(row.validationsCount)}</td>
                   <td data-label="Ultima aparicao">${formatDate(row.lastAppearance)}</td>
                 </tr>
-                <tr class="audience-detail-row" data-audience-detail="${esc(row.participantKey)}" ${expanded ? "" : "hidden"}><td colspan="6">${renderAudienceEntries(row.entries)}</td></tr>
+                <tr class="audience-detail-row" data-audience-detail="${esc(row.participantKey)}" ${expanded ? "" : "hidden"}><td colspan="5">${renderAudienceEntries(row.entries)}</td></tr>
               `;
             })
             .join("")}
@@ -2132,6 +2145,39 @@ function renderAudienceEntries(entries) {
   `;
 }
 
+function renderResponsiveTable({ className = "", columns = [], rows = [], empty = "Nenhum registro encontrado." }) {
+  return `
+    <div class="table-wrap responsive-table ${className}">
+      <table>
+        <thead><tr>${columns.map((column) => `<th>${esc(column.label)}</th>`).join("")}</tr></thead>
+        <tbody>
+          ${
+            rows.length
+              ? rows
+                  .map(
+                    (row) => `
+                      <tr>
+                        ${columns
+                          .map(
+                            (column) => `
+                              <td data-label="${esc(column.label)}" class="${column.className ? esc(column.className) : ""}">
+                                ${column.render(row)}
+                              </td>
+                            `
+                          )
+                          .join("")}
+                      </tr>
+                    `
+                  )
+                  .join("")
+              : `<tr><td colspan="${columns.length || 1}">${esc(empty)}</td></tr>`
+          }
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
 function renderRecurringBuyers() {
   const events = filteredEvents();
   const analysis = recurringAnalysis(events);
@@ -2158,30 +2204,17 @@ function renderRecurringBuyers() {
 
 function renderRecurringBuyersTable(rows) {
   if (!rows.length) return `<p class="notice">Nenhum comprador recorrente encontrado no recorte atual.</p>`;
-  return `
-    <div class="table-wrap compact-table recurring-table">
-      <table>
-        <thead><tr><th>Comprador</th><th>Eventos</th><th>Ingressos</th><th>Validados</th><th>Receita</th><th>Eventos recentes</th></tr></thead>
-        <tbody>
-          ${rows
-            .slice(0, 60)
-            .map(
-              (row) => `
-                <tr>
-                  <td data-label="Comprador"><strong>${esc(row.name)}</strong></td>
-                  <td data-label="Eventos">${int(row.paidEventCount)}</td>
-                  <td data-label="Ingressos">${int(row.sold)}</td>
-                  <td data-label="Validados">${row.sold ? rateCell(row.soldValidated, row.sold) : "-"}</td>
-                  <td data-label="Receita">${money(row.revenue)}</td>
-                  <td data-label="Eventos recentes">${recurringEventNames(row)}</td>
-                </tr>
-              `
-            )
-            .join("")}
-        </tbody>
-      </table>
-    </div>
-  `;
+  return renderResponsiveTable({
+    className: "compact-table recurring-table",
+    columns: [
+      { label: "Comprador", render: (row) => `<strong>${esc(row.name)}</strong>` },
+      { label: "Eventos", render: (row) => int(row.paidEventCount) },
+      { label: "Ingressos", render: (row) => `<strong>${int(row.sold)}</strong><small>${int(row.soldValidated)} validados</small>` },
+      { label: "Receita", render: (row) => money(row.revenue) },
+      { label: "Eventos recentes", render: (row) => recurringEventNames(row) }
+    ],
+    rows: rows.slice(0, 60)
+  });
 }
 
 function renderValidation() {
@@ -2431,21 +2464,16 @@ function renderBatches(event) {
         <tbody>
           ${groups
             .map((group) => {
-              const expanded = state.expandedBatchGroup === group.key;
+              const expanded = state.batchDrawerGroupKey === group.key;
               return `
                 <tr class="batch-group-row ${expanded ? "is-expanded" : ""}" data-batch-group="${esc(group.key)}" title="Clique para ver os lotes deste grupo">
-                  <td><strong>${esc(group.label)}</strong><span class="row-hint">${expanded ? "Ocultar lotes" : `${int(group.batches.length)} lotes`}</span></td>
+                  <td><strong>${esc(group.label)}</strong><span class="row-hint">${expanded ? "Detalhes abertos" : `${int(group.batches.length)} lotes`}</span></td>
                   <td>${int(group.sold)}</td>
                   <td>${group.sold ? rateCell(group.soldValidated, group.sold) : "-"}</td>
                   <td>${int(group.complimentary)}</td>
                   <td>${group.complimentary ? rateCell(group.complimentaryValidated, group.complimentary, true) : "-"}</td>
                   <td>${money(group.revenue)}</td>
                   <td>${Number(group.revenue || 0) ? shareCell(group.revenue, event.revenue) : "-"}</td>
-                </tr>
-                <tr class="batch-detail-row" data-batch-detail="${esc(group.key)}" ${expanded ? "" : "hidden"}>
-                  <td colspan="7">
-                    ${renderBatchGroupDetail(event, group)}
-                  </td>
                 </tr>
               `;
             })
@@ -2466,7 +2494,7 @@ function renderBatchGroupDetail(event, group) {
         </div>
         <div class="table-wrap nested-detail-table batch-lot-table">
           <table>
-            <thead><tr><th>Lote</th><th>Vendidos</th><th>Val. vendas</th><th>Cortesias</th><th>Val. cortesias</th><th>Total val.</th><th>Presenca</th><th>Receita</th><th>% Fat.</th></tr></thead>
+            <thead><tr><th>Lote</th><th>Vendas</th><th>Cortesias</th><th>Total val.</th><th>Presenca</th><th>Receita</th></tr></thead>
             <tbody>
               ${group.batches
                 .map((batch) => {
@@ -2474,14 +2502,11 @@ function renderBatchGroupDetail(event, group) {
                   return `
                     <tr class="detail-batch-row">
                       <td data-label="Lote"><strong>${esc(batch.rawLabel || batch.label || "Sem lote")}</strong></td>
-                      <td data-label="Vendidos">${int(batch.sold)}</td>
-                      <td class="rate-col" data-label="Val. vendas">${batch.sold ? rateCell(batch.soldValidated, batch.sold) : "-"}</td>
-                      <td data-label="Cortesias">${int(batch.complimentary)}</td>
-                      <td class="rate-col" data-label="Val. cortesias">${batch.complimentary ? rateCell(batch.complimentaryValidated, batch.complimentary, true) : "-"}</td>
+                      <td data-label="Vendas"><strong>${int(batch.sold)}</strong><small>${int(batch.soldValidated)} validadas</small></td>
+                      <td data-label="Cortesias"><strong>${int(batch.complimentary)}</strong><small>${int(batch.complimentaryValidated)} validadas</small></td>
                       <td data-label="Total val.">${int(batch.validated)}</td>
                       <td class="rate-col" data-label="Presenca">${tickets ? rateCell(batch.validated, tickets, true, "rate-only") : "-"}</td>
-                      <td class="money-col" data-label="Receita">${money(batch.revenue)}</td>
-                      <td class="rate-col" data-label="% Fat.">${Number(batch.revenue || 0) ? shareCell(batch.revenue, event.revenue) : "-"}</td>
+                      <td class="money-col" data-label="Receita"><strong>${money(batch.revenue)}</strong><small>${Number(batch.revenue || 0) ? pct(safeRate(batch.revenue, event.revenue)) : "-"}</small></td>
                     </tr>
                   `;
                 })
@@ -2494,32 +2519,42 @@ function renderBatchGroupDetail(event, group) {
   `;
 }
 
-function renderMailingTable(rows, limit = 120) {
+function renderBatchLotDrawer() {
+  if (state.view !== "detail" || !state.batchDrawerGroupKey) return "";
+  const event = selectedEvent();
+  const group = buildBatchGroups(event?.batches || []).find((item) => item.key === state.batchDrawerGroupKey);
+  if (!event || !group) return "";
+  const tickets = Number(group.sold || 0) + Number(group.complimentary || 0);
   return `
-    <div class="table-wrap compact-table mailing-table">
-      <table>
-        <thead><tr><th>Nome</th><th>E-mail</th><th>Telefone</th><th>Tipo</th><th>Ingressos</th><th>Validacoes</th><th>Origem/link</th></tr></thead>
-        <tbody>
-          ${rows
-            .slice(0, limit)
-            .map(
-              (row) => `
-                <tr>
-                  <td data-label="Nome"><strong>${esc(row.name)}</strong>${row.possibleDuplicate ? `<span class="pill warn">Possivel duplicidade</span>` : ""}</td>
-                  <td data-label="E-mail">${row.email ? esc(row.email) : "-"}</td>
-                  <td data-label="Telefone">${row.phone ? esc(row.phone) : "-"}</td>
-                  <td data-label="Tipo">${esc(row.participationType)}</td>
-                  <td data-label="Ingressos">${int(row.tickets)}</td>
-                  <td data-label="Validacoes">${int(row.validationCount)}</td>
-                  <td data-label="Origem/link">${esc(row.origins.slice(0, 3).join(", ") || "-")}</td>
-                </tr>
-              `
-            )
-            .join("") || `<tr><td colspan="7">Nenhum participante encontrado.</td></tr>`}
-        </tbody>
-      </table>
-    </div>
+    <div class="batch-drawer-backdrop" data-action="close-batch-drawer"></div>
+    <aside class="batch-drawer" role="dialog" aria-modal="true" aria-label="Detalhes dos lotes">
+      <div class="batch-drawer-head">
+        <div>
+          <span class="eyebrow">${esc(event.name)}</span>
+          <h3>${esc(group.label)}</h3>
+          <p>${int(group.batches.length)} lotes · ${int(tickets)} ingressos · ${money(group.revenue)}</p>
+        </div>
+        <button class="ghost icon-button" data-action="close-batch-drawer" aria-label="Fechar detalhes">×</button>
+      </div>
+      ${renderBatchGroupDetail(event, group)}
+    </aside>
   `;
+}
+
+function renderMailingTable(rows, limit = 120) {
+  return renderResponsiveTable({
+    className: "compact-table mailing-table",
+    columns: [
+      { label: "Nome", render: (row) => `<strong>${esc(row.name)}</strong>${row.possibleDuplicate ? `<span class="pill warn">Possivel duplicidade</span>` : ""}` },
+      { label: "Contato", render: (row) => `<strong>${row.email ? esc(row.email) : "-"}</strong><small>${row.phone ? esc(row.phone) : "-"}</small>` },
+      { label: "Tipo", render: (row) => esc(row.participationType) },
+      { label: "Ingressos", render: (row) => int(row.tickets) },
+      { label: "Validacoes", render: (row) => int(row.validationCount) },
+      { label: "Origem/link", render: (row) => esc(row.origins.slice(0, 3).join(", ") || "-") }
+    ],
+    rows: rows.slice(0, limit),
+    empty: "Nenhum participante encontrado."
+  });
 }
 
 function renderMailing(event) {
@@ -2606,8 +2641,14 @@ function bindActions() {
   document.querySelectorAll("[data-batch-group]").forEach((row) => {
     row.addEventListener("click", () => {
       const key = row.dataset.batchGroup;
-      state.expandedBatchGroup = state.expandedBatchGroup === key ? "" : key;
+      state.batchDrawerGroupKey = key;
       renderPreservingElement(dataSelector("data-batch-group", key));
+    });
+  });
+  document.querySelectorAll("[data-action='close-batch-drawer']").forEach((element) => {
+    element.addEventListener("click", () => {
+      state.batchDrawerGroupKey = "";
+      renderPreservingScroll();
     });
   });
   document.querySelectorAll("[data-detail-tab]").forEach((button) => {
@@ -2626,6 +2667,15 @@ function bindActions() {
       state.drawerOpen = !state.drawerOpen;
       render();
     });
+  });
+  document.querySelector("[data-action='toggle-sidebar']")?.addEventListener("click", () => {
+    state.sidebarCollapsed = !state.sidebarCollapsed;
+    try {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, state.sidebarCollapsed ? "1" : "0");
+    } catch {
+      // localStorage pode estar indisponivel em alguns contextos embarcados.
+    }
+    render();
   });
   document.querySelectorAll("[data-action='export-mailing']").forEach((button) => {
     button.addEventListener("click", (event) => {
