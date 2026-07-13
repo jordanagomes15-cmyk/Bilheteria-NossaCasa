@@ -162,8 +162,9 @@ const state = {
   selectedEventId: null,
   expandedPromoter: "",
   salesCodeDrawerKey: "",
-  expandedBatchGroup: "",
   batchDrawerGroupKey: "",
+  drawerReturnSelector: "",
+  pendingDrawerFocus: false,
   drawerOpen: false,
   sidebarCollapsed: loadSidebarCollapsed(),
   syncStatus: "ok",
@@ -1068,6 +1069,7 @@ function salesCodeBatchRows(row, eventRow) {
   const event = state.events.find((item) => item.id === eventRow.id);
   const codeKey = normalizeCodeName(row.name);
   const grouped = new Map();
+  let hasRevenueByEntry = false;
   (event?.audience || []).forEach((entry) => {
     if (entry.type !== "purchase") return;
     if (normalizeCodeName(entry.linkOrCommissioner || "") !== codeKey) return;
@@ -1077,20 +1079,37 @@ function salesCodeBatchRows(row, eventRow) {
       grouped.set(batchKey, {
         label: batchName,
         sold: 0,
-        soldValidated: 0
+        soldValidated: 0,
+        revenue: 0,
+        revenueEstimated: false
       });
     }
     const batch = grouped.get(batchKey);
     batch.sold += 1;
     if (entry.validated) batch.soldValidated += 1;
+    if (Number.isFinite(Number(entry.revenue)) && Number(entry.revenue) > 0) {
+      hasRevenueByEntry = true;
+      batch.revenue += Number(entry.revenue || 0);
+    }
   });
   const rows = [...grouped.values()].sort((a, b) => b.sold - a.sold || b.soldValidated - a.soldValidated || a.label.localeCompare(b.label));
-  if (rows.length) return rows;
+  if (rows.length) {
+    if (!hasRevenueByEntry && Number(eventRow.revenue || 0) > 0) {
+      const soldTotal = rows.reduce((sum, batch) => sum + Number(batch.sold || 0), 0);
+      rows.forEach((batch) => {
+        batch.revenue = soldTotal ? (Number(eventRow.revenue || 0) * Number(batch.sold || 0)) / soldTotal : 0;
+        batch.revenueEstimated = Number(batch.revenue || 0) > 0;
+      });
+    }
+    return rows;
+  }
   return [
     {
       label: "Total do link no evento",
       sold: Number(eventRow.sold || 0),
-      soldValidated: Number(eventRow.soldValidated || 0)
+      soldValidated: Number(eventRow.soldValidated || 0),
+      revenue: Number(eventRow.revenue || 0),
+      revenueEstimated: false
     }
   ];
 }
@@ -1212,6 +1231,8 @@ function setView(view) {
   state.view = view;
   state.salesCodeDrawerKey = "";
   state.batchDrawerGroupKey = "";
+  state.drawerReturnSelector = "";
+  state.pendingDrawerFocus = false;
   state.drawerOpen = false;
   render();
 }
@@ -1219,9 +1240,10 @@ function setView(view) {
 function openEvent(id) {
   state.selectedEventId = id;
   state.view = "detail";
-  state.expandedBatchGroup = "";
   state.salesCodeDrawerKey = "";
   state.batchDrawerGroupKey = "";
+  state.drawerReturnSelector = "";
+  state.pendingDrawerFocus = false;
   state.drawerOpen = false;
   render();
 }
@@ -1244,6 +1266,8 @@ function render() {
     ${renderBatchLotDrawer()}
   `;
   bindActions();
+  syncDrawerBodyState();
+  focusPendingDrawer();
 }
 
 function renderPreservingScroll() {
@@ -1252,6 +1276,84 @@ function renderPreservingScroll() {
   render();
   window.scrollTo(scrollX, scrollY);
   requestAnimationFrame(() => window.scrollTo(scrollX, scrollY));
+}
+
+function hasOpenDrawer() {
+  return Boolean(state.salesCodeDrawerKey || state.batchDrawerGroupKey);
+}
+
+function syncDrawerBodyState() {
+  document.body.classList.toggle("drawer-locked", hasOpenDrawer());
+}
+
+function activeDrawer() {
+  return document.querySelector(".batch-drawer");
+}
+
+function drawerFocusableElements(drawer) {
+  if (!drawer) return [];
+  return [...drawer.querySelectorAll(`
+    button,
+    [href],
+    input,
+    select,
+    textarea,
+    [tabindex]:not([tabindex="-1"])
+  `)].filter((element) => !element.disabled && element.getClientRects().length > 0);
+}
+
+function focusPendingDrawer() {
+  if (!state.pendingDrawerFocus) return;
+  state.pendingDrawerFocus = false;
+  const drawer = activeDrawer();
+  const first = drawerFocusableElements(drawer)[0];
+  first?.focus({ preventScroll: true });
+}
+
+function restoreDrawerFocus(selector) {
+  if (!selector) return;
+  requestAnimationFrame(() => {
+    document.querySelector(selector)?.focus?.({ preventScroll: true });
+  });
+}
+
+function closeActiveDrawer() {
+  if (!hasOpenDrawer()) return;
+  const returnSelector = state.drawerReturnSelector;
+  state.salesCodeDrawerKey = "";
+  state.batchDrawerGroupKey = "";
+  state.drawerReturnSelector = "";
+  state.pendingDrawerFocus = false;
+  renderPreservingScroll();
+  restoreDrawerFocus(returnSelector);
+}
+
+function handleDrawerKeydown(event) {
+  const drawer = activeDrawer();
+  if (!drawer) return;
+
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeActiveDrawer();
+    return;
+  }
+
+  if (event.key !== "Tab") return;
+  const focusable = drawerFocusableElements(drawer);
+  if (!focusable.length) {
+    event.preventDefault();
+    return;
+  }
+
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
 }
 
 function cssAttr(value) {
@@ -1661,33 +1763,50 @@ function renderSalesLinkTable(rows, totalRevenue, options = {}) {
 }
 
 function renderSalesCodeDetail(row, totalRevenue) {
+  const events = row.events
+    .slice()
+    .sort((a, b) => Number(b.revenue || 0) - Number(a.revenue || 0) || Number(b.sold || 0) - Number(a.sold || 0));
   return `
     <div class="sales-code-detail">
-      <div class="table-wrap nested-detail-table">
-        <table class="sales-detail-table">
-          <thead><tr><th>Evento</th><th>Lote</th><th>Vendidos</th><th>Validados</th><th>Conversao</th></tr></thead>
-          <tbody>
-            ${row.events
-              .slice()
-              .sort((a, b) => Number(b.revenue || 0) - Number(a.revenue || 0) || Number(b.sold || 0) - Number(a.sold || 0))
-              .map((eventRow) => {
-                const batchRows = salesCodeBatchRows(row, eventRow);
-                return batchRows
-                  .map((batch, index) => `
-                    <tr class="detail-batch-row ${index === 0 ? "has-event" : "is-continuation"}">
-                      <td class="detail-event-cell ${index === 0 ? "" : "is-empty"}" data-label="Evento">${index === 0 ? `<button class="ghost detail-event-link" data-event="${esc(eventRow.id)}"><span>${esc(eventRow.name)}</span></button>` : ""}</td>
-                      <td class="detail-lot-cell" data-label="Lote">${esc(batch.label)}</td>
-                      <td class="detail-count-cell" data-label="Vendidos">${int(batch.sold)}</td>
-                      <td class="detail-count-cell" data-label="Validados">${int(batch.soldValidated)}</td>
-                      <td class="detail-count-cell" data-label="Conversao">${pct(safeRate(batch.soldValidated, batch.sold))}</td>
-                    </tr>
-                  `)
-                  .join("");
-              })
-              .join("")}
-          </tbody>
-        </table>
-      </div>
+      ${events
+        .map((eventRow) => {
+          const batchRows = salesCodeBatchRows(row, eventRow);
+          const sold = batchRows.reduce((sum, batch) => sum + Number(batch.sold || 0), 0);
+          const soldValidated = batchRows.reduce((sum, batch) => sum + Number(batch.soldValidated || 0), 0);
+          const revenue = batchRows.reduce((sum, batch) => sum + Number(batch.revenue || 0), 0);
+          return `
+            <div class="batch-detail-block sales-code-event-block">
+              <div class="batch-detail-head">
+                <h4>
+                  <button class="ghost detail-event-link" data-event="${esc(eventRow.id)}">
+                    <span>${esc(eventRow.name)}</span>
+                  </button>
+                </h4>
+                <p>${int(batchRows.length)} ${batchRows.length === 1 ? "lote" : "lotes"} · ${int(sold)} vendidos · ${money(revenue)} · ${pct(safeRate(soldValidated, sold))} validados</p>
+              </div>
+              <div class="table-wrap nested-detail-table" tabindex="0">
+                <table class="sales-detail-table">
+                  <thead><tr><th>Lote</th><th>Quantidade</th><th>Receita</th><th>Validados</th></tr></thead>
+                  <tbody>
+                    ${batchRows
+                      .map(
+                        (batch) => `
+                          <tr class="detail-batch-row">
+                            <td class="detail-lot-cell" data-label="Lote">${esc(batch.label)}</td>
+                            <td class="detail-count-cell" data-label="Quantidade">${int(batch.sold)}</td>
+                            <td class="detail-count-cell" data-label="Receita">${money(batch.revenue)}${batch.revenueEstimated ? ` <small title="Receita estimada proporcionalmente aos vendidos do lote.">estimado</small>` : ""}</td>
+                            <td class="detail-count-cell" data-label="Validados">${int(batch.soldValidated)}</td>
+                          </tr>
+                        `
+                      )
+                      .join("")}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          `;
+        })
+        .join("")}
     </div>
   `;
 }
@@ -2286,45 +2405,6 @@ function renderResponsiveTable({ className = "", columns = [], rows = [], empty 
   `;
 }
 
-function renderRecurringBuyers() {
-  const events = filteredEvents();
-  const analysis = recurringAnalysis(events);
-  const buyers = analysis.buyers;
-  const recurringRevenue = buyers.reduce((acc, row) => acc + Number(row.revenue || 0), 0);
-  const recurringSold = buyers.reduce((acc, row) => acc + Number(row.sold || 0), 0);
-  const recurringSoldValidated = buyers.reduce((acc, row) => acc + Number(row.soldValidated || 0), 0);
-  return `
-    <section class="grid">
-      ${renderDashboardFilters(events)}
-      <div class="grid cards">
-        ${metric("Compradores recorrentes", int(buyers.length), "Compra paga em 2+ eventos")}
-        ${metric("Receita recorrente", money(recurringRevenue), `${int(recurringSold)} ingressos pagos`)}
-        ${metric("Ingressos validados", int(recurringSoldValidated), `${pct(safeRate(recurringSoldValidated, recurringSold))} de presenca paga`)}
-        ${metric("Media por cliente", money(buyers.length ? recurringRevenue / buyers.length : 0), "Receita recorrente / clientes")}
-      </div>
-      <div class="card">
-        <div class="section-title"><h2>Compradores recorrentes</h2><p>Clientes com compra paga em dois ou mais eventos, ordenados por receita.</p></div>
-        ${renderRecurringBuyersTable(buyers)}
-      </div>
-    </section>
-  `;
-}
-
-function renderRecurringBuyersTable(rows) {
-  if (!rows.length) return `<p class="notice">Nenhum comprador recorrente encontrado no recorte atual.</p>`;
-  return renderResponsiveTable({
-    className: "compact-table recurring-table",
-    columns: [
-      { label: "Comprador", render: (row) => `<strong>${esc(row.name)}</strong>` },
-      { label: "Eventos", render: (row) => int(row.paidEventCount) },
-      { label: "Ingressos", render: (row) => `<strong>${int(row.sold)}</strong><small>${int(row.soldValidated)} validados</small>` },
-      { label: "Receita", render: (row) => money(row.revenue) },
-      { label: "Eventos recentes", render: (row) => recurringEventNames(row) }
-    ],
-    rows: rows.slice(0, 60)
-  });
-}
-
 function renderValidation() {
   const events = filteredEvents();
   const rows = events.map((event) => {
@@ -2605,7 +2685,7 @@ function renderBatchGroupDetail(event, group, options = {}) {
               </div>`
             : ""
         }
-        <div class="table-wrap nested-detail-table batch-lot-table">
+        <div class="table-wrap nested-detail-table batch-lot-table" tabindex="0">
           <table>
             <thead><tr><th>Lote</th><th>Vendas</th><th>Cortesias</th><th>Total val.</th><th>Presenca</th><th>Receita</th></tr></thead>
             <tbody>
@@ -2670,36 +2750,6 @@ function renderMailingTable(rows, limit = 120) {
   });
 }
 
-function renderMailing(event) {
-  const rows = buildMailingRows([event], event.id);
-  const buyers = rows.filter((row) => row.participationType.includes("Compra")).length;
-  const courtesy = rows.filter((row) => row.participationType.includes("Cortesia")).length;
-  const validated = rows.filter((row) => row.validationCount > 0).length;
-  const possibleDuplicates = rows.filter((row) => row.possibleDuplicate).length;
-  return `
-    <div class="grid mailing-panel">
-      <div class="toolbar mailing-header">
-        <div class="section-title">
-          <h3>Mailing do evento</h3>
-          <p>Participantes finais deduplicados. Cortesias consideram quem recebeu o ingresso, nao quem enviou.</p>
-        </div>
-        <div class="mailing-actions">
-          <button class="secondary" data-action="export-mailing" data-mailing-scope="event" data-event-id="${esc(event.id)}">Exportar evento</button>
-          <button class="ghost" data-action="export-mailing" data-mailing-scope="all">Exportar total</button>
-        </div>
-      </div>
-      <div class="grid cards">
-        ${metric("Contatos unicos", int(rows.length), "Deduplicados no evento")}
-        ${metric("Compradores", int(buyers), "Participantes com compra paga")}
-        ${metric("Convidados", int(courtesy), "Participantes com cortesia")}
-        ${metric("Com validacao", int(validated), "Pessoas com check-in")}
-        ${metric("Possiveis duplicados", int(possibleDuplicates), "Sem e-mail nem telefone")}
-      </div>
-      ${renderMailingTable(rows, 80)}
-    </div>
-  `;
-}
-
 function renderEventSummary(event) {
   return `
     <div class="grid two">
@@ -2749,29 +2799,28 @@ function bindActions() {
       const key = row.dataset.salesCode;
       state.salesCodeDrawerKey = key;
       state.batchDrawerGroupKey = "";
+      state.drawerReturnSelector = dataSelector("data-sales-code", key);
+      state.pendingDrawerFocus = true;
       renderPreservingElement(dataSelector("data-sales-code", key));
     });
   });
   document.querySelectorAll("[data-action='close-sales-code-drawer']").forEach((element) => {
-    element.addEventListener("click", () => {
-      state.salesCodeDrawerKey = "";
-      renderPreservingScroll();
-    });
+    element.addEventListener("click", closeActiveDrawer);
   });
   document.querySelectorAll("[data-batch-group]").forEach((row) => {
     row.addEventListener("click", () => {
       const key = row.dataset.batchGroup;
       state.salesCodeDrawerKey = "";
       state.batchDrawerGroupKey = key;
+      state.drawerReturnSelector = dataSelector("data-batch-group", key);
+      state.pendingDrawerFocus = true;
       renderPreservingElement(dataSelector("data-batch-group", key));
     });
   });
   document.querySelectorAll("[data-action='close-batch-drawer']").forEach((element) => {
-    element.addEventListener("click", () => {
-      state.batchDrawerGroupKey = "";
-      renderPreservingScroll();
-    });
+    element.addEventListener("click", closeActiveDrawer);
   });
+  document.onkeydown = handleDrawerKeydown;
   document.querySelectorAll("[data-detail-tab]").forEach((button) => {
     button.addEventListener("click", () => {
       state.detailTab = button.dataset.detailTab;

@@ -47,6 +47,10 @@ body {
   letter-spacing: 0;
 }
 
+body.drawer-locked {
+  overflow: hidden;
+}
+
 button,
 input,
 select {
@@ -1229,22 +1233,21 @@ h3 {
 
 .sales-detail-table {
   table-layout: fixed;
-  width: max(100%, 760px);
-  min-width: 760px;
+  width: max(100%, 680px);
+  min-width: 680px;
 }
 
 .sales-detail-table th:nth-child(1) {
-  width: 34%;
+  width: 44%;
 }
 
 .sales-detail-table th:nth-child(2) {
-  width: 24%;
+  width: 16%;
 }
 
 .sales-detail-table th:nth-child(3),
-.sales-detail-table th:nth-child(4),
-.sales-detail-table th:nth-child(5) {
-  width: 14%;
+.sales-detail-table th:nth-child(4) {
+  width: 20%;
 }
 
 .overview-link-grid .sales-code-detail .nested-detail-table {
@@ -1253,9 +1256,44 @@ h3 {
 
 @media (min-width: 641px) {
   .overview-link-grid .sales-code-detail .sales-detail-table {
-    width: max(100%, 760px);
-    min-width: 760px;
+    width: max(100%, 680px);
+    min-width: 680px;
   }
+}
+
+.sales-code-event-block {
+  padding: 0 0 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.sales-code-event-block:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.sales-code-event-block .batch-detail-head {
+  align-items: center;
+}
+
+.sales-code-event-block .batch-detail-head h4 {
+  min-width: 0;
+}
+
+.sales-code-event-block .detail-event-link {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.sales-code-detail .sales-detail-table td small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
 .detail-event-link {
@@ -2552,15 +2590,11 @@ tr:last-child td {
     box-sizing: border-box;
     margin: 0 0 8px;
     padding: 10px;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 7px 10px;
     border: 1px solid var(--line);
     border-radius: 10px;
     background: #fffdf8;
-  }
-
-  .sales-code-detail .sales-detail-table tr.detail-batch-row.is-continuation {
-    margin-top: -4px;
   }
 
   .sales-code-detail .sales-detail-table td {
@@ -2583,24 +2617,10 @@ tr:last-child td {
     content: attr(data-label);
     flex: 0 0 auto;
     color: var(--muted);
-    font-size: 9px;
+    font-size: 12px;
     font-weight: 850;
     text-align: left;
     text-transform: uppercase;
-  }
-
-  .sales-code-detail .sales-detail-table .detail-event-cell {
-    display: block;
-    grid-column: 1 / -1;
-    text-align: left !important;
-  }
-
-  .sales-code-detail .sales-detail-table .detail-event-cell::before {
-    display: none !important;
-  }
-
-  .sales-code-detail .sales-detail-table .detail-event-cell.is-empty {
-    display: none !important;
   }
 
   .sales-code-detail .sales-detail-table .detail-lot-cell {
