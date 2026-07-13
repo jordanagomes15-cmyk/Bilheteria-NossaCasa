@@ -476,6 +476,17 @@ h3 {
   line-height: 1.25;
 }
 
+.mini-insight {
+  width: min(220px, 100%);
+  padding: 10px 12px;
+  gap: 7px;
+  box-shadow: none;
+}
+
+.mini-insight strong {
+  font-size: 16px;
+}
+
 .two {
   grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
 }
@@ -640,23 +651,44 @@ h3 {
 
 .metric strong {
   max-width: 100%;
-  font-size: clamp(20px, 1.85vw, 28px);
+  font-size: clamp(22px, 2.05vw, 34px);
   line-height: 1;
   font-weight: 880;
-  white-space: normal;
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: clip;
 }
 
-.metric strong.long-value {
-  font-size: 13px;
-  line-height: 1.25;
-  white-space: normal;
-  font-variant-numeric: normal;
-  display: -webkit-box;
+.metric strong.compact-value {
+  font-size: clamp(20px, 1.6vw, 29px);
+}
+
+.metric strong.money-value {
+  display: flex;
+  align-items: baseline;
+  gap: 0.16em;
+  min-width: 0;
+}
+
+.metric-currency {
+  flex: 0 0 auto;
+  color: var(--text) !important;
+  font-size: 0.68em !important;
+  line-height: 1;
+  font-weight: 880 !important;
+  text-transform: none !important;
+}
+
+.metric-number {
+  min-width: 0;
+  color: var(--text) !important;
+  font-size: 1em !important;
+  line-height: 1;
+  font-weight: 880 !important;
+  text-transform: none !important;
+  white-space: nowrap !important;
   overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
 }
 
 .metric small {
@@ -749,9 +781,32 @@ h3 {
   min-width: 760px;
 }
 
+.profile-actions {
+  flex: 1 1 560px;
+}
+
+.profile-actions .compact-select {
+  min-width: min(190px, 100%);
+  flex: 1 1 170px;
+}
+
+.profile-segment-table table {
+  min-width: 900px;
+}
+
+.profile-segment-table td:first-child,
+.profile-segment-table th:first-child {
+  width: 130px;
+}
+
 .profile-table td:nth-child(n + 2),
 .profile-table th:nth-child(n + 2) {
   text-align: right;
+}
+
+.profile-segment-table td:nth-child(2),
+.profile-segment-table th:nth-child(2) {
+  text-align: left;
 }
 
 .event-profile-table table {
@@ -1405,6 +1460,13 @@ tr:last-child td {
 .pill.warn {
   color: var(--warn);
   background: #f8e6bf;
+}
+
+.pill.soft {
+  min-height: 22px;
+  color: var(--brand);
+  background: #e7f2ee;
+  font-size: 11px;
 }
 
 .pill.muted-pill,

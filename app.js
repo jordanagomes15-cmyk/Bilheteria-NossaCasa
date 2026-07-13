@@ -167,6 +167,12 @@ const state = {
   expandedAudienceKey: "",
   mailingEventId: "all",
   profileEventId: "all",
+  profileFilters: {
+    ticketType: "all",
+    gender: "all",
+    ageBand: "all",
+    segment: "main"
+  },
   codeRankingSort: "revenue",
   promoterLinkSearch: "",
   batchFilters: {
@@ -660,14 +666,24 @@ function incrementAudienceBucket(map, key, ticket = null) {
   return row;
 }
 
-function collectAudienceProfile(events) {
+function entryMatchesAudienceProfile(entry, filters = {}) {
+  const type = filters.ticketType || "all";
+  if (type === "purchase" && entry.type !== "purchase") return false;
+  if (type === "courtesy" && entry.type !== "courtesy") return false;
+  if (type === "validated" && !entry.validated) return false;
+  if (filters.gender && filters.gender !== "all" && cleanAudienceGender(entry.gender) !== filters.gender) return false;
+  if (filters.ageBand && filters.ageBand !== "all" && audienceAgeBand(entry.age) !== filters.ageBand) return false;
+  return true;
+}
+
+function collectAudienceProfile(events, filters = {}) {
   const people = new Map();
   const gender = new Map();
   const ages = new Map();
   const ticketTypes = new Map();
   const links = new Map();
   const batches = new Map();
-  const entries = audienceEntriesFromEvents(events);
+  const entries = audienceEntriesFromEvents(events).filter((entry) => entryMatchesAudienceProfile(entry, filters));
 
   entries.forEach((entry, index) => {
     const personKey = personMailingKey(entry) || normalizeParticipantKey(entry) || `ticket:${entry.ticketId || index}`;
@@ -749,11 +765,11 @@ function collectAudienceProfile(events) {
   };
 }
 
-function buildAudienceProfile(events = filteredEvents()) {
-  const profile = collectAudienceProfile(events);
+function buildAudienceProfile(events = filteredEvents(), filters = {}) {
+  const profile = collectAudienceProfile(events, filters);
   profile.eventRows = events
     .map((event) => {
-      const eventProfile = collectAudienceProfile([event]);
+      const eventProfile = collectAudienceProfile([event], filters);
       return {
         id: event.id,
         name: event.name,
@@ -1441,8 +1457,13 @@ function renderDashboardFilters(events) {
 }
 
 function metric(label, value, note) {
-  const longValue = String(value ?? "").length > 22;
-  return `<div class="card metric"><span>${esc(label)}</span><strong class="${longValue ? "long-value" : ""}" title="${esc(value)}">${esc(value)}</strong><small class="muted">${esc(note)}</small></div>`;
+  const text = String(value ?? "");
+  const moneyMatch = text.match(/^R\$\s*(.+)$/);
+  const compactValue = text.length > 13;
+  const valueHtml = moneyMatch
+    ? `<strong class="metric-value money-value ${compactValue ? "compact-value" : ""}" title="${esc(text)}"><span class="metric-currency">R$</span><span class="metric-number">${esc(moneyMatch[1])}</span></strong>`
+    : `<strong class="metric-value ${compactValue ? "compact-value" : ""}" title="${esc(text)}">${esc(text)}</strong>`;
+  return `<div class="card metric"><span>${esc(label)}</span>${valueHtml}<small class="muted">${esc(note)}</small></div>`;
 }
 
 function eventMini(event) {
@@ -1713,19 +1734,56 @@ function renderCommissioners() {
   `;
 }
 
-function renderAudienceProfileRows(rows, total, valueLabel = "Pessoas") {
+function profileSegmentRows(profile, segment = "main") {
+  const rows = [];
+  const addRows = (category, items) => {
+    items.forEach((row) => rows.push({ ...row, category }));
+  };
+  const validationRows = [
+    {
+      label: "Validados",
+      peopleCount: profile.summary.validatedPeople,
+      tickets: profile.summary.validatedTickets,
+      validated: profile.summary.validatedTickets,
+      people: new Set()
+    },
+    {
+      label: "Nao validados",
+      peopleCount: Math.max(0, profile.summary.uniquePeople - profile.summary.validatedPeople),
+      tickets: Math.max(0, profile.summary.tickets - profile.summary.validatedTickets),
+      validated: 0,
+      people: new Set()
+    }
+  ];
+  if (segment === "main" || segment === "demographic") {
+    addRows("Genero", profile.genderRows);
+    addRows("Idade", profile.ageRows);
+  }
+  if (segment === "main" || segment === "behavior") {
+    addRows("Ingresso", profile.typeRows);
+    addRows("Validacao", validationRows);
+  }
+  if (segment === "all" || segment === "origin") {
+    addRows("Link", profile.linkRows);
+    addRows("Lote", profile.batchRows);
+  }
+  return rows;
+}
+
+function renderAudienceSegmentTable(rows, total) {
   if (!rows.length) return `<p class="notice">Nao ha dados suficientes para este recorte.</p>`;
   return `
-    <div class="table-wrap compact-table profile-table">
+    <div class="table-wrap compact-table profile-table profile-segment-table">
       <table>
-        <thead><tr><th>Perfil</th><th>${esc(valueLabel)}</th><th>Ingressos</th><th>Validados</th><th>Participacao</th></tr></thead>
+        <thead><tr><th>Categoria</th><th>Perfil</th><th>Pessoas</th><th>Ingressos</th><th>Validados</th><th>Participacao</th></tr></thead>
         <tbody>
           ${rows
             .map(
               (row) => `
                 <tr>
+                  <td data-label="Categoria"><span class="pill soft">${esc(row.category)}</span></td>
                   <td data-label="Perfil"><strong>${esc(row.label)}</strong></td>
-                  <td data-label="${esc(valueLabel)}"><span class="cell-value">${int(row.peopleCount)}</span></td>
+                  <td data-label="Pessoas"><span class="cell-value">${int(row.peopleCount)}</span></td>
                   <td data-label="Ingressos"><span class="cell-value">${int(row.tickets)}</span></td>
                   <td data-label="Validados"><span class="cell-value">${int(row.validated)}</span></td>
                   <td data-label="Participacao">${shareCell(row.peopleCount, total)}</td>
@@ -1743,11 +1801,13 @@ function renderAudienceProfile() {
   const events = filteredEvents();
   const selectedEvent = state.profileEventId === "all" ? null : state.events.find((event) => event.id === state.profileEventId);
   const scopeEvents = selectedEvent ? [selectedEvent] : events;
-  const profile = buildAudienceProfile(scopeEvents);
+  const baseProfile = buildAudienceProfile(scopeEvents);
+  const profile = buildAudienceProfile(scopeEvents, state.profileFilters);
   const summary = profile.summary;
   const title = selectedEvent ? selectedEvent.name : "Todos os eventos do recorte atual";
   const avgAge = summary.avgAge ? `${Math.round(summary.avgAge)} anos` : "-";
   const validationRate = safeRate(summary.validatedTickets, summary.tickets);
+  const segmentRows = profileSegmentRows(profile, state.profileFilters.segment);
   return `
     <section class="grid">
       ${renderDashboardFilters(events)}
@@ -1757,12 +1817,45 @@ function renderAudienceProfile() {
             <h2>Perfil do publico</h2>
             <p>${esc(title)} · ${int(summary.uniquePeople)} pessoas unicas mapeadas</p>
           </div>
-          <div class="mailing-actions">
+          <div class="mailing-actions profile-actions">
             <label class="filter-field compact-select">
               <span>Evento</span>
               <select id="profileEvent">
                 <option value="all" ${state.profileEventId === "all" ? "selected" : ""}>Todos os eventos</option>
                 ${state.events.map((event) => `<option value="${esc(event.id)}" ${state.profileEventId === event.id ? "selected" : ""}>${esc(event.name)}</option>`).join("")}
+              </select>
+            </label>
+            <label class="filter-field compact-select">
+              <span>Tipo</span>
+              <select id="profileTicketType">
+                <option value="all" ${state.profileFilters.ticketType === "all" ? "selected" : ""}>Todos</option>
+                <option value="purchase" ${state.profileFilters.ticketType === "purchase" ? "selected" : ""}>Compras</option>
+                <option value="courtesy" ${state.profileFilters.ticketType === "courtesy" ? "selected" : ""}>Cortesias</option>
+                <option value="validated" ${state.profileFilters.ticketType === "validated" ? "selected" : ""}>Validados</option>
+              </select>
+            </label>
+            <label class="filter-field compact-select">
+              <span>Genero</span>
+              <select id="profileGender">
+                <option value="all" ${state.profileFilters.gender === "all" ? "selected" : ""}>Todos</option>
+                ${baseProfile.genderRows.map((row) => `<option value="${esc(row.label)}" ${state.profileFilters.gender === row.label ? "selected" : ""}>${esc(row.label)}</option>`).join("")}
+              </select>
+            </label>
+            <label class="filter-field compact-select">
+              <span>Idade</span>
+              <select id="profileAgeBand">
+                <option value="all" ${state.profileFilters.ageBand === "all" ? "selected" : ""}>Todas</option>
+                ${baseProfile.ageRows.map((row) => `<option value="${esc(row.label)}" ${state.profileFilters.ageBand === row.label ? "selected" : ""}>${esc(row.label)}</option>`).join("")}
+              </select>
+            </label>
+            <label class="filter-field compact-select">
+              <span>Mostrar</span>
+              <select id="profileSegment">
+                <option value="main" ${state.profileFilters.segment === "main" ? "selected" : ""}>Resumo</option>
+                <option value="demographic" ${state.profileFilters.segment === "demographic" ? "selected" : ""}>Genero + idade</option>
+                <option value="behavior" ${state.profileFilters.segment === "behavior" ? "selected" : ""}>Ingresso + validacao</option>
+                <option value="origin" ${state.profileFilters.segment === "origin" ? "selected" : ""}>Links + lotes</option>
+                <option value="all" ${state.profileFilters.segment === "all" ? "selected" : ""}>Tudo</option>
               </select>
             </label>
           </div>
@@ -1776,38 +1869,16 @@ function renderAudienceProfile() {
         ${metric("Idade media", avgAge, `${int(summary.knownAges)} perfis com idade`)}
         ${metric("Genero principal", summary.dominantGender, `${int(summary.knownGender)} perfis com genero`)}
       </div>
-      <div class="grid two profile-grid">
-        <div class="card">
-          <div class="section-title"><h2>Genero</h2><p>Distribuicao por pessoas unicas.</p></div>
-          ${renderAudienceProfileRows(profile.genderRows, summary.uniquePeople)}
-        </div>
-        <div class="card">
-          <div class="section-title"><h2>Faixa etaria</h2><p>Distribuicao por idade declarada.</p></div>
-          ${renderAudienceProfileRows(profile.ageRows, summary.uniquePeople)}
-        </div>
-        <div class="card">
-          <div class="section-title"><h2>Tipo de ingresso</h2><p>Compra paga e cortesia sem mistura de regra.</p></div>
-          ${renderAudienceProfileRows(profile.typeRows, summary.uniquePeople)}
-        </div>
-        <div class="card">
-          <div class="section-title"><h2>Validacao</h2><p>${int(summary.validatedTickets)} de ${int(summary.tickets)} ingressos validados.</p></div>
-          <div class="insight-card compact-insight">
-            <span>Taxa de presenca</span>
+      <div class="card">
+        <div class="toolbar">
+          <div class="section-title"><h2>Segmentos do publico</h2><p>Genero, idade, tipo de ingresso, validacao, links e lotes em uma leitura unica.</p></div>
+          <div class="insight-card mini-insight">
+            <span>Presenca</span>
             <strong>${pct(validationRate)}</strong>
             <div class="bar"><i style="width:${clampPercent(validationRate)}%"></i></div>
-            <small>${int(summary.validatedPeople)} pessoas tiveram ao menos uma validacao</small>
           </div>
         </div>
-      </div>
-      <div class="grid two profile-grid">
-        <div class="card">
-          <div class="section-title"><h2>Links e comissarios</h2><p>Principais origens do publico.</p></div>
-          ${renderAudienceProfileRows(profile.linkRows, summary.uniquePeople)}
-        </div>
-        <div class="card">
-          <div class="section-title"><h2>Lotes</h2><p>Nomenclaturas originais dos anexos.</p></div>
-          ${renderAudienceProfileRows(profile.batchRows, summary.uniquePeople)}
-        </div>
+        ${renderAudienceSegmentTable(segmentRows, summary.uniquePeople)}
       </div>
       ${
         selectedEvent
@@ -2591,6 +2662,22 @@ function bindActions() {
   });
   document.getElementById("profileEvent")?.addEventListener("change", (event) => {
     state.profileEventId = event.target.value;
+    render();
+  });
+  document.getElementById("profileTicketType")?.addEventListener("change", (event) => {
+    state.profileFilters.ticketType = event.target.value;
+    render();
+  });
+  document.getElementById("profileGender")?.addEventListener("change", (event) => {
+    state.profileFilters.gender = event.target.value;
+    render();
+  });
+  document.getElementById("profileAgeBand")?.addEventListener("change", (event) => {
+    state.profileFilters.ageBand = event.target.value;
+    render();
+  });
+  document.getElementById("profileSegment")?.addEventListener("change", (event) => {
+    state.profileFilters.segment = event.target.value;
     render();
   });
   bindHorizontalDetailScroll();
