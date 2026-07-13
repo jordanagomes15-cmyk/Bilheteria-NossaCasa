@@ -401,11 +401,9 @@ def parse_xlsx(path):
             },
         )
         sold -= cancel_quantity
-        revenue -= cancel_value
         batch["sold"] -= cancel_quantity
-        batch["revenue"] -= cancel_value
-        add_promoter(promoters, promoter, sold=-cancel_quantity, revenue=-cancel_value)
-        add_attendee(attendees, row, event_id, name, sold=-cancel_quantity, revenue=-cancel_value)
+        add_promoter(promoters, promoter, sold=-cancel_quantity)
+        add_attendee(attendees, row, event_id, name, sold=-cancel_quantity)
 
     for _, row in ingressos.iterrows():
         description = get_cell(row, "Descrição")
