@@ -1342,7 +1342,7 @@ function renderOverview() {
   return `
     <section class="grid">
       ${renderDashboardFilters(events)}
-      <div class="grid cards">
+      <div class="grid cards overview-metrics">
         ${metric("Faturamento", money(sum.revenue), "Receita total registrada")}
         ${metric("Venda geral", money(split.generalRevenue), `${int(split.generalSold)} ingressos sem link`)}
         ${metric("Venda por link", money(split.linkRevenue), `${pct(safeRate(split.linkRevenue, sum.revenue))} do faturamento`)}
