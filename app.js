@@ -1287,8 +1287,8 @@ function renderSidebar() {
       <div class="brand-row">
         <img class="logo-img" src="/assets/nossa-casa-logo.jpeg" alt="Nossa Casa" />
         <div><strong>Nossa Casa</strong><span>Performance de eventos</span></div>
+        <button class="sidebar-toggle" data-action="toggle-sidebar" aria-label="${state.sidebarCollapsed ? "Expandir menu" : "Recolher menu"}">${state.sidebarCollapsed ? "›" : "‹"}</button>
       </div>
-      <button class="sidebar-toggle" data-action="toggle-sidebar" aria-label="${state.sidebarCollapsed ? "Expandir menu" : "Recolher menu"}">${state.sidebarCollapsed ? "›" : "‹"}</button>
       <nav class="nav">
         ${items
           .map(([id, label]) => `<button class="${state.view === id ? "active" : ""}" data-view="${id}" title="${esc(label)}"><span class="nav-icon">${esc(label.slice(0, 1))}</span><span class="nav-label">${esc(label)}</span></button>`)
