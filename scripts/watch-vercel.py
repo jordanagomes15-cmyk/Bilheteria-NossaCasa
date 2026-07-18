@@ -67,6 +67,19 @@ def generated_version():
         return ""
 
 
+def committed_generated_version():
+    result = subprocess.run(["git", "show", f"HEAD:{GENERATED}"], capture_output=True, text=True)
+    if result.returncode != 0:
+        return ""
+    match = re.search(r"window\.NOSSA_CASA_DATA\s*=\s*([\s\S]*);\s*$", result.stdout)
+    if not match:
+        return ""
+    try:
+        return json.loads(match.group(1)).get("dataVersion", "")
+    except json.JSONDecodeError:
+        return ""
+
+
 def generated_changed():
     return subprocess.run(["git", "diff", "--quiet", "--", str(GENERATED)]).returncode != 0
 
@@ -102,6 +115,14 @@ def sync_once(*, force=False, deploy=True):
     current_signature = source_signature()
     current_generated = generated_version()
     if not force and current_signature == current_generated:
+        if generated_changed():
+            if current_generated != committed_generated_version():
+                log("Dados gerados ja batem com as pastas, mas ainda nao foram publicados.")
+                commit_and_push()
+                if deploy:
+                    deploy_vercel()
+                return True
+            log("Dados ja estao publicados; diferenca local parece ser apenas metadado de geracao.")
         log("Dados ja estao atualizados para a versao atual das pastas.")
         return False
 
