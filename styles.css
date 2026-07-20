@@ -189,6 +189,7 @@ h3 {
 
 .field input,
 .field select,
+.field textarea,
 .filter-field input,
 .filter-field select,
 .search {
@@ -200,6 +201,63 @@ h3 {
   color: var(--text);
   background: #fff;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  font: inherit;
+}
+
+.field textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.signup-link {
+  margin: -4px 40px 32px;
+  text-decoration: underline;
+  justify-self: start;
+}
+
+.signup-success {
+  padding: 40px;
+  display: grid;
+  gap: 10px;
+  align-content: center;
+}
+
+.access-requests {
+  display: grid;
+  gap: 14px;
+}
+
+.access-request-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 16px;
+  display: grid;
+  gap: 6px;
+}
+
+.access-request-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.access-request-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.access-request-actions select {
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  background: #fff;
 }
 
 .search {

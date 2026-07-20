@@ -201,7 +201,16 @@ const state = {
     type: "all",
     min: "2",
     validatedOnly: false
-  }
+  },
+  showSignup: false,
+  signupSubmitting: false,
+  signupError: "",
+  signupSuccess: false,
+  accessRequests: [],
+  accessRequestsLoaded: false,
+  accessRequestsLoading: false,
+  accessRequestsError: "",
+  accessDecisionBusy: ""
 };
 
 let activeDataVersion = dataVersion(embeddedData);
@@ -1316,6 +1325,87 @@ async function ensurePrivateData() {
   }
 }
 
+async function ensureAccessRequests() {
+  if (state.accessRequestsLoaded || state.accessRequestsLoading) return;
+  state.accessRequestsLoading = true;
+  state.accessRequestsError = "";
+  render();
+  try {
+    const response = await fetch("/api/access-requests", { credentials: "include", cache: "no-store" });
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.error || "Nao foi possivel carregar as solicitacoes.");
+    state.accessRequests = data.requests || [];
+    state.accessRequestsLoaded = true;
+  } catch (error) {
+    state.accessRequestsError = error.message || "Nao foi possivel carregar as solicitacoes.";
+  } finally {
+    state.accessRequestsLoading = false;
+    render();
+  }
+}
+
+async function decideAccessRequest(issueNumber, decision, tier) {
+  state.accessDecisionBusy = String(issueNumber);
+  render();
+  try {
+    const response = await fetch("/api/access-decide", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ issueNumber, decision, tier })
+    });
+    const data = await response.json().catch(() => ({ ok: false, error: "Falha ao registrar decisao." }));
+    if (!response.ok || !data.ok) throw new Error(data.error || "Falha ao registrar decisao.");
+    state.accessRequests = state.accessRequests.filter((request) => request.number !== issueNumber);
+  } catch (error) {
+    state.accessRequestsError = error.message || "Falha ao registrar decisao.";
+  } finally {
+    state.accessDecisionBusy = "";
+    render();
+  }
+}
+
+function renderAccessRequests() {
+  if (state.accessRequestsLoading && !state.accessRequestsLoaded) {
+    return `<div class="panel"><p class="muted">Carregando solicitacoes...</p></div>`;
+  }
+  if (state.accessRequestsError) {
+    return `<div class="panel"><p class="login-error">${esc(state.accessRequestsError)}</p></div>`;
+  }
+  if (!state.accessRequests.length) {
+    return `<div class="panel"><p class="muted">Nenhuma solicitacao pendente no momento.</p></div>`;
+  }
+  return `
+    <div class="panel access-requests">
+      ${state.accessRequests
+        .map((requestItem) => {
+          const busy = state.accessDecisionBusy === String(requestItem.number);
+          return `
+            <div class="access-request-card">
+              <div class="access-request-head">
+                <strong>${esc(requestItem.name || "Sem nome")}</strong>
+                <span class="muted">${esc(requestItem.email || "")}</span>
+              </div>
+              <p class="muted">${esc(requestItem.phone ? `Telefone: ${requestItem.phone}` : "Telefone nao informado")}</p>
+              <p><strong>Nivel solicitado:</strong> ${esc(requestItem.accessLevel || "-")}</p>
+              ${requestItem.reason ? `<p class="muted">"${esc(requestItem.reason)}"</p>` : ""}
+              <div class="access-request-actions">
+                <select data-tier-select="${esc(requestItem.number)}">
+                  <option value="overview">Visao geral</option>
+                  <option value="full">Completo</option>
+                  <option value="promoter">Comissario/RP</option>
+                </select>
+                <button class="primary" type="button" data-action="approve-access" data-issue="${esc(requestItem.number)}" ${busy ? "disabled" : ""}>Aprovar</button>
+                <button class="secondary" type="button" data-action="deny-access" data-issue="${esc(requestItem.number)}" ${busy ? "disabled" : ""}>Recusar</button>
+              </div>
+            </div>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
 function setLoginError(message) {
   const error = document.getElementById("loginError");
   if (error) error.textContent = message;
@@ -1506,6 +1596,39 @@ function renderKeepingFocus(id) {
   }
 }
 
+function renderSignupForm() {
+  if (state.signupSuccess) {
+    return `
+      <div class="signup-success" role="status">
+        <p><strong>Solicitacao enviada.</strong></p>
+        <p class="muted">A administradora foi avisada e vai revisar seu pedido de acesso em breve.</p>
+        <button class="secondary" type="button" data-action="hide-signup">Voltar ao login</button>
+      </div>
+    `;
+  }
+  return `
+    <form class="login-form signup-form" id="signupForm">
+      <h2>Solicitar acesso</h2>
+      <label class="field">Nome<input id="signupName" name="name" type="text" required maxlength="120" /></label>
+      <label class="field">E-mail<input id="signupEmail" name="email" type="email" required maxlength="160" /></label>
+      <label class="field">Telefone (opcional)<input id="signupPhone" name="phone" type="tel" maxlength="40" /></label>
+      <label class="field">
+        Nivel de acesso desejado
+        <select id="signupAccessLevel" name="accessLevel">
+          <option value="overview">Visao geral (sem dados pessoais)</option>
+          <option value="full">Completo (inclui audiencia e mailing)</option>
+          <option value="promoter">Comissario/RP (apenas meus links)</option>
+        </select>
+      </label>
+      <label class="field">Motivo/observacoes (opcional)<textarea id="signupReason" name="reason" rows="3" maxlength="600"></textarea></label>
+      <p class="login-error" id="signupError" aria-live="polite"></p>
+      <button class="primary" type="submit">Enviar solicitacao</button>
+      <button class="secondary" type="button" data-action="hide-signup">Cancelar</button>
+      <p class="muted">A administradora recebe um aviso e decide o nivel de acesso liberado.</p>
+    </form>
+  `;
+}
+
 function renderLogin() {
   return `
     <section class="login">
@@ -1515,6 +1638,10 @@ function renderLogin() {
           <h1>Nossa Casa</h1>
           <p>Dashboard de performance de eventos, vendas, cortesias, validacoes e ranking de comissarios/RPs.</p>
         </div>
+        ${
+          state.showSignup
+            ? renderSignupForm()
+            : `
         <form class="login-form" id="loginForm">
           <h2>Acesso</h2>
           <label class="field">E-mail<input id="loginEmail" name="email" type="email" autocomplete="username" required /></label>
@@ -1523,13 +1650,16 @@ function renderLogin() {
           <button class="primary" type="submit">Entrar</button>
           <p class="muted">Acesso validado no servidor. Dados privados so carregam apos sessao autenticada.</p>
         </form>
+        <button class="ghost signup-link" type="button" data-action="show-signup">Nao tenho acesso ainda - solicitar cadastro</button>
+        `
+        }
       </div>
     </section>
   `;
 }
 
 function bindLogin() {
-  document.getElementById("loginForm").addEventListener("submit", async (event) => {
+  document.getElementById("loginForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     setLoginError("");
     const email = document.getElementById("loginEmail")?.value?.trim() || "";
@@ -1544,6 +1674,48 @@ function bindLogin() {
       if (button) button.disabled = false;
     }
   });
+  document.querySelector("[data-action='show-signup']")?.addEventListener("click", () => {
+    state.showSignup = true;
+    state.signupSuccess = false;
+    state.signupError = "";
+    render();
+  });
+  document.querySelector("[data-action='hide-signup']")?.addEventListener("click", () => {
+    state.showSignup = false;
+    state.signupSuccess = false;
+    state.signupError = "";
+    render();
+  });
+  document.getElementById("signupForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    state.signupError = "";
+    const payload = {
+      name: document.getElementById("signupName")?.value?.trim() || "",
+      email: document.getElementById("signupEmail")?.value?.trim() || "",
+      phone: document.getElementById("signupPhone")?.value?.trim() || "",
+      accessLevel: document.getElementById("signupAccessLevel")?.value || "overview",
+      reason: document.getElementById("signupReason")?.value?.trim() || ""
+    };
+    const button = event.currentTarget.querySelector("button[type='submit']");
+    if (button) button.disabled = true;
+    try {
+      const response = await fetch("/api/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json().catch(() => ({ ok: false, error: "Falha ao enviar solicitacao." }));
+      if (!response.ok || !data.ok) throw new Error(data.error || "Falha ao enviar solicitacao.");
+      state.signupSuccess = true;
+      render();
+    } catch (error) {
+      state.signupError = error.message || "Falha ao enviar solicitacao.";
+      const errorField = document.getElementById("signupError");
+      if (errorField) errorField.textContent = state.signupError;
+    } finally {
+      if (button) button.disabled = false;
+    }
+  });
 }
 
 function renderSidebar() {
@@ -1554,7 +1726,8 @@ function renderSidebar() {
     ["audienceProfile", "Perfil"],
     ["mailing", "Mailing"],
     ["audienceRecurrence", "Recorrencia"],
-    ["validation", "Validacao"]
+    ["validation", "Validacao"],
+    ["accessRequests", "Solicitacoes"]
   ];
   const navIcons = {
     overview: "Vg",
@@ -1563,7 +1736,8 @@ function renderSidebar() {
     audienceProfile: "Pf",
     mailing: "Ml",
     audienceRecurrence: "Rc",
-    validation: "Val"
+    validation: "Val",
+    accessRequests: "Ac"
   };
   return `
     <aside class="sidebar ${state.drawerOpen ? "open" : ""} ${state.sidebarCollapsed ? "collapsed" : ""}">
@@ -1594,6 +1768,7 @@ function renderTopbar() {
     mailing: ["Mailing", "Contatos finais deduplicados por evento ou consolidado"],
     audienceRecurrence: ["Recorrencia de Compradores", "Clientes com compra paga em mais de um evento"],
     validation: ["Validacao", "Leitura consolidada de check-ins e lotes"],
+    accessRequests: ["Solicitacoes de acesso", "Pessoas que pediram cadastro no dashboard"],
     detail: [selectedEvent()?.name || "Evento", "Detalhe de vendas, lotes e validacoes"]
   };
   const [title, subtitle] = titles[state.view] || titles.overview;
@@ -1622,6 +1797,10 @@ function renderView() {
   if (state.view === "mailing") return renderMailingPage();
   if (state.view === "audienceRecurrence") return renderAudienceRecurrence();
   if (state.view === "validation") return renderValidation();
+  if (state.view === "accessRequests") {
+    setTimeout(() => ensureAccessRequests(), 0);
+    return renderAccessRequests();
+  }
   if (state.view === "detail") return renderDetail();
   return renderOverview();
 }
@@ -2992,6 +3171,18 @@ function bindActions() {
     });
   });
   document.querySelector("[data-action='logout']")?.addEventListener("click", logout);
+  document.querySelectorAll("[data-action='approve-access']").forEach((button) => {
+    button.addEventListener("click", () => {
+      const issueNumber = Number(button.dataset.issue);
+      const tierSelect = document.querySelector(`[data-tier-select="${button.dataset.issue}"]`);
+      decideAccessRequest(issueNumber, "approved", tierSelect?.value || "overview");
+    });
+  });
+  document.querySelectorAll("[data-action='deny-access']").forEach((button) => {
+    button.addEventListener("click", () => {
+      decideAccessRequest(Number(button.dataset.issue), "denied");
+    });
+  });
   document.getElementById("rankSearch")?.addEventListener("input", (event) => {
     state.query = event.target.value;
     renderKeepingFocus("rankSearch");
