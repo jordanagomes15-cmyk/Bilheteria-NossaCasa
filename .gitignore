@@ -3,7 +3,14 @@ dist/
 .env
 .env.local
 node_modules/
+private-data/
+data/private/
 
-# Local Netlify folder
+# Arquivos-fonte podem conter PII. Use um repositório/bucket privado para CI.
+data/incoming/**
+!data/incoming/.gitkeep
+
+# Pastas legadas/desativadas
 .netlify
 .vercel
+launchd/com.nossa-casa.watch-netlify.plist

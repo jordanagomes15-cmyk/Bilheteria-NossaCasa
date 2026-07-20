@@ -1,8 +1,5 @@
-const SESSION_KEY = "nossa-casa-session-v1";
 const PROMOTER_SPLIT_KEY = "nossa-casa-promoter-split-v1";
 const SIDEBAR_COLLAPSED_KEY = "nossa-casa-sidebar-collapsed-v1";
-const LOGIN_EMAIL_KEY = "nossa-casa-login-email-v1";
-const LOGIN_PASSWORD_HASH_KEY = "nossa-casa-login-password-sha256-v1";
 const embeddedData = globalThis.NOSSA_CASA_DATA || null;
 
 const fallbackEvents = [
@@ -168,11 +165,18 @@ const state = {
   drawerOpen: false,
   sidebarCollapsed: loadSidebarCollapsed(),
   syncStatus: "ok",
+  authStatus: "checking",
+  authError: "",
+  privateDataLoaded: false,
+  privateDataLoading: false,
+  privateDataError: "",
   detailTab: "batches",
   promoterSplit: loadPromoterSplit(),
   query: "",
   expandedAudienceKey: "",
   mailingEventId: "all",
+  mailingPage: 1,
+  audiencePage: 1,
   profileEventId: "all",
   profileFilters: {
     ticketType: "all",
@@ -245,6 +249,13 @@ function applyGeneratedData(data) {
   if (nextVersion && nextVersion === activeDataVersion) return;
   const selectedId = state.selectedEventId;
   state.events = data.events;
+  if (state.privateDataLoaded) {
+    state.privateDataLoaded = false;
+    state.privateDataError = "";
+    if (["audienceProfile", "mailing", "audienceRecurrence"].includes(state.view)) {
+      setTimeout(() => ensurePrivateData(), 0);
+    }
+  }
   activeDataVersion = nextVersion;
   if (selectedId && !state.events.some((event) => event.id === selectedId)) {
     state.selectedEventId = null;
@@ -575,6 +586,13 @@ function personMailingKey(entry) {
 }
 
 function eventAudienceSummary(event) {
+  if ((!event?.audience || !event.audience.length) && event?.audienceSummary) {
+    return {
+      uniquePeople: Number(event.audienceSummary.uniquePeople || 0),
+      uniqueBuyers: Number(event.audienceSummary.uniqueBuyers || 0),
+      uniqueCourtesy: Number(event.audienceSummary.uniqueCourtesy || 0)
+    };
+  }
   const all = new Set();
   const buyers = new Set();
   const courtesy = new Set();
@@ -590,6 +608,33 @@ function eventAudienceSummary(event) {
     uniqueBuyers: buyers.size,
     uniqueCourtesy: courtesy.size
   };
+}
+
+function renderPrivateDataGate(title = "Dados privados") {
+  if (!state.privateDataLoading && !state.privateDataLoaded && !state.privateDataError) {
+    setTimeout(() => ensurePrivateData(), 0);
+  }
+  return `
+    <section class="grid">
+      ${renderDashboardFilters(filteredEvents())}
+      <div class="card">
+        <div class="section-title">
+          <h2>${esc(title)}</h2>
+          <p>Esta area usa dados de audiencia/mailing protegidos por sessao no servidor.</p>
+        </div>
+        ${
+          state.privateDataError
+            ? `<p class="notice warning">${esc(state.privateDataError)}</p>`
+            : `<p class="notice">${state.privateDataLoading ? "Carregando dados privados..." : "Preparando carregamento seguro..."}</p>`
+        }
+      </div>
+    </section>
+  `;
+}
+
+function requirePrivateData(title) {
+  if (state.privateDataLoaded) return "";
+  return renderPrivateDataGate(title);
 }
 
 function audienceEntriesFromEvents(events) {
@@ -835,7 +880,11 @@ function downloadTextFile(filename, content) {
   URL.revokeObjectURL(url);
 }
 
-function exportMailingCsv(eventId = "all") {
+async function exportMailingCsv(eventId = "all") {
+  if (!state.privateDataLoaded) {
+    await ensurePrivateData();
+    if (!state.privateDataLoaded) return;
+  }
   const events = filteredEvents();
   const selected = eventId === "all" ? null : events.find((event) => event.id === eventId) || state.events.find((event) => event.id === eventId);
   const scopeEvents = selected ? [selected] : events;
@@ -1192,33 +1241,78 @@ function selectedEvent() {
 }
 
 function isLoggedIn() {
-  return localStorage.getItem(SESSION_KEY) === "active";
+  return state.authStatus === "authenticated";
 }
 
-function login() {
-  localStorage.setItem(SESSION_KEY, "active");
-  render();
-}
-
-function logout() {
-  localStorage.removeItem(SESSION_KEY);
-  render();
-}
-
-async function sha256Hex(value) {
-  if (!globalThis.crypto?.subtle) return "";
-  const bytes = new TextEncoder().encode(String(value || ""));
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
-function clientLoginConfig() {
+async function checkSession() {
   try {
-    const email = localStorage.getItem(LOGIN_EMAIL_KEY);
-    const passwordHash = localStorage.getItem(LOGIN_PASSWORD_HASH_KEY);
-    return email && passwordHash ? { email, passwordHash } : null;
+    const response = await fetch("/api/session", { credentials: "include", cache: "no-store" });
+    const data = await response.json();
+    state.authStatus = data.ok ? "authenticated" : "anonymous";
   } catch {
-    return null;
+    state.authStatus = "anonymous";
+  }
+  render();
+}
+
+async function login(email, password) {
+  const response = await fetch("/api/login", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password })
+  });
+  const data = await response.json().catch(() => ({ ok: false, error: "Falha ao autenticar." }));
+  if (!response.ok || !data.ok) throw new Error(data.error || "E-mail ou senha invalidos.");
+  state.authStatus = "authenticated";
+  state.authError = "";
+  render();
+}
+
+async function logout() {
+  try {
+    await fetch("/api/logout", { method: "POST", credentials: "include" });
+  } catch {
+    // A interface ainda deve limpar o estado local mesmo se a rede falhar.
+  }
+  state.authStatus = "anonymous";
+  state.privateDataLoaded = false;
+  state.privateDataLoading = false;
+  state.privateDataError = "";
+  state.events = loadEvents();
+  render();
+}
+
+function mergePrivateAudienceData(data) {
+  const privateEvents = new Map((data?.events || []).map((event) => [event.id, event]));
+  state.events = state.events.map((event) => {
+    const privateEvent = privateEvents.get(event.id);
+    if (!privateEvent) return event;
+    return {
+      ...event,
+      audience: privateEvent.audience || [],
+      attendees: privateEvent.attendees || []
+    };
+  });
+}
+
+async function ensurePrivateData() {
+  if (state.privateDataLoaded || state.privateDataLoading) return;
+  state.privateDataLoading = true;
+  state.privateDataError = "";
+  render();
+  try {
+    const response = await fetch("/api/audience", { credentials: "include", cache: "no-store" });
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.error || "Nao foi possivel carregar dados privados.");
+    mergePrivateAudienceData(data);
+    state.privateDataLoaded = true;
+  } catch (error) {
+    state.privateDataError = error.message || "Nao foi possivel carregar dados privados.";
+    if (/sessao|401|auth/i.test(state.privateDataError)) state.authStatus = "anonymous";
+  } finally {
+    state.privateDataLoading = false;
+    render();
   }
 }
 
@@ -1253,6 +1347,25 @@ function app() {
 }
 
 function render() {
+  if (state.authStatus === "checking") {
+    app().innerHTML = `
+      <section class="login">
+        <div class="login-panel">
+          <div class="login-brand">
+            <img class="logo-img" src="/assets/nossa-casa-logo.jpeg" alt="Nossa Casa" />
+            <h1>Nossa Casa</h1>
+            <p>Verificando sessao segura...</p>
+          </div>
+        </div>
+      </section>
+    `;
+    return;
+  }
+  if (!isLoggedIn()) {
+    app().innerHTML = renderLogin();
+    bindLogin();
+    return;
+  }
   app().innerHTML = `
     <div class="drawer-backdrop ${state.drawerOpen ? "show" : ""}" data-action="toggle-drawer"></div>
     <div class="app-shell ${state.sidebarCollapsed ? "sidebar-collapsed" : ""}">
@@ -1408,7 +1521,7 @@ function renderLogin() {
           <label class="field">Senha<input id="loginPassword" name="password" type="password" autocomplete="current-password" required /></label>
           <p class="login-error" id="loginError" aria-live="polite"></p>
           <button class="primary" type="submit">Entrar</button>
-          <p class="muted">Login client-side basico. Nao substitui autenticacao real com backend.</p>
+          <p class="muted">Acesso validado no servidor. Dados privados so carregam apos sessao autenticada.</p>
         </form>
       </div>
     </section>
@@ -1419,20 +1532,17 @@ function bindLogin() {
   document.getElementById("loginForm").addEventListener("submit", async (event) => {
     event.preventDefault();
     setLoginError("");
-    // Autenticacao client-side e apenas uma barreira cosmetica. Use backend/auth real para proteger dados sensiveis.
-    const config = clientLoginConfig();
-    if (!config) {
-      setLoginError("Acesso nao configurado neste navegador.");
-      return;
-    }
     const email = document.getElementById("loginEmail")?.value?.trim() || "";
     const password = document.getElementById("loginPassword")?.value || "";
-    const passwordHash = await sha256Hex(password);
-    if (email === config.email && passwordHash && passwordHash === config.passwordHash) {
-      login();
-      return;
+    const button = event.currentTarget.querySelector("button[type='submit']");
+    if (button) button.disabled = true;
+    try {
+      await login(email, password);
+    } catch (error) {
+      setLoginError(error.message || "E-mail ou senha invalidos.");
+    } finally {
+      if (button) button.disabled = false;
     }
-    setLoginError("E-mail ou senha invalidos.");
   });
 }
 
@@ -2068,6 +2178,8 @@ function renderProfileBarChart(title, subtitle, rows, total, options = {}) {
 }
 
 function renderAudienceProfile() {
+  const gate = requirePrivateData("Perfil do publico");
+  if (gate) return gate;
   const events = filteredEvents();
   const selectedEvent = state.profileEventId === "all" ? null : state.events.find((event) => event.id === state.profileEventId);
   const scopeEvents = selectedEvent ? [selectedEvent] : events;
@@ -2189,10 +2301,15 @@ function renderAudienceProfile() {
 }
 
 function renderMailingPage() {
+  const gate = requirePrivateData("Mailing");
+  if (gate) return gate;
   const events = filteredEvents();
   const selectedEvent = state.mailingEventId === "all" ? null : state.events.find((event) => event.id === state.mailingEventId);
   const scopeEvents = selectedEvent ? [selectedEvent] : events;
   const rows = buildMailingRows(scopeEvents, selectedEvent ? selectedEvent.id : "all");
+  const pageSize = 50;
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const page = Math.min(Math.max(1, state.mailingPage), totalPages);
   const buyers = rows.filter((row) => row.participationType.includes("Compra")).length;
   const courtesy = rows.filter((row) => row.participationType.includes("Cortesia")).length;
   const validated = rows.filter((row) => row.validationCount > 0).length;
@@ -2227,7 +2344,8 @@ function renderMailingPage() {
         ${metric("Com validacao", int(validated), "Pessoas com check-in")}
         ${metric("Possiveis duplicados", int(possibleDuplicates), "Sem e-mail nem telefone")}
       </div>
-      ${renderMailingTable(rows)}
+      ${renderMailingTable(rows, pageSize, page)}
+      ${renderPagination(rows.length, page, pageSize, "mailing-page")}
     </section>
   `;
 }
@@ -2281,8 +2399,13 @@ function renderAudienceFilters(events) {
 }
 
 function renderAudienceRecurrence() {
+  const gate = requirePrivateData("Recorrencia de compradores");
+  if (gate) return gate;
   const events = filteredEvents();
   const rows = filteredAudienceRecurrence(events);
+  const pageSize = 50;
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const page = Math.min(Math.max(1, state.audiencePage), totalPages);
   const validated = rows.filter((row) => row.validationsCount > 0).length;
   const maxEvents = rows.reduce((max, row) => Math.max(max, row.totalEvents), 0);
   const totalTickets = rows.reduce((acc, row) => acc + row.entries.length, 0);
@@ -2298,21 +2421,23 @@ function renderAudienceRecurrence() {
       </div>
       <div class="card">
         <div class="section-title"><h2>Recorrencia de Compradores</h2><p>${int(rows.length)} compradores no recorte atual.</p></div>
-        ${renderAudienceTable(rows)}
+        ${renderAudienceTable(rows, pageSize, page)}
+        ${renderPagination(rows.length, page, pageSize, "audience-page")}
       </div>
     </section>
   `;
 }
 
-function renderAudienceTable(rows) {
+function renderAudienceTable(rows, pageSize = 50, page = 1) {
   if (!rows.length) return `<p class="notice">Nenhum comprador recorrente encontrado com os filtros atuais.</p>`;
+  const start = (page - 1) * pageSize;
   return `
     <div class="table-wrap compact-table audience-table recurring-table">
       <table>
         <thead><tr><th>Comprador</th><th>E-mail</th><th>Historico</th><th>Tipo</th><th>Ultima aparicao</th></tr></thead>
         <tbody>
           ${rows
-            .slice(0, 120)
+            .slice(start, start + pageSize)
             .map((row) => {
               const expanded = state.expandedAudienceKey === row.participantKey;
               return `
@@ -2401,6 +2526,18 @@ function renderResponsiveTable({ className = "", columns = [], rows = [], empty 
           }
         </tbody>
       </table>
+    </div>
+  `;
+}
+
+function renderPagination(total, page, pageSize, action) {
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  if (pages <= 1) return "";
+  return `
+    <div class="pagination" role="navigation" aria-label="Paginacao">
+      <button class="secondary" data-action="${esc(action)}" data-page="${Math.max(1, page - 1)}" ${page <= 1 ? "disabled" : ""}>Anterior</button>
+      <span>Pagina ${int(page)} de ${int(pages)}</span>
+      <button class="secondary" data-action="${esc(action)}" data-page="${Math.min(pages, page + 1)}" ${page >= pages ? "disabled" : ""}>Proxima</button>
     </div>
   `;
 }
@@ -2734,7 +2871,8 @@ function renderBatchLotDrawer() {
   `;
 }
 
-function renderMailingTable(rows, limit = 120) {
+function renderMailingTable(rows, pageSize = 50, page = 1) {
+  const start = (page - 1) * pageSize;
   return renderResponsiveTable({
     className: "compact-table mailing-table",
     columns: [
@@ -2745,7 +2883,7 @@ function renderMailingTable(rows, limit = 120) {
       { label: "Validacoes", render: (row) => int(row.validationCount) },
       { label: "Origem/link", render: (row) => esc(row.origins.slice(0, 3).join(", ") || "-") }
     ],
-    rows: rows.slice(0, limit),
+    rows: rows.slice(start, start + pageSize),
     empty: "Nenhum participante encontrado."
   });
 }
@@ -2848,9 +2986,9 @@ function bindActions() {
     render();
   });
   document.querySelectorAll("[data-action='export-mailing']").forEach((button) => {
-    button.addEventListener("click", (event) => {
+    button.addEventListener("click", async (event) => {
       event.stopPropagation();
-      exportMailingCsv(button.dataset.mailingScope === "event" ? button.dataset.eventId : "all");
+      await exportMailingCsv(button.dataset.mailingScope === "event" ? button.dataset.eventId : "all");
     });
   });
   document.querySelector("[data-action='logout']")?.addEventListener("click", logout);
@@ -2893,26 +3031,43 @@ function bindActions() {
   document.getElementById("recurrenceEvent")?.addEventListener("change", (event) => {
     state.recurrenceFilters.eventId = event.target.value;
     state.expandedAudienceKey = "";
+    state.audiencePage = 1;
     render();
   });
   document.getElementById("recurrenceType")?.addEventListener("change", (event) => {
     state.recurrenceFilters.type = event.target.value;
     state.expandedAudienceKey = "";
+    state.audiencePage = 1;
     render();
   });
   document.getElementById("recurrenceMin")?.addEventListener("input", (event) => {
     state.recurrenceFilters.min = event.target.value;
     state.expandedAudienceKey = "";
+    state.audiencePage = 1;
     renderKeepingFocus("recurrenceMin");
   });
   document.getElementById("recurrenceValidatedOnly")?.addEventListener("change", (event) => {
     state.recurrenceFilters.validatedOnly = event.target.checked;
     state.expandedAudienceKey = "";
+    state.audiencePage = 1;
     render();
   });
   document.getElementById("mailingEvent")?.addEventListener("change", (event) => {
     state.mailingEventId = event.target.value;
+    state.mailingPage = 1;
     render();
+  });
+  document.querySelectorAll("[data-action='mailing-page']").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.mailingPage = Number(button.dataset.page || 1);
+      render();
+    });
+  });
+  document.querySelectorAll("[data-action='audience-page']").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.audiencePage = Number(button.dataset.page || 1);
+      render();
+    });
   });
   document.getElementById("profileEvent")?.addEventListener("change", (event) => {
     state.profileEventId = event.target.value;
@@ -3047,4 +3202,5 @@ function bindPromoterSplitResize() {
 }
 
 render();
+checkSession();
 startRealtimeDataSync();

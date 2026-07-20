@@ -6,13 +6,13 @@
   --surface-3: #eee4d2;
   --text: #172313;
   --text-2: #33442d;
-  --muted: #6e7768;
-  --line: #ded0b7;
+  --muted: #5f695a;
+  --line: #d5c4a7;
   --line-strong: #cdb68e;
   --brand: #153612;
   --brand-2: #224d1b;
   --brand-3: #2d6330;
-  --accent: #d69b35;
+  --accent: #b97912;
   --accent-2: #f1c46b;
   --info: #315f86;
   --good: #0d5e50;
@@ -63,8 +63,11 @@ button {
 
 button:focus-visible,
 input:focus-visible,
-select:focus-visible {
-  outline: 3px solid rgba(214, 155, 53, 0.34);
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid rgba(185, 121, 18, 0.42);
   outline-offset: 2px;
 }
 
@@ -2040,6 +2043,27 @@ tr:last-child td {
   background: #f8e6bf;
   color: #5d3a0b;
   font-weight: 720;
+}
+
+.notice.warning {
+  border-color: rgba(122, 76, 5, 0.28);
+  background: #fff0cf;
+  color: var(--warn);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 10px 0 0;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.pagination button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
 }
 
 .drawer-backdrop {

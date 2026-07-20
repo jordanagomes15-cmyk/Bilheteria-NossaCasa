@@ -1,3 +1,4 @@
+import copy
 import json
 import hashlib
 import os
@@ -9,12 +10,14 @@ from pathlib import Path
 import pandas as pd
 from pypdf import PdfReader
 
-ROOT = Path("/Users/jordanagomes/Documents/Nossa Casa")
+ROOT = Path(os.environ.get("NOSSA_CASA_DATA_DIR", Path.home() / "Documents/Nossa Casa")).expanduser()
 GANDAYA_DIR = ROOT / "Gandaya"
 PNE_DIR = ROOT / "PNE"
 OUT = Path("generated-data.js")
+PRIVATE_DIR = Path(os.environ.get("NOSSA_CASA_PRIVATE_DATA_DIR", "private-data"))
+PRIVATE_AUDIENCE_OUT = PRIVATE_DIR / "audience.json"
 WATCH_EXTENSIONS = {".xlsx", ".pdf"}
-DATA_SCHEMA_VERSION = "audience-profile-v1"
+DATA_SCHEMA_VERSION = "public-private-split-v2"
 
 
 def date_from_text(value):
@@ -99,6 +102,58 @@ def anonymous_person_key(user_id, email, name):
     if not base:
         return ""
     return hashlib.sha256(base.encode("utf-8")).hexdigest()[:14]
+
+
+def person_summary_key(entry):
+    email = str(entry.get("email") or "").strip().lower()
+    if email:
+        return f"email:{email}"
+    phone = clean_phone(entry.get("phone"))
+    name = normalize(entry.get("name"))
+    if name and phone:
+        return f"name-phone:{name}:{phone}"
+    if name:
+        return f"name:{name}"
+    return normalize(entry.get("participantKey"))
+
+
+def event_audience_summary(event):
+    all_people = set()
+    buyers = set()
+    courtesy = set()
+    for entry in event.get("audience") or []:
+        key = person_summary_key(entry)
+        if not key:
+            continue
+        all_people.add(key)
+        if entry.get("type") == "purchase":
+            buyers.add(key)
+        if entry.get("type") == "courtesy":
+            courtesy.add(key)
+    return {
+        "uniquePeople": len(all_people),
+        "uniqueBuyers": len(buyers),
+        "uniqueCourtesy": len(courtesy),
+    }
+
+
+def public_event(event):
+    public = copy.deepcopy(event)
+    public["audienceSummary"] = event_audience_summary(event)
+    public.pop("audience", None)
+    public.pop("attendees", None)
+    return public
+
+
+def private_event(event):
+    return {
+        "id": event.get("id"),
+        "name": event.get("name"),
+        "eventDate": event.get("eventDate"),
+        "eventDateTime": event.get("eventDateTime"),
+        "audience": event.get("audience") or [],
+        "attendees": event.get("attendees") or [],
+    }
 
 
 def event_name_from_xlsx(path):
@@ -598,15 +653,23 @@ def main():
                 event["eventDateTime"] = pne["eventDateTime"]
     events = sorted(events, key=lambda event: (event.get("eventDateTime") or event.get("eventDate") or "9999-12-31", normalize(event.get("name"))))
 
+    private_payload = {
+        "generatedAt": datetime.now().isoformat(timespec="seconds"),
+        "dataVersion": data_version,
+        "events": [private_event(event) for event in events],
+    }
+    PRIVATE_DIR.mkdir(parents=True, exist_ok=True)
+    PRIVATE_AUDIENCE_OUT.write_text(json.dumps(private_payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+
     payload = {
         "generatedAt": datetime.now().isoformat(timespec="seconds"),
         "dataVersion": data_version,
         "sourceFolders": {
-            "gandaya": str(GANDAYA_DIR),
-            "pne": str(PNE_DIR),
+            "gandaya": "Gandaya",
+            "pne": "PNE",
         },
         "sourceFiles": source_files,
-        "events": events,
+        "events": [public_event(event) for event in events],
         "pneReports": pnes,
     }
     OUT.write_text(

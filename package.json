@@ -3,12 +3,11 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "build": "mkdir -p dist/assets dist/vendor && cp index.html styles.css app.js generated-data.js dist/ && cp assets/nossa-casa-logo.jpeg dist/assets/ && cp vendor/xlsx.full.min.js dist/vendor/",
-    "generate:data": "/Users/jordanagomes/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 scripts/generate-data.py",
-    "watch:data": "python3 scripts/watch-data.py",
-    "watch:netlify": "python3 scripts/watch-netlify.py",
-    "watch:vercel": "python3 scripts/watch-vercel.py",
-    "watch:publish": "python3 scripts/watch-publish.py",
+    "build": "mkdir -p dist/assets dist/vendor && cp index.html styles.css app.js generated-data.js manifest.json robots.txt sitemap.xml dist/ && cp assets/nossa-casa-logo.jpeg dist/assets/ && cp vendor/xlsx.full.min.js dist/vendor/",
+    "generate:data": "python3 scripts/generate-data.py",
+    "watch:data": "python3 scripts/watch-local.py --no-commit",
+    "watch:local": "python3 scripts/watch-local.py",
+    "upload:sources": "python3 scripts/upload-source-files.py",
     "dev": "python3 -m http.server 4175",
     "preview": "python3 -m http.server 4175 -d dist"
   }
