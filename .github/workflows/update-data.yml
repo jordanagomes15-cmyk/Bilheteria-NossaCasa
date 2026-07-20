@@ -7,7 +7,6 @@ on:
       - main
     paths:
       - "data/incoming/**"
-      - "scripts/generate-data.py"
 
 permissions:
   contents: write
@@ -32,7 +31,12 @@ jobs:
       - name: Gerar dados
         env:
           NOSSA_CASA_DATA_DIR: data/incoming
-        run: npm run generate:data
+        run: |
+          if ! find data/incoming -type f \( -name '*.xlsx' -o -name '*.pdf' \) | grep -q .; then
+            echo "Nenhum arquivo .xlsx/.pdf em data/incoming; abortando para evitar publicar dados vazios."
+            exit 1
+          fi
+          npm run generate:data
       - run: npm run build
       - name: Commit generated-data
         run: |
