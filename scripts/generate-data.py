@@ -56,6 +56,23 @@ def slug(value):
     return normalize(value).replace(" ", "-") or "evento"
 
 
+def event_match_tokens(value):
+    ignored = {
+        "edicao",
+        "especial",
+        "dia",
+        "evento",
+        "painel",
+        "controle",
+        "pensa",
+        "no",
+        "evento",
+        "com",
+        "br",
+    }
+    return {token for token in normalize(value).split() if len(token) >= 3 and not token.isdigit() and token not in ignored}
+
+
 def display(value):
     value = str(value or "").replace("-", " ").strip()
     return re.sub(r"\s+", " ", value).title() or "Sem nome"
@@ -523,6 +540,18 @@ def best_event_match(events, pne):
         event_key = normalize(event["name"])
         if key and (key in event_key or event_key in key):
             return event
+    key_tokens = event_match_tokens(pne["eventName"])
+    if key_tokens:
+        best = None
+        best_score = 0
+        for event in events:
+            event_tokens = event_match_tokens(event["name"])
+            common = key_tokens & event_tokens
+            if len(common) >= 2 and len(common) > best_score:
+                best = event
+                best_score = len(common)
+        if best:
+            return best
     special = {
         "som na praca edicao especial": "som na praca",
         "sambae": "sambae",
