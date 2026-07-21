@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "build": "mkdir -p dist/assets dist/vendor && cp index.html styles.css app.js generated-data.js manifest.json robots.txt sitemap.xml dist/ && cp assets/nossa-casa-logo.jpeg dist/assets/ && cp vendor/xlsx.full.min.js dist/vendor/",
+    "build": "mkdir -p dist/assets dist/vendor && cp index.html styles.css app.js generated-data.js manifest.json robots.txt sitemap.xml dist/ && cp assets/nossa-casa-logo.jpeg assets/nossa-casa-logo-small.jpeg dist/assets/ && cp vendor/xlsx.full.min.js dist/vendor/",
     "generate:data": "python3 scripts/generate-data.py",
     "watch:data": "python3 scripts/watch-local.py --no-commit",
     "watch:local": "python3 scripts/watch-local.py",

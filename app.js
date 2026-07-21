@@ -1367,13 +1367,13 @@ async function decideAccessRequest(issueNumber, decision, tier) {
 
 function renderAccessRequests() {
   if (state.accessRequestsLoading && !state.accessRequestsLoaded) {
-    return `<div class="panel"><p class="muted">Carregando solicitacoes...</p></div>`;
+    return renderStatePanel("Carregando solicitacoes", "Buscando pedidos pendentes no GitHub Issues.", "loading");
   }
   if (state.accessRequestsError) {
-    return `<div class="panel"><p class="login-error">${esc(state.accessRequestsError)}</p></div>`;
+    return renderStatePanel("Nao foi possivel carregar", state.accessRequestsError, "error");
   }
   if (!state.accessRequests.length) {
-    return `<div class="panel"><p class="muted">Nenhuma solicitacao pendente no momento.</p></div>`;
+    return renderStatePanel("Sem solicitacoes pendentes", "Quando alguem pedir acesso, a solicitacao aparece aqui para aprovacao.", "empty");
   }
   return `
     <div class="panel access-requests">
@@ -1442,7 +1442,7 @@ function render() {
       <section class="login">
         <div class="login-panel">
           <div class="login-brand">
-            <img class="logo-img" src="/assets/nossa-casa-logo.jpeg" alt="Nossa Casa" />
+            <img class="logo-img" src="/assets/nossa-casa-logo-small.jpeg" alt="Nossa Casa" />
             <h1>Nossa Casa</h1>
             <p>Verificando sessao segura...</p>
           </div>
@@ -1634,7 +1634,7 @@ function renderLogin() {
     <section class="login">
       <div class="login-panel">
         <div class="login-brand">
-          <img class="logo-img" src="/assets/nossa-casa-logo.jpeg" alt="Nossa Casa" />
+          <img class="logo-img" src="/assets/nossa-casa-logo-small.jpeg" alt="Nossa Casa" />
           <h1>Nossa Casa</h1>
           <p>Dashboard de performance de eventos, vendas, cortesias, validacoes e ranking de comissarios/RPs.</p>
         </div>
@@ -1718,6 +1718,33 @@ function bindLogin() {
   });
 }
 
+const NAV_ICON_PATHS = {
+  overview: '<rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect>',
+  events: '<path d="M8 2v4"></path><path d="M16 2v4"></path><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M3 10h18"></path>',
+  commissioners: '<path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"></path><circle cx="9.5" cy="7" r="4"></circle><path d="M17 11l2 2 4-4"></path>',
+  audienceProfile: '<path d="M3 3v18h18"></path><path d="M7 15l3-3 3 2 5-6"></path><circle cx="7" cy="15" r="1"></circle><circle cx="10" cy="12" r="1"></circle><circle cx="13" cy="14" r="1"></circle><circle cx="18" cy="8" r="1"></circle>',
+  mailing: '<rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 7l9 6 9-6"></path>',
+  audienceRecurrence: '<path d="M3 12a8 8 0 0 1 13.66-5.66L19 8"></path><path d="M19 3v5h-5"></path><path d="M21 12a8 8 0 0 1-13.66 5.66L5 16"></path><path d="M5 21v-5h5"></path>',
+  validation: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="M22 4L12 14.01l-3-3"></path>',
+  accessRequests: '<path d="M9 3h6l1 2h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h3l1-2Z"></path><path d="M9 12h6"></path><path d="M9 16h4"></path>'
+};
+
+function navIcon(id) {
+  return `<svg class="nav-icon-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${NAV_ICON_PATHS[id] || NAV_ICON_PATHS.overview}</svg>`;
+}
+
+function renderStatePanel(title, message, type = "empty") {
+  return `
+    <div class="panel state-panel ${esc(type)}" role="${type === "error" ? "alert" : "status"}" aria-live="polite">
+      <div class="state-dot" aria-hidden="true"></div>
+      <div>
+        <strong>${esc(title)}</strong>
+        <p class="muted">${esc(message)}</p>
+      </div>
+    </div>
+  `;
+}
+
 function renderSidebar() {
   const items = [
     ["overview", "Visao geral"],
@@ -1729,26 +1756,19 @@ function renderSidebar() {
     ["validation", "Validacao"],
     ["accessRequests", "Solicitacoes"]
   ];
-  const navIcons = {
-    overview: "Vg",
-    events: "Ev",
-    commissioners: "Co",
-    audienceProfile: "Pf",
-    mailing: "Ml",
-    audienceRecurrence: "Rc",
-    validation: "Val",
-    accessRequests: "Ac"
-  };
   return `
     <aside class="sidebar ${state.drawerOpen ? "open" : ""} ${state.sidebarCollapsed ? "collapsed" : ""}">
       <div class="brand-row">
-        <img class="logo-img" src="/assets/nossa-casa-logo.jpeg" alt="Nossa Casa" />
+        <img class="logo-img" src="/assets/nossa-casa-logo-small.jpeg" alt="Nossa Casa" />
         <div><strong>Nossa Casa</strong><span>Performance de eventos</span></div>
         <button class="sidebar-toggle" data-action="toggle-sidebar" aria-label="${state.sidebarCollapsed ? "Expandir menu" : "Recolher menu"}">${state.sidebarCollapsed ? "›" : "‹"}</button>
       </div>
       <nav class="nav">
         ${items
-          .map(([id, label]) => `<button class="${state.view === id ? "active" : ""}" data-view="${id}" title="${esc(label)}"><span class="nav-icon">${esc(navIcons[id])}</span><span class="nav-label">${esc(label)}</span></button>`)
+          .map(([id, label]) => {
+            const active = state.view === id;
+            return `<button class="${active ? "active" : ""}" data-view="${id}" title="${esc(label)}" aria-label="${esc(label)}" ${active ? 'aria-current="page"' : ""}>${navIcon(id)}<span class="nav-label">${esc(label)}</span></button>`;
+          })
           .join("")}
       </nav>
       <div class="sidebar-foot">
@@ -1780,12 +1800,12 @@ function renderTopbar() {
   const syncStatus = syncLabels[state.syncStatus] ? state.syncStatus : "ok";
   return `
     <header class="topbar">
-      <button class="secondary mobile-menu" data-action="toggle-drawer">Menu</button>
+      <button class="secondary mobile-menu" data-action="toggle-drawer" aria-label="Abrir menu de navegacao">Menu</button>
       <div class="section-title">
         <h1>${esc(title)}</h1>
         <p>${esc(subtitle)}</p>
       </div>
-      <div class="source-status ${esc(syncStatus)}">${esc(syncLabels[syncStatus])}</div>
+      <div class="source-status ${esc(syncStatus)}" role="status" aria-live="polite">${esc(syncLabels[syncStatus])}</div>
     </header>
   `;
 }

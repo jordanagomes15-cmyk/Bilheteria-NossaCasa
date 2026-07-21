@@ -14,3 +14,4 @@ data/incoming/**
 .netlify
 .vercel
 launchd/com.nossa-casa.watch-netlify.plist
+.env*
