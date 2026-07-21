@@ -188,8 +188,14 @@ const state = {
   promoterLinkSearch: "",
   settlementFilters: {
     search: "",
-    model: "all"
+    model: "all",
+    status: "withRepasse",
+    sort: "repasse",
+    sortDir: "desc"
   },
+  expandedSettlementCode: "",
+  settlementShowAll: false,
+  settlementRulesOpen: false,
   batchFilters: {
     search: "",
     type: "all",
@@ -937,6 +943,34 @@ async function exportMailingCsv(eventId = "all") {
   ];
   const filename = selected ? `mailing-${slugFileName(selected.name)}.csv` : "mailing-consolidado-nossa-casa.csv";
   downloadTextFile(filename, `\uFEFF${lines.join("\n")}`);
+}
+
+function currentSettlementRows(analysis) {
+  const search = normalizeText(state.settlementFilters.search);
+  const modelFilter = state.settlementFilters.model;
+  return sortSettlementRows(
+    analysis.rows.filter((row) => {
+      const searchMatch = !search || normalizeText(row.name).includes(search);
+      const modelMatch = modelFilter === "all" || row.model === modelFilter;
+      const statusMatch = settlementStatusMatch(row, state.settlementFilters.status);
+      return searchMatch && modelMatch && statusMatch && (row.revenue || row.sold || row.complimentary || row.repasse);
+    })
+  );
+}
+
+function exportSettlementCsv() {
+  const analysis = buildSettlementAnalysis(filteredEvents());
+  const rows = currentSettlementRows(analysis);
+  const headers = ["Nome", "Modelo", "Receita", "Vendidos", "Validados", "Repasse", "Garantia aplicada"];
+  const lines = [
+    headers.map(csvValue).join(";"),
+    ...rows.map((row) =>
+      [row.name, settlementModelLabel(row.model), money(row.revenue), row.sold, row.soldValidated, money(row.repasse), money(row.guaranteeApplied)]
+        .map(csvValue)
+        .join(";")
+    )
+  ];
+  downloadTextFile("fechamento-nossa-casa.csv", `\uFEFF${lines.join("\n")}`);
 }
 
 function formatDate(value) {
@@ -2197,14 +2231,14 @@ function renderDashboardFilters(events) {
   `;
 }
 
-function metric(label, value, note) {
+function metric(label, value, note, actionHtml = "") {
   const text = String(value ?? "");
   const moneyMatch = text.match(/^R\$\s*(.+)$/);
   const compactValue = text.length > 13;
   const valueHtml = moneyMatch
     ? `<strong class="metric-value money-value ${compactValue ? "compact-value" : ""}" title="${esc(text)}"><span class="metric-currency">R$</span><span class="metric-number">${esc(moneyMatch[1])}</span></strong>`
     : `<strong class="metric-value ${compactValue ? "compact-value" : ""}" title="${esc(text)}">${esc(text)}</strong>`;
-  return `<div class="card metric"><span>${esc(label)}</span>${valueHtml}<small class="muted">${esc(note)}</small></div>`;
+  return `<div class="card metric"><span>${esc(label)}</span>${valueHtml}<small class="muted">${esc(note)}</small>${actionHtml}</div>`;
 }
 
 function eventMini(event) {
@@ -2553,16 +2587,126 @@ function renderSettlementTierList(row) {
   `;
 }
 
+function settlementRulesTable() {
+  return renderResponsiveTable({
+    className: "settlement-rules-table",
+    columns: [
+      { label: "Tier", render: (row) => `<strong>${esc(row.label)}</strong>` },
+      { label: "Modelo padrao", render: (row) => `${pct(row.commissionRate * 100)} comissao · ${pct(row.discountRate * 100)} desconto` },
+      { label: "100k garantido", render: (row) => `${money(row.guaranteedBase)} base · ${pct(row.guaranteedCommissionRate * 100)} comissao · ${pct(row.guaranteedDiscountRate * 100)} desconto` }
+    ],
+    rows: SETTLEMENT_TIER_ORDER.filter((tierKey) => tierKey !== "unclassified").map((tierKey) => SETTLEMENT_TIERS[tierKey])
+  });
+}
+
+function settlementStatusMatch(row, status) {
+  const hasRepasse = Number(row.repasse || 0) > 0;
+  const hasUnclassified = Number(row.tiers.unclassified?.revenue || 0) > 0 || Number(row.tiers.unclassified?.sold || 0) > 0;
+  if (status === "all") return true;
+  if (status === "withRepasse") return hasRepasse;
+  if (status === "withoutRepasse") return !hasRepasse && (row.revenue || row.sold || row.complimentary);
+  if (status === "unclassified") return hasUnclassified;
+  return true;
+}
+
+function compareSettlementValues(aValue, bValue, dir = "desc") {
+  if (typeof aValue === "string" || typeof bValue === "string") {
+    const result = String(aValue || "").localeCompare(String(bValue || ""), "pt-BR");
+    return dir === "asc" ? result : -result;
+  }
+  const result = Number(aValue || 0) - Number(bValue || 0);
+  return dir === "asc" ? result : -result;
+}
+
+function sortSettlementRows(rows) {
+  const sort = state.settlementFilters.sort;
+  const dir = state.settlementFilters.sortDir || (sort === "name" ? "asc" : "desc");
+  return rows.slice().sort((a, b) => {
+    if (sort === "revenue") return compareSettlementValues(a.revenue, b.revenue, dir) || Number(b.repasse || 0) - Number(a.repasse || 0);
+    if (sort === "name") return compareSettlementValues(a.name, b.name, dir);
+    if (sort === "pending") {
+      return Number(b.tiers.unclassified?.revenue || 0) - Number(a.tiers.unclassified?.revenue || 0) || Number(b.revenue || 0) - Number(a.revenue || 0);
+    }
+    return compareSettlementValues(a.repasse, b.repasse, dir) || Number(b.revenue || 0) - Number(a.revenue || 0);
+  });
+}
+
+function settlementSortHeader(key, label) {
+  const active = state.settlementFilters.sort === key;
+  const dir = state.settlementFilters.sortDir || (key === "name" ? "asc" : "desc");
+  const marker = !active ? "↕" : dir === "asc" ? "↑" : "↓";
+  return `<button class="table-sort-button ${active ? "active" : ""}" data-settlement-sort="${esc(key)}" aria-label="Ordenar por ${esc(label)}">${esc(label)} <span>${marker}</span></button>`;
+}
+
+function settlementTierCompactSummary(row) {
+  const tierParts = row.tierRows
+    .filter((tier) => Number(tier.repasse || 0) || Number(tier.revenue || 0) || Number(tier.sold || 0))
+    .slice(0, 4)
+    .map((tier) => `${tier.label} ${money(tier.repasse)}`);
+  const countLabel = tierParts.length === 1 ? "1 tier" : `${int(tierParts.length)} tiers`;
+  return `${countLabel}${tierParts.length ? ` - ${tierParts.join(" - ")}` : ""}`;
+}
+
+function renderSettlementPendingCard(analysis) {
+  if (!analysis.summary.unclassifiedRevenue) return "";
+  const pendingRows = analysis.rows
+    .filter((row) => Number(row.tiers.unclassified?.revenue || 0) > 0 || Number(row.tiers.unclassified?.sold || 0) > 0)
+    .sort((a, b) => Number(b.tiers.unclassified?.revenue || 0) - Number(a.tiers.unclassified?.revenue || 0))
+    .slice(0, 6);
+  return `
+    <button class="notice warning settlement-pending-action" data-action="settlement-show-unclassified">
+      <span>
+        <strong>Resolver eventos sem tier</strong>
+        <small>${money(analysis.summary.unclassifiedRevenue)} em receita sem regra de comissao aplicada.</small>
+      </span>
+      <span class="settlement-pending-list">${pendingRows.map((row) => `${esc(row.name)} ${money(row.tiers.unclassified.revenue)}`).join(" · ")}</span>
+    </button>
+  `;
+}
+
+function renderSettlementRows(rows) {
+  if (!rows.length) return `<p class="notice">Nenhum codigo encontrado no recorte atual.</p>`;
+  return `
+    <div class="table-wrap responsive-table settlement-table">
+      <table>
+        <thead><tr><th>${settlementSortHeader("name", "Codigo")}</th><th>Modelo</th><th>${settlementSortHeader("revenue", "Receita")}</th><th>Vendas</th><th>${settlementSortHeader("repasse", "Repasse")}</th><th>Resumo dos tiers</th><th>Status</th></tr></thead>
+        <tbody>
+          ${rows
+            .map((row) => {
+              const key = salesCodeKey(row.name);
+              const expanded = state.expandedSettlementCode === key;
+              const hasUnclassified = Number(row.tiers.unclassified?.revenue || 0) > 0 || Number(row.tiers.unclassified?.sold || 0) > 0;
+              const status = hasUnclassified ? "Tem pendencia" : Number(row.repasse || 0) > 0 ? "Pronto" : "Sem repasse";
+              return `
+                <tr class="settlement-row ${expanded ? "is-expanded" : ""}" data-settlement-row="${esc(key)}">
+                  <td data-label="Codigo"><strong>${esc(row.name)}</strong><small>${int(row.eventCount)} eventos com ocorrencia</small></td>
+                  <td data-label="Modelo"><span class="pill ${row.model === "100k garantido" ? "warn" : "soft"}">${esc(settlementModelLabel(row.model))}</span></td>
+                  <td data-label="Receita" class="money-col">${money(row.revenue)}</td>
+                  <td data-label="Vendas">${int(row.sold)}<small>${int(row.soldValidated)} validadas</small></td>
+                  <td data-label="Repasse" class="money-col"><strong>${money(row.repasse)}</strong>${row.guaranteeApplied ? `<small>${money(row.guaranteeApplied)} garantia</small>` : ""}</td>
+                  <td data-label="Resumo dos tiers"><span class="tier-summary-text">${esc(settlementTierCompactSummary(row))}</span><button class="secondary compact-action" data-settlement-code="${esc(key)}" aria-expanded="${expanded ? "true" : "false"}">${expanded ? "Ocultar detalhamento" : "Ver detalhamento"}</button></td>
+                  <td data-label="Status"><span class="pill ${hasUnclassified ? "warn" : Number(row.repasse || 0) > 0 ? "good" : "muted-pill"}">${esc(status)}</span></td>
+                </tr>
+                ${
+                  expanded
+                    ? `<tr class="settlement-detail-row"><td colspan="7">${renderSettlementTierList(row)}</td></tr>`
+                    : ""
+                }
+              `;
+            })
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
 function renderSettlement() {
   const events = filteredEvents();
   const analysis = buildSettlementAnalysis(events);
-  const search = normalizeText(state.settlementFilters.search);
   const modelFilter = state.settlementFilters.model;
-  const rows = analysis.rows.filter((row) => {
-    const searchMatch = !search || normalizeText(row.name).includes(search);
-    const modelMatch = modelFilter === "all" || row.model === modelFilter;
-    return searchMatch && modelMatch && (row.revenue || row.sold || row.complimentary || row.repasse);
-  });
+  const rows = currentSettlementRows(analysis);
+  const visibleRows = state.settlementShowAll ? rows : rows.slice(0, 50);
   const specialRows = analysis.rows.filter((row) => row.model === "100k garantido");
   return `
     <section class="grid settlement-page">
@@ -2570,15 +2714,19 @@ function renderSettlement() {
       <div class="grid cards overview-metrics settlement-metrics">
         ${metric("Repasse total", money(analysis.summary.repasse), "Comissoes calculadas pelo modelo de cada codigo")}
         ${metric("Modelo padrao", money(analysis.summary.standardRepasse), "Demais comissarios por tier")}
-        ${metric("100k garantido", money(analysis.summary.specialRepasse), "RA, Mare e Mariana Parik agrupados")}
+        ${metric("100k garantido", money(analysis.summary.specialRepasse), "RA, Mare e Mariana Parik agrupados", `<button class="metric-link" data-action="scroll-special-settlement">Ver regra especial</button>`)}
         ${metric("Receita dos codigos", money(analysis.summary.revenue), `${int(analysis.summary.sold)} vendas por link`)}
       </div>
-      ${
-        analysis.summary.unclassifiedRevenue
-          ? `<p class="notice warning">Ha ${money(analysis.summary.unclassifiedRevenue)} em receita de codigos em eventos sem tier configurado. Nenhuma comissao foi aplicada nesses casos.</p>`
-          : ""
-      }
-      <div class="card settlement-special-card">
+      ${renderSettlementPendingCard(analysis)}
+      <div class="card settlement-rule-card compact">
+        <div class="section-title">
+          <h2>Regras aplicadas</h2>
+          <p>Referencia das negociacoes usadas no fechamento.</p>
+        </div>
+        <button class="secondary compact-action settlement-rules-toggle" data-action="toggle-settlement-rules" aria-expanded="${state.settlementRulesOpen ? "true" : "false"}">${state.settlementRulesOpen ? "Ocultar regras de comissao" : "Ver regras de comissao"}</button>
+        ${state.settlementRulesOpen ? settlementRulesTable() : ""}
+      </div>
+      <div class="card settlement-special-card" id="settlementSpecialCard">
         <div class="section-title">
           <span class="special-rule-badge">Regra especial</span>
           <h2>Negociacao especial RA / MARE / Mariana Parik</h2>
@@ -2589,12 +2737,18 @@ function renderSettlement() {
           ${metric("Receita apurada", money(analysis.specialPool.revenue), `${int(analysis.specialPool.sold)} vendidos / ${int(analysis.specialPool.soldValidated)} validados`)}
           ${metric("Codigos especiais", int(specialRows.length), specialRows.map((row) => row.name).join(", ") || "Sem vendas no recorte")}
         </div>
-        ${renderSettlementTierList(analysis.specialPool)}
+        <details class="settlement-details-toggle">
+          <summary>Ver distribuicao por tier</summary>
+          ${renderSettlementTierList(analysis.specialPool)}
+        </details>
       </div>
       <div class="card settlement-filter-card">
-        <div class="section-title">
-          <h2>Fechamento por codigo</h2>
-          <p>Totais e tier de evento usados para calcular o repasse.</p>
+        <div class="toolbar settlement-card-toolbar">
+          <div class="section-title">
+            <h2>Fechamento por codigo</h2>
+            <p>Totais e tier de evento usados para calcular o repasse.</p>
+          </div>
+          <button class="secondary" data-action="export-settlement">Exportar fechamento (CSV)</button>
         </div>
         <div class="filter-grid settlement-filter-grid">
           <label class="filter-field">
@@ -2609,35 +2763,27 @@ function renderSettlement() {
               <option value="100k garantido" ${modelFilter === "100k garantido" ? "selected" : ""}>100k garantido</option>
             </select>
           </label>
+          <label class="filter-field">
+            <span>Status financeiro</span>
+            <select id="settlementStatus">
+              <option value="withRepasse" ${state.settlementFilters.status === "withRepasse" ? "selected" : ""}>Com repasse</option>
+              <option value="unclassified" ${state.settlementFilters.status === "unclassified" ? "selected" : ""}>Sem tier</option>
+              <option value="withoutRepasse" ${state.settlementFilters.status === "withoutRepasse" ? "selected" : ""}>Sem repasse</option>
+              <option value="all" ${state.settlementFilters.status === "all" ? "selected" : ""}>Todos</option>
+            </select>
+          </label>
         </div>
-        ${renderResponsiveTable({
-          className: "settlement-table",
-          columns: [
-            { label: "Codigo", render: (row) => `<strong>${esc(row.name)}</strong><small>${int(row.eventCount)} eventos com ocorrencia</small>` },
-            { label: "Modelo", render: (row) => `<span class="pill ${row.model === "100k garantido" ? "warn" : "soft"}">${esc(settlementModelLabel(row.model))}</span>` },
-            { label: "Receita", className: "money-col", render: (row) => money(row.revenue) },
-            { label: "Vendas", render: (row) => `${int(row.sold)}<small>${int(row.soldValidated)} validadas</small>` },
-            { label: "Repasse", className: "money-col", render: (row) => `<strong>${money(row.repasse)}</strong>${row.guaranteeApplied ? `<small>${money(row.guaranteeApplied)} garantia</small>` : ""}` },
-            { label: "Tiers", render: (row) => renderSettlementTierList(row) }
-          ],
-          rows,
-          empty: "Nenhum codigo encontrado no recorte atual."
-        })}
-      </div>
-      <div class="card settlement-rule-card">
-        <div class="section-title">
-          <h2>Regras aplicadas</h2>
-          <p>Os descontos sao exibidos como referencia da negociacao; o repasse usa a comissao de cada tier.</p>
+        <div class="settlement-result-bar">
+          <p class="muted settlement-result-count">${int(visibleRows.length)} de ${int(rows.length)} codigos exibidos</p>
+          ${
+            rows.length > visibleRows.length
+              ? `<button class="secondary compact-action" data-action="settlement-show-all">Ver todos</button>`
+              : state.settlementShowAll && rows.length > 50
+                ? `<button class="secondary compact-action" data-action="settlement-show-less">Ver principais</button>`
+                : ""
+          }
         </div>
-        ${renderResponsiveTable({
-          className: "settlement-rules-table",
-          columns: [
-            { label: "Tier", render: (row) => `<strong>${esc(row.label)}</strong>` },
-            { label: "Modelo padrao", render: (row) => `${pct(row.commissionRate * 100)} comissao · ${pct(row.discountRate * 100)} desconto` },
-            { label: "100k garantido", render: (row) => `${money(row.guaranteedBase)} base · ${pct(row.guaranteedCommissionRate * 100)} comissao · ${pct(row.guaranteedDiscountRate * 100)} desconto` }
-          ],
-          rows: SETTLEMENT_TIER_ORDER.filter((tierKey) => tierKey !== "unclassified").map((tierKey) => SETTLEMENT_TIERS[tierKey])
-        })}
+        ${renderSettlementRows(visibleRows)}
       </div>
     </section>
   `;
@@ -3556,6 +3702,7 @@ function bindActions() {
       await exportMailingCsv(button.dataset.mailingScope === "event" ? button.dataset.eventId : "all");
     });
   });
+  document.querySelector("[data-action='export-settlement']")?.addEventListener("click", exportSettlementCsv);
   document.querySelector("[data-action='logout']")?.addEventListener("click", logout);
   document.querySelector("[data-action='retry-access-requests']")?.addEventListener("click", () => {
     state.accessRequestsError = "";
@@ -3601,11 +3748,74 @@ function bindActions() {
   });
   document.getElementById("settlementSearch")?.addEventListener("input", (event) => {
     state.settlementFilters.search = event.target.value;
+    state.expandedSettlementCode = "";
+    state.settlementShowAll = false;
     renderKeepingFocus("settlementSearch");
   });
   document.getElementById("settlementModel")?.addEventListener("change", (event) => {
     state.settlementFilters.model = event.target.value;
+    state.expandedSettlementCode = "";
+    state.settlementShowAll = false;
     render();
+  });
+  document.getElementById("settlementStatus")?.addEventListener("change", (event) => {
+    state.settlementFilters.status = event.target.value;
+    state.expandedSettlementCode = "";
+    state.settlementShowAll = false;
+    render();
+  });
+  document.getElementById("settlementSort")?.addEventListener("change", (event) => {
+    state.settlementFilters.sort = event.target.value;
+    state.settlementFilters.sortDir = event.target.value === "name" ? "asc" : "desc";
+    state.expandedSettlementCode = "";
+    state.settlementShowAll = false;
+    render();
+  });
+  document.querySelectorAll("[data-settlement-sort]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const key = button.dataset.settlementSort;
+      if (state.settlementFilters.sort === key) {
+        state.settlementFilters.sortDir = state.settlementFilters.sortDir === "asc" ? "desc" : "asc";
+      } else {
+        state.settlementFilters.sort = key;
+        state.settlementFilters.sortDir = key === "name" ? "asc" : "desc";
+      }
+      state.expandedSettlementCode = "";
+      state.settlementShowAll = false;
+      render();
+    });
+  });
+  document.querySelector("[data-action='settlement-show-unclassified']")?.addEventListener("click", () => {
+    state.settlementFilters.status = "unclassified";
+    state.settlementFilters.sort = "pending";
+    state.settlementFilters.sortDir = "desc";
+    state.expandedSettlementCode = "";
+    state.settlementShowAll = false;
+    render();
+  });
+  document.querySelector("[data-action='settlement-show-all']")?.addEventListener("click", () => {
+    state.settlementShowAll = true;
+    render();
+  });
+  document.querySelector("[data-action='settlement-show-less']")?.addEventListener("click", () => {
+    state.settlementShowAll = false;
+    state.expandedSettlementCode = "";
+    render();
+  });
+  document.querySelector("[data-action='toggle-settlement-rules']")?.addEventListener("click", () => {
+    state.settlementRulesOpen = !state.settlementRulesOpen;
+    renderPreservingElement("[data-action='toggle-settlement-rules']");
+  });
+  document.querySelector("[data-action='scroll-special-settlement']")?.addEventListener("click", () => {
+    document.getElementById("settlementSpecialCard")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  document.querySelectorAll("[data-settlement-code]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const key = button.dataset.settlementCode;
+      state.expandedSettlementCode = state.expandedSettlementCode === key ? "" : key;
+      renderPreservingElement(dataSelector("data-settlement-row", key));
+    });
   });
   document.getElementById("batchSearch")?.addEventListener("input", (event) => {
     state.batchFilters.search = event.target.value;
