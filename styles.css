@@ -1097,6 +1097,73 @@ h3 {
   min-width: 720px;
 }
 
+.settlement-tier-events-card {
+  gap: 16px;
+}
+
+.settlement-tier-event-groups {
+  display: grid;
+  gap: 12px;
+}
+
+.settlement-tier-event-group,
+.settlement-tier-events {
+  border: 1px solid rgba(221, 206, 176, 0.78);
+  border-radius: 8px;
+  background: #fffaf1;
+}
+
+.settlement-tier-event-group summary,
+.settlement-tier-events summary {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 850;
+}
+
+.settlement-tier-event-group summary small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.settlement-tier-event-grid {
+  margin: 0;
+  padding: 12px;
+  border-top: 1px solid rgba(221, 206, 176, 0.78);
+}
+
+.settlement-tier-events {
+  grid-column: 1 / -1;
+  background: rgba(255, 253, 248, 0.72);
+}
+
+.settlement-tier-events summary {
+  min-height: 0;
+  padding: 9px 10px;
+  color: var(--brand);
+  font-size: 12px;
+}
+
+.settlement-tier-events .settlement-tier-event-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 10px;
+}
+
+.settlement-event-mini .event-card-bars {
+  gap: 6px;
+}
+
+.settlement-event-mini > small {
+  font-size: 12px;
+}
+
 .settlement-rule-card.compact {
   gap: 12px;
 }
@@ -2689,6 +2756,7 @@ tr:last-child td {
   }
 
   .event-highlight-grid,
+  .settlement-tier-events .settlement-tier-event-grid,
   .insight-grid,
   .profile-chart-grid {
     grid-template-columns: 1fr;

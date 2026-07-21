@@ -1299,7 +1299,8 @@ function createSettlementAccumulator(name, model) {
         guaranteedBase: 0,
         guaranteedCommission: 0,
         guaranteeApplied: 0,
-        eventNames: new Set()
+        eventNames: new Set(),
+        eventRows: new Map()
       };
       return acc;
     }, {})
@@ -1325,6 +1326,25 @@ function addSettlementData(row, tierKey, event, data) {
   tier.complimentaryValidated += complimentaryValidated;
   tier.revenue += revenue;
   tier.eventNames.add(event.name);
+  if (!tier.eventRows.has(event.id)) {
+    tier.eventRows.set(event.id, {
+      id: event.id,
+      name: event.name,
+      sold: 0,
+      soldValidated: 0,
+      complimentary: 0,
+      complimentaryValidated: 0,
+      validated: 0,
+      revenue: 0
+    });
+  }
+  const eventRow = tier.eventRows.get(event.id);
+  eventRow.sold += sold;
+  eventRow.soldValidated += soldValidated;
+  eventRow.complimentary += complimentary;
+  eventRow.complimentaryValidated += complimentaryValidated;
+  eventRow.validated += soldValidated + complimentaryValidated;
+  eventRow.revenue += revenue;
 }
 
 function finalizeSettlementRow(row, options = {}) {
@@ -1359,6 +1379,7 @@ function finalizeSettlementRow(row, options = {}) {
       tier.repasse = tier.actualCommission;
     }
     tier.eventCount = tier.eventNames.size;
+    tier.eventRows = [...tier.eventRows.values()].sort((a, b) => Number(b.revenue || 0) - Number(a.revenue || 0) || Number(b.sold || 0) - Number(a.sold || 0));
     actualCommission += tier.actualCommission;
     guaranteeApplied += tier.guaranteeApplied;
     repasse += tier.repasse;
@@ -2224,14 +2245,7 @@ function renderOverview() {
       </div>
       <div class="card">
         <div class="section-title"><h2>Eventos em destaque</h2><p>Maiores faturamentos dentro do recorte filtrado.</p></div>
-        <div class="event-highlight-grid">
-          ${events
-            .slice()
-            .sort((a, b) => Number(b.revenue || 0) - Number(a.revenue || 0))
-            .slice(0, 6)
-            .map((event) => eventMini(event))
-            .join("") || renderStatePanel("Nenhum evento encontrado com os filtros atuais.", "", "empty")}
-        </div>
+        ${renderEventHighlightGrid(events, { limit: 6 })}
       </div>
     </section>
   `;
@@ -2333,6 +2347,19 @@ function eventMini(event) {
       </div>
       <div class="bar"><i style="width:${clampPercent(rate)}%"></i></div>
     </button>
+  `;
+}
+
+function renderEventHighlightGrid(events, options = {}) {
+  const rows = options.preserveOrder
+    ? events.slice()
+    : events.slice().sort((a, b) => Number(b.revenue || 0) - Number(a.revenue || 0));
+  const visibleRows = Number(options.limit || 0) ? rows.slice(0, Number(options.limit)) : rows;
+  const renderer = options.renderer || eventMini;
+  return `
+    <div class="event-highlight-grid ${options.className ? esc(options.className) : ""}">
+      ${visibleRows.map((event) => renderer(event)).join("") || renderStatePanel(options.empty || "Nenhum evento encontrado com os filtros atuais.", "", "empty")}
+    </div>
   `;
 }
 
@@ -2638,8 +2665,114 @@ function settlementModelLabel(model) {
   return model === "100k garantido" ? "100k garantido" : "Modelo padrao";
 }
 
+function settlementEventMini(event) {
+  const soldRate = safeRate(event.soldValidated, event.sold);
+  const courtesyRate = safeRate(event.complimentaryValidated, event.complimentary);
+  return `
+    <button class="event-mini settlement-event-mini" data-event="${esc(event.id)}">
+      <div>
+        <h3>${esc(event.name)}</h3>
+        <p class="muted">${money(event.revenue)} em receita de codigos</p>
+      </div>
+      <div class="event-mini-stats">
+        <span><b>${int(event.sold)}</b> vendidos</span>
+        <span><b>${int(event.soldValidated)}</b> val. vendas</span>
+        <span><b>${int(event.complimentary)}</b> cortesias</span>
+        <span><b>${int(event.complimentaryValidated)}</b> val. cortesias</span>
+      </div>
+      <div class="event-card-bars">
+        <div><span>Venda</span>${event.sold ? shareCell(event.soldValidated, event.sold) : "-"}</div>
+        <div><span>Cortesia</span>${event.complimentary ? shareCell(event.complimentaryValidated, event.complimentary) : "-"}</div>
+      </div>
+      <small class="muted">Presenca paga ${pct(soldRate)} · cortesia ${pct(courtesyRate)}</small>
+    </button>
+  `;
+}
+
+function renderSettlementEventCards(events) {
+  return renderEventHighlightGrid(events, {
+    preserveOrder: true,
+    renderer: settlementEventMini,
+    className: "settlement-tier-event-grid",
+    empty: "Nenhum evento neste tier."
+  });
+}
+
+function settlementTierEventGroups(events = filteredEvents()) {
+  const groups = SETTLEMENT_TIER_ORDER.map((tierKey) => ({
+    key: tierKey,
+    label: SETTLEMENT_TIERS[tierKey].label,
+    revenue: 0,
+    sold: 0,
+    soldValidated: 0,
+    complimentary: 0,
+    complimentaryValidated: 0,
+    eventRows: []
+  }));
+  const byTier = new Map(groups.map((group) => [group.key, group]));
+  events.forEach((event) => {
+    const tierKey = settlementTierForEvent(event);
+    const group = byTier.get(tierKey) || byTier.get("unclassified");
+    const eventRow = Object.values(event.promoters || {}).reduce(
+      (acc, data) => {
+        const sold = Number(data.sold || 0);
+        const soldValidated = rowSoldValidated(data);
+        const complimentary = Number(data.complimentary || 0);
+        const complimentaryValidated = rowComplimentaryValidated(data);
+        const revenue = Number(data.revenue || 0);
+        acc.sold += sold;
+        acc.soldValidated += soldValidated;
+        acc.complimentary += complimentary;
+        acc.complimentaryValidated += complimentaryValidated;
+        acc.revenue += revenue;
+        return acc;
+      },
+      { id: event.id, name: event.name, sold: 0, soldValidated: 0, complimentary: 0, complimentaryValidated: 0, validated: 0, revenue: 0 }
+    );
+    eventRow.validated = eventRow.soldValidated + eventRow.complimentaryValidated;
+    group.revenue += eventRow.revenue;
+    group.sold += eventRow.sold;
+    group.soldValidated += eventRow.soldValidated;
+    group.complimentary += eventRow.complimentary;
+    group.complimentaryValidated += eventRow.complimentaryValidated;
+    if (eventRow.revenue || eventRow.sold || eventRow.complimentary) group.eventRows.push(eventRow);
+  });
+  groups.forEach((group) => {
+    group.eventRows.sort((a, b) => Number(b.revenue || 0) - Number(a.revenue || 0) || Number(b.sold || 0) - Number(a.sold || 0));
+  });
+  return groups.filter((group) => group.key !== "unclassified" || group.eventRows.length);
+}
+
+function renderSettlementTierEventsOverview(events) {
+  const groups = settlementTierEventGroups(events);
+  return `
+    <div class="card settlement-tier-events-card">
+      <div class="section-title">
+        <h2>Eventos por tier</h2>
+        <p>Ouro, Prata e Bronze detalhados no mesmo formato visual da Visao geral.</p>
+      </div>
+      <div class="settlement-tier-event-groups">
+        ${groups
+          .map(
+            (group) => `
+              <details class="settlement-tier-event-group" ${group.eventRows.length ? "open" : ""}>
+                <summary>
+                  <span><strong>${esc(group.label)}</strong><small>${int(group.eventRows.length)} eventos · ${money(group.revenue)} · ${int(group.sold)} vendidos</small></span>
+                  <span>${pct(safeRate(group.soldValidated, group.sold))} val. vendas</span>
+                </summary>
+                ${renderSettlementEventCards(group.eventRows)}
+              </details>
+            `
+          )
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
 function settlementTierSummary(tier, model) {
   const hasGuarantee = model === "100k garantido" && Number(tier.guaranteedBase || 0) > 0;
+  const eventRows = Array.isArray(tier.eventRows) ? tier.eventRows : [];
   return `
     <div class="settlement-tier-card">
       <div>
@@ -2652,6 +2785,11 @@ function settlementTierSummary(tier, model) {
         <span><b>${int(tier.soldValidated)}</b><small>validados</small></span>
         <span><b>${money(tier.repasse)}</b><small>repasse${hasGuarantee ? " com garantia" : ""}</small></span>
       </div>
+      ${
+        eventRows.length
+          ? `<details class="settlement-tier-events"><summary>Ver eventos ${esc(tier.label)}</summary>${renderSettlementEventCards(eventRows)}</details>`
+          : ""
+      }
     </div>
   `;
 }
@@ -2803,6 +2941,7 @@ function renderSettlement() {
         <button class="secondary compact-action settlement-rules-toggle" data-action="toggle-settlement-rules" aria-expanded="${state.settlementRulesOpen ? "true" : "false"}">${state.settlementRulesOpen ? "Ocultar regras de comissao" : "Ver regras de comissao"}</button>
         ${state.settlementRulesOpen ? settlementRulesTable() : ""}
       </div>
+      ${renderSettlementTierEventsOverview(events)}
       <div class="card settlement-special-card" id="settlementSpecialCard">
         <div class="section-title">
           <span class="special-rule-badge">Regra especial</span>
