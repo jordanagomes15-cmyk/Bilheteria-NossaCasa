@@ -541,11 +541,13 @@ h3 {
 
 .sidebar.collapsed .brand-row > div,
 .sidebar.collapsed .nav-label,
+.sidebar.collapsed .nav-group-label,
 .sidebar.collapsed .sidebar-foot {
   display: none;
 }
 
 .sidebar.collapsed .nav,
+.sidebar.collapsed .nav-group,
 .sidebar.collapsed .nav button {
   width: 44px;
 }
@@ -582,7 +584,23 @@ h3 {
 
 .nav {
   display: grid;
+  gap: 12px;
+}
+
+.nav-group {
+  display: grid;
   gap: 4px;
+}
+
+.nav-group-label {
+  display: block;
+  padding: 4px 12px 2px;
+  color: rgba(248, 242, 232, 0.48);
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0;
+  line-height: 1.1;
+  text-transform: uppercase;
 }
 
 .nav button {
@@ -911,6 +929,34 @@ h3 {
 .settlement-rule-card {
   display: grid;
   gap: 16px;
+}
+
+.settlement-special-card {
+  position: relative;
+  border-color: rgba(214, 155, 53, 0.56);
+  box-shadow: 0 0 0 1px rgba(214, 155, 53, 0.12), var(--shadow);
+}
+
+.settlement-special-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  border-radius: var(--radius) 0 0 var(--radius);
+  background: linear-gradient(180deg, var(--accent), var(--brand-2));
+}
+
+.special-rule-badge {
+  width: fit-content;
+  padding: 5px 9px;
+  border: 1px solid rgba(214, 155, 53, 0.4);
+  border-radius: 999px;
+  color: #5e4819;
+  background: #fff0cc;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
 .settlement-special-summary {

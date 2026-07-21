@@ -1983,16 +1983,11 @@ function renderStatePanel(title, message, type = "empty", actions = "") {
 }
 
 function renderSidebar() {
-  const items = [
-    ["overview", "Visao geral"],
-    ["events", "Eventos"],
-    ["commissioners", "Comissarios"],
-    ["settlement", "Fechamento"],
-    ["audienceProfile", "Perfil"],
-    ["mailing", "Mailing"],
-    ["audienceRecurrence", "Recorrencia"],
-    ["validation", "Validacao"],
-    ["accessRequests", "Solicitacoes"]
+  const groups = [
+    { label: "Vendas", items: [["overview", "Visao geral"], ["events", "Eventos"]] },
+    { label: "Comissarios", items: [["commissioners", "Comissarios"], ["settlement", "Fechamento"]] },
+    { label: "Publico", items: [["audienceProfile", "Perfil"], ["mailing", "Mailing"], ["audienceRecurrence", "Recorrencia"]] },
+    { label: "Administracao", items: [["validation", "Validacao"], ["accessRequests", "Solicitacoes"]] }
   ];
   return `
     <aside class="sidebar ${state.drawerOpen ? "open" : ""} ${state.sidebarCollapsed ? "collapsed" : ""}">
@@ -2002,11 +1997,20 @@ function renderSidebar() {
         <button class="sidebar-toggle" data-action="toggle-sidebar" aria-label="${state.sidebarCollapsed ? "Expandir menu" : "Recolher menu"}">${state.sidebarCollapsed ? "›" : "‹"}</button>
       </div>
       <nav class="nav">
-        ${items
-          .map(([id, label]) => {
-            const active = state.view === id;
-            return `<button class="${active ? "active" : ""}" data-view="${id}" title="${esc(label)}" aria-label="${esc(label)}" ${active ? 'aria-current="page"' : ""}>${navIcon(id)}<span class="nav-label">${esc(label)}</span></button>`;
-          })
+        ${groups
+          .map(
+            (group) => `
+              <div class="nav-group">
+                <span class="nav-group-label">${esc(group.label)}</span>
+                ${group.items
+                  .map(([id, label]) => {
+                    const active = state.view === id;
+                    return `<button class="${active ? "active" : ""}" data-view="${id}" title="${esc(label)}" aria-label="${esc(label)}" ${active ? 'aria-current="page"' : ""}>${navIcon(id)}<span class="nav-label">${esc(label)}</span></button>`;
+                  })
+                  .join("")}
+              </div>
+            `
+          )
           .join("")}
       </nav>
       <div class="sidebar-foot">
@@ -2576,6 +2580,7 @@ function renderSettlement() {
       }
       <div class="card settlement-special-card">
         <div class="section-title">
+          <span class="special-rule-badge">Regra especial</span>
           <h2>Negociacao especial RA / MARE / Mariana Parik</h2>
           <p>Modelo 100k garantido: Ouro R$ 20 mil, Prata R$ 50 mil e Bronze R$ 30 mil. O repasse abaixo mostra o consolidado e a divisao proporcional por codigo.</p>
         </div>
