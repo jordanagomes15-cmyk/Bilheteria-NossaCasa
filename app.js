@@ -1177,6 +1177,7 @@ function settlementTierForEvent(event) {
     name.includes("mequetrefe") ||
     name.includes("krush") ||
     name.includes("pagode secreto") ||
+    name.includes("serpentina") ||
     name.includes("novo samba tradicional") ||
     name.includes("brasil x marrocos")
   ) {
