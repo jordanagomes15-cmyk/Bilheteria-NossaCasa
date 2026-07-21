@@ -1900,47 +1900,61 @@ h3 {
   min-width: 680px;
 }
 
-.sales-code-summary-table {
-  table-layout: fixed;
-  width: max(100%, 760px);
-  min-width: 760px;
+.sales-code-event-list {
+  display: grid;
+  gap: 10px;
 }
 
-.sales-code-summary-table th:nth-child(1) {
-  width: 42%;
+.sales-code-event-item {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fffdf8;
 }
 
-.sales-code-summary-table th:nth-child(2),
-.sales-code-summary-table th:nth-child(5) {
-  width: 12%;
-}
-
-.sales-code-summary-table th:nth-child(3),
-.sales-code-summary-table th:nth-child(4) {
-  width: 17%;
-}
-
-.sales-code-event-row.is-expanded td {
+.sales-code-event-item.is-expanded {
   background: #fff8ec;
 }
 
-.sales-code-event-detail-row > td {
-  padding: 10px;
-  background: #fffaf1;
+.sales-code-event-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.sales-code-expand-cell {
-  text-align: center;
-}
-
-.compact-icon {
-  width: 34px;
-  min-width: 34px;
-  min-height: 34px;
+.sales-code-event-title {
+  min-width: 0;
   padding: 0;
-  justify-content: center;
-  font-size: 16px;
-  line-height: 1;
+  color: var(--text);
+  text-align: left;
+}
+
+.sales-code-event-title span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.sales-code-event-meta {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.sales-code-lot-toggle {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fbf4e7;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.sales-code-event-lots {
+  margin-top: 12px;
 }
 
 .sales-detail-table th:nth-child(1) {
@@ -3415,85 +3429,22 @@ tr:last-child td {
     background: transparent;
   }
 
-  .sales-code-summary-wrap {
-    max-height: none;
-    overflow: visible;
-  }
-
-  .sales-code-summary-table,
-  .sales-code-summary-table tbody {
-    display: block;
-    width: 100%;
-    min-width: 0;
-  }
-
-  .sales-code-summary-table thead {
-    display: none;
-  }
-
-  .sales-code-summary-table tr.sales-code-event-row {
-    display: grid;
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-    margin: 0 0 8px;
-    padding: 10px;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px 10px;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    background: #fffdf8;
-  }
-
-  .sales-code-summary-table tr.sales-code-event-detail-row {
-    display: block;
-    margin: -2px 0 10px;
-  }
-
-  .sales-code-summary-table tr.sales-code-event-detail-row > td {
-    display: block;
-    padding: 0;
-    border: 0;
-    background: transparent;
-  }
-
-  .sales-code-summary-table > tbody > tr > td {
-    display: flex;
-    width: auto;
-    min-height: 0;
-    padding: 0;
-    align-items: center;
-    justify-content: space-between;
+  .sales-code-event-list {
     gap: 8px;
-    border: 0;
-    color: var(--text);
-    font-size: 12px;
-    line-height: 1.2;
-    text-align: right !important;
   }
 
-  .sales-code-summary-table > tbody > tr > td::before {
-    display: block !important;
-    content: attr(data-label);
-    flex: 0 0 auto;
-    color: var(--muted);
-    font-size: 12px;
-    font-weight: 850;
-    text-align: left;
-    text-transform: uppercase;
+  .sales-code-event-item {
+    padding: 12px;
+    border-radius: 10px;
   }
 
-  .sales-code-summary-table > tbody > tr > td:first-child,
-  .sales-code-summary-table .sales-code-expand-cell {
-    grid-column: 1 / -1;
+  .sales-code-event-main {
+    display: grid;
+    gap: 8px;
   }
 
-  .sales-code-summary-table > tbody > tr > td:first-child {
-    align-items: flex-start;
-  }
-
-  .sales-code-summary-table .detail-event-link {
-    padding: 0;
+  .sales-code-lot-toggle {
+    justify-self: start;
   }
 
   .sales-code-detail .sales-detail-table,

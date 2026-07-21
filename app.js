@@ -2488,37 +2488,29 @@ function renderSalesCodeDetail(row, totalRevenue) {
   });
   return `
     <div class="sales-code-detail">
-      <div class="table-wrap nested-detail-table sales-code-summary-wrap" tabindex="0">
-        <table class="sales-code-summary-table">
-          <thead><tr><th>Evento</th><th>Vendidos</th><th>Receita</th><th>Validados (%)</th><th></th></tr></thead>
-          <tbody>
-            ${eventRows
-              .map((eventRow) => {
-                const expanded = state.salesCodeExpandedEventId === eventRow.key;
-                return `
-                  <tr class="sales-code-event-row ${expanded ? "is-expanded" : ""}">
-                    <td data-label="Evento"><button class="ghost detail-event-link" data-event="${esc(eventRow.id)}"><span>${esc(eventRow.name)}</span></button></td>
-                    <td data-label="Vendidos">${int(eventRow.sold)}</td>
-                    <td data-label="Receita">${money(eventRow.revenue)}</td>
-                    <td data-label="Validados (%)">${eventRow.sold ? rateCell(eventRow.soldValidated, eventRow.sold) : "-"}</td>
-                    <td data-label="Lotes" class="sales-code-expand-cell">
-                      ${
-                        eventRow.batchRows.length > 1
-                          ? `<button class="ghost icon-button compact-icon" data-action="toggle-sales-event-detail" data-sales-event="${esc(eventRow.key)}" aria-label="${expanded ? "Ocultar lotes" : "Ver lotes"}" aria-expanded="${expanded ? "true" : "false"}">${expanded ? "−" : "+"}</button>`
-                          : `<span class="muted">${int(eventRow.batchRows.length)} lote</span>`
-                      }
-                    </td>
-                  </tr>
+      <div class="sales-code-event-list">
+        ${eventRows
+          .map((eventRow) => {
+            const expanded = state.salesCodeExpandedEventId === eventRow.key;
+            const validationRate = eventRow.sold ? pct(safeRate(eventRow.soldValidated, eventRow.sold)) : "-";
+            return `
+              <article class="sales-code-event-item ${expanded ? "is-expanded" : ""}">
+                <div class="sales-code-event-main">
+                  <button class="ghost detail-event-link sales-code-event-title" data-event="${esc(eventRow.id)}">
+                    <span>${esc(eventRow.name)}</span>
+                  </button>
                   ${
-                    expanded
-                      ? `<tr class="sales-code-event-detail-row"><td colspan="5">${renderSalesCodeBatchTable(eventRow.batchRows)}</td></tr>`
+                    eventRow.batchRows.length > 1
+                      ? `<button class="ghost sales-code-lot-toggle" data-action="toggle-sales-event-detail" data-sales-event="${esc(eventRow.key)}" aria-label="${expanded ? "Ocultar lotes de " : "Ver lotes de "}${esc(eventRow.name)}" aria-expanded="${expanded ? "true" : "false"}">${expanded ? "Ocultar lotes" : "Ver lotes"}</button>`
                       : ""
                   }
-                `;
-              })
-              .join("")}
-          </tbody>
-        </table>
+                </div>
+                <p class="sales-code-event-meta">${int(eventRow.sold)} vendidos - ${money(eventRow.revenue)} - ${validationRate} validados</p>
+                ${expanded ? `<div class="sales-code-event-lots">${renderSalesCodeBatchTable(eventRow.batchRows)}</div>` : ""}
+              </article>
+            `;
+          })
+          .join("")}
       </div>
     </div>
   `;
