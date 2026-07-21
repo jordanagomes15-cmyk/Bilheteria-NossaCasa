@@ -158,6 +158,7 @@ const state = {
   events: loadEvents(),
   selectedEventId: null,
   salesCodeDrawerKey: "",
+  salesCodeExpandedEventId: "",
   batchDrawerGroupKey: "",
   drawerReturnSelector: "",
   pendingDrawerFocus: false,
@@ -1733,6 +1734,7 @@ function setLoginError(message) {
 function setView(view) {
   state.view = view;
   state.salesCodeDrawerKey = "";
+  state.salesCodeExpandedEventId = "";
   state.batchDrawerGroupKey = "";
   state.drawerReturnSelector = "";
   state.pendingDrawerFocus = false;
@@ -1744,6 +1746,7 @@ function openEvent(id) {
   state.selectedEventId = id;
   state.view = "detail";
   state.salesCodeDrawerKey = "";
+  state.salesCodeExpandedEventId = "";
   state.batchDrawerGroupKey = "";
   state.drawerReturnSelector = "";
   state.pendingDrawerFocus = false;
@@ -1843,6 +1846,7 @@ function closeActiveDrawer() {
   if (!hasOpenDrawer()) return;
   const returnSelector = state.drawerReturnSelector;
   state.salesCodeDrawerKey = "";
+  state.salesCodeExpandedEventId = "";
   state.batchDrawerGroupKey = "";
   state.drawerReturnSelector = "";
   state.pendingDrawerFocus = false;
@@ -2443,51 +2447,79 @@ function renderSalesLinkTable(rows, totalRevenue, options = {}) {
   `;
 }
 
+function renderSalesCodeBatchTable(batchRows) {
+  return `
+    <div class="table-wrap nested-detail-table" tabindex="0">
+      <table class="sales-detail-table">
+        <thead><tr><th>Lote</th><th>Quantidade</th><th>Receita</th><th>Validados</th></tr></thead>
+        <tbody>
+          ${batchRows
+            .map(
+              (batch) => `
+                <tr class="detail-batch-row">
+                  <td class="detail-lot-cell" data-label="Lote">${esc(batch.label)}</td>
+                  <td class="detail-count-cell" data-label="Quantidade">${int(batch.sold)}</td>
+                  <td class="detail-count-cell" data-label="Receita">${money(batch.revenue)}${batch.revenueEstimated ? ` <small title="Receita estimada proporcionalmente aos vendidos do lote.">estimado</small>` : ""}</td>
+                  <td class="detail-count-cell" data-label="Validados">${int(batch.soldValidated)}</td>
+                </tr>
+              `
+            )
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
 function renderSalesCodeDetail(row, totalRevenue) {
   const events = row.events
     .slice()
     .sort((a, b) => Number(b.revenue || 0) - Number(a.revenue || 0) || Number(b.sold || 0) - Number(a.sold || 0));
+  const eventRows = events.map((eventRow) => {
+    const batchRows = salesCodeBatchRows(row, eventRow);
+    return {
+      ...eventRow,
+      key: String(eventRow.id || eventRow.name || ""),
+      batchRows,
+      sold: batchRows.reduce((sum, batch) => sum + Number(batch.sold || 0), 0),
+      soldValidated: batchRows.reduce((sum, batch) => sum + Number(batch.soldValidated || 0), 0),
+      revenue: batchRows.reduce((sum, batch) => sum + Number(batch.revenue || 0), 0)
+    };
+  });
   return `
     <div class="sales-code-detail">
-      ${events
-        .map((eventRow) => {
-          const batchRows = salesCodeBatchRows(row, eventRow);
-          const sold = batchRows.reduce((sum, batch) => sum + Number(batch.sold || 0), 0);
-          const soldValidated = batchRows.reduce((sum, batch) => sum + Number(batch.soldValidated || 0), 0);
-          const revenue = batchRows.reduce((sum, batch) => sum + Number(batch.revenue || 0), 0);
-          return `
-            <div class="batch-detail-block sales-code-event-block">
-              <div class="batch-detail-head">
-                <h4>
-                  <button class="ghost detail-event-link" data-event="${esc(eventRow.id)}">
-                    <span>${esc(eventRow.name)}</span>
-                  </button>
-                </h4>
-                <p>${int(batchRows.length)} ${batchRows.length === 1 ? "lote" : "lotes"} · ${int(sold)} vendidos · ${money(revenue)} · ${pct(safeRate(soldValidated, sold))} validados</p>
-              </div>
-              <div class="table-wrap nested-detail-table" tabindex="0">
-                <table class="sales-detail-table">
-                  <thead><tr><th>Lote</th><th>Quantidade</th><th>Receita</th><th>Validados</th></tr></thead>
-                  <tbody>
-                    ${batchRows
-                      .map(
-                        (batch) => `
-                          <tr class="detail-batch-row">
-                            <td class="detail-lot-cell" data-label="Lote">${esc(batch.label)}</td>
-                            <td class="detail-count-cell" data-label="Quantidade">${int(batch.sold)}</td>
-                            <td class="detail-count-cell" data-label="Receita">${money(batch.revenue)}${batch.revenueEstimated ? ` <small title="Receita estimada proporcionalmente aos vendidos do lote.">estimado</small>` : ""}</td>
-                            <td class="detail-count-cell" data-label="Validados">${int(batch.soldValidated)}</td>
-                          </tr>
-                        `
-                      )
-                      .join("")}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          `;
-        })
-        .join("")}
+      <div class="table-wrap nested-detail-table sales-code-summary-wrap" tabindex="0">
+        <table class="sales-code-summary-table">
+          <thead><tr><th>Evento</th><th>Vendidos</th><th>Receita</th><th>Validados (%)</th><th></th></tr></thead>
+          <tbody>
+            ${eventRows
+              .map((eventRow) => {
+                const expanded = state.salesCodeExpandedEventId === eventRow.key;
+                return `
+                  <tr class="sales-code-event-row ${expanded ? "is-expanded" : ""}">
+                    <td data-label="Evento"><button class="ghost detail-event-link" data-event="${esc(eventRow.id)}"><span>${esc(eventRow.name)}</span></button></td>
+                    <td data-label="Vendidos">${int(eventRow.sold)}</td>
+                    <td data-label="Receita">${money(eventRow.revenue)}</td>
+                    <td data-label="Validados (%)">${eventRow.sold ? rateCell(eventRow.soldValidated, eventRow.sold) : "-"}</td>
+                    <td data-label="Lotes" class="sales-code-expand-cell">
+                      ${
+                        eventRow.batchRows.length > 1
+                          ? `<button class="ghost icon-button compact-icon" data-action="toggle-sales-event-detail" data-sales-event="${esc(eventRow.key)}" aria-label="${expanded ? "Ocultar lotes" : "Ver lotes"}" aria-expanded="${expanded ? "true" : "false"}">${expanded ? "−" : "+"}</button>`
+                          : `<span class="muted">${int(eventRow.batchRows.length)} lote</span>`
+                      }
+                    </td>
+                  </tr>
+                  ${
+                    expanded
+                      ? `<tr class="sales-code-event-detail-row"><td colspan="5">${renderSalesCodeBatchTable(eventRow.batchRows)}</td></tr>`
+                      : ""
+                  }
+                `;
+              })
+              .join("")}
+          </tbody>
+        </table>
+      </div>
     </div>
   `;
 }
@@ -3822,10 +3854,19 @@ function bindActions() {
     row.addEventListener("click", () => {
       const key = row.dataset.salesCode;
       state.salesCodeDrawerKey = key;
+      state.salesCodeExpandedEventId = "";
       state.batchDrawerGroupKey = "";
       state.drawerReturnSelector = dataSelector("data-sales-code", key);
       state.pendingDrawerFocus = true;
       renderPreservingElement(dataSelector("data-sales-code", key));
+    });
+  });
+  document.querySelectorAll("[data-action='toggle-sales-event-detail']").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const key = button.dataset.salesEvent;
+      state.salesCodeExpandedEventId = state.salesCodeExpandedEventId === key ? "" : key;
+      renderPreservingElement(dataSelector("data-sales-event", key));
     });
   });
   document.querySelectorAll("[data-action='close-sales-code-drawer']").forEach((element) => {
