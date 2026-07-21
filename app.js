@@ -1370,7 +1370,12 @@ function renderAccessRequests() {
     return renderStatePanel("Carregando solicitacoes", "Buscando pedidos pendentes no GitHub Issues.", "loading");
   }
   if (state.accessRequestsError) {
-    return renderStatePanel("Nao foi possivel carregar", state.accessRequestsError, "error");
+    return renderStatePanel(
+      "Nao foi possivel carregar",
+      state.accessRequestsError,
+      "error",
+      `<button class="secondary" type="button" data-action="retry-access-requests">Tentar novamente</button>`
+    );
   }
   if (!state.accessRequests.length) {
     return renderStatePanel("Sem solicitacoes pendentes", "Quando alguem pedir acesso, a solicitacao aparece aqui para aprovacao.", "empty");
@@ -1776,13 +1781,14 @@ function navIcon(id) {
   return `<svg class="nav-icon-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${NAV_ICON_PATHS[id] || NAV_ICON_PATHS.overview}</svg>`;
 }
 
-function renderStatePanel(title, message, type = "empty") {
+function renderStatePanel(title, message, type = "empty", actions = "") {
   return `
     <div class="panel state-panel ${esc(type)}" role="${type === "error" ? "alert" : "status"}" aria-live="polite">
       <div class="state-dot" aria-hidden="true"></div>
       <div>
         <strong>${esc(title)}</strong>
         <p class="muted">${esc(message)}</p>
+        ${actions ? `<div class="state-actions">${actions}</div>` : ""}
       </div>
     </div>
   `;
@@ -1861,7 +1867,9 @@ function renderView() {
   if (state.view === "audienceRecurrence") return renderAudienceRecurrence();
   if (state.view === "validation") return renderValidation();
   if (state.view === "accessRequests") {
-    setTimeout(() => ensureAccessRequests(), 0);
+    if (!state.accessRequestsLoaded && !state.accessRequestsLoading && !state.accessRequestsError) {
+      setTimeout(() => ensureAccessRequests(), 0);
+    }
     return renderAccessRequests();
   }
   if (state.view === "detail") return renderDetail();
@@ -3234,6 +3242,12 @@ function bindActions() {
     });
   });
   document.querySelector("[data-action='logout']")?.addEventListener("click", logout);
+  document.querySelector("[data-action='retry-access-requests']")?.addEventListener("click", () => {
+    state.accessRequestsError = "";
+    state.accessRequestsLoaded = false;
+    state.accessRequests = [];
+    ensureAccessRequests();
+  });
   document.querySelectorAll("[data-action='approve-access']").forEach((button) => {
     button.addEventListener("click", () => {
       const issueNumber = Number(button.dataset.issue);

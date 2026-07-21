@@ -25,8 +25,22 @@ async function githubRequest(path, options = {}) {
     }
   });
   const text = await response.text();
-  const data = text ? JSON.parse(text) : null;
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = null;
+  }
   if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error("Token do GitHub invalido ou expirado. Atualize GITHUB_TOKEN na Vercel.");
+    }
+    if (response.status === 403) {
+      throw new Error("Token do GitHub sem permissao suficiente. Garanta Issues: Read and write no repositorio.");
+    }
+    if (response.status === 404) {
+      throw new Error("Repositorio do GitHub nao encontrado. Confira GITHUB_REPO e o acesso do token.");
+    }
     throw new Error(data?.message || `GitHub API respondeu ${response.status}`);
   }
   return data;
