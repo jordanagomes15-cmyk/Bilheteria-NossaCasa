@@ -186,6 +186,10 @@ const state = {
   },
   codeRankingSort: "revenue",
   promoterLinkSearch: "",
+  settlementFilters: {
+    search: "",
+    model: "all"
+  },
   batchFilters: {
     search: "",
     type: "all",
@@ -1115,6 +1119,189 @@ function sortCodeRanking(rows, type = "sales") {
   });
 }
 
+const SETTLEMENT_TIERS = {
+  gold: { label: "Ouro", commissionRate: 0.05, discountRate: 0, guaranteedBase: 20000, guaranteedCommissionRate: 0.1, guaranteedDiscountRate: 0.1 },
+  silver: { label: "Prata", commissionRate: 0.1, discountRate: 0.05, guaranteedBase: 50000, guaranteedCommissionRate: 0.1, guaranteedDiscountRate: 0.1 },
+  bronze: { label: "Bronze", commissionRate: 0.2, discountRate: 0.1, guaranteedBase: 30000, guaranteedCommissionRate: 0.2, guaranteedDiscountRate: 0.2 },
+  unclassified: { label: "Sem tier", commissionRate: 0, discountRate: 0, guaranteedBase: 0, guaranteedCommissionRate: 0, guaranteedDiscountRate: 0 }
+};
+
+const SETTLEMENT_TIER_ORDER = ["gold", "silver", "bronze", "unclassified"];
+const SPECIAL_SETTLEMENT_CODES = new Set(["ra", "mare", "marianaparik"]);
+
+function isSpecialSettlementCode(name) {
+  return SPECIAL_SETTLEMENT_CODES.has(normalizeCodeName(name));
+}
+
+function settlementTierForEvent(event) {
+  const name = normalizeText(`${event?.name || ""} ${event?.source || ""}`);
+  if (name.includes("like olds") || name.includes("nostalgia") || name.includes("semi final") || name.includes("final petroski") || name.includes("all night lou") || name.includes("vitor lou")) return "gold";
+  if (
+    name.includes("cat house") ||
+    name.includes("cathouse") ||
+    name.includes("bresh") ||
+    name.includes("mequetrefe") ||
+    name.includes("krush") ||
+    name.includes("pagode secreto") ||
+    name.includes("novo samba tradicional") ||
+    name.includes("brasil x marrocos")
+  ) {
+    return "silver";
+  }
+  if (
+    name.includes("red room") ||
+    name.includes("sambae") ||
+    name.includes("nossa junina") ||
+    name.includes("alumea") ||
+    name.includes("som na praca") ||
+    name.includes("fun7") ||
+    name.includes("sun7") ||
+    name.includes("viva sessions") ||
+    name.includes("ddp")
+  ) {
+    return "bronze";
+  }
+  return "unclassified";
+}
+
+function createSettlementAccumulator(name, model) {
+  return {
+    key: normalizeCodeName(name),
+    name: displayName(name),
+    model,
+    sold: 0,
+    soldValidated: 0,
+    complimentary: 0,
+    complimentaryValidated: 0,
+    revenue: 0,
+    repasse: 0,
+    actualCommission: 0,
+    guaranteeApplied: 0,
+    events: new Set(),
+    tiers: SETTLEMENT_TIER_ORDER.reduce((acc, tierKey) => {
+      acc[tierKey] = {
+        key: tierKey,
+        label: SETTLEMENT_TIERS[tierKey].label,
+        sold: 0,
+        soldValidated: 0,
+        complimentary: 0,
+        complimentaryValidated: 0,
+        revenue: 0,
+        repasse: 0,
+        actualCommission: 0,
+        guaranteedBase: 0,
+        guaranteedCommission: 0,
+        guaranteeApplied: 0,
+        eventNames: new Set()
+      };
+      return acc;
+    }, {})
+  };
+}
+
+function addSettlementData(row, tierKey, event, data) {
+  const tier = row.tiers[tierKey] || row.tiers.unclassified;
+  const sold = Number(data.sold || 0);
+  const soldValidated = rowSoldValidated(data);
+  const complimentary = Number(data.complimentary || 0);
+  const complimentaryValidated = rowComplimentaryValidated(data);
+  const revenue = Number(data.revenue || 0);
+  row.sold += sold;
+  row.soldValidated += soldValidated;
+  row.complimentary += complimentary;
+  row.complimentaryValidated += complimentaryValidated;
+  row.revenue += revenue;
+  row.events.add(event.id);
+  tier.sold += sold;
+  tier.soldValidated += soldValidated;
+  tier.complimentary += complimentary;
+  tier.complimentaryValidated += complimentaryValidated;
+  tier.revenue += revenue;
+  tier.eventNames.add(event.name);
+}
+
+function finalizeSettlementRow(row, options = {}) {
+  const specialPool = options.specialPool || null;
+  let repasse = 0;
+  let actualCommission = 0;
+  let guaranteeApplied = 0;
+  SETTLEMENT_TIER_ORDER.forEach((tierKey) => {
+    const tier = row.tiers[tierKey];
+    const rule = SETTLEMENT_TIERS[tierKey];
+    const commissionRate = row.model === "100k garantido" ? rule.guaranteedCommissionRate : rule.commissionRate;
+    tier.commissionRate = commissionRate;
+    tier.discountRate = row.model === "100k garantido" ? rule.guaranteedDiscountRate : rule.discountRate;
+    tier.actualCommission = tier.revenue * commissionRate;
+    if (row.model === "100k garantido" && !specialPool) {
+      tier.guaranteedBase = rule.guaranteedBase;
+      tier.guaranteedCommission = rule.guaranteedBase * commissionRate;
+      tier.repasse = Math.max(tier.actualCommission, tier.guaranteedCommission);
+      tier.guaranteeApplied = Math.max(0, tier.repasse - tier.actualCommission);
+    } else if (row.model === "100k garantido" && specialPool) {
+      const poolTier = specialPool.tiers[tierKey];
+      const poolRevenue = Number(poolTier.revenue || 0);
+      const poolSold = Number(poolTier.sold || 0);
+      const revenueWeight = poolRevenue ? tier.revenue / poolRevenue : 0;
+      const soldWeight = !poolRevenue && poolSold ? tier.sold / poolSold : 0;
+      const weight = revenueWeight || soldWeight || 0;
+      tier.guaranteedBase = poolTier.guaranteedBase * weight;
+      tier.guaranteedCommission = poolTier.guaranteedCommission * weight;
+      tier.repasse = poolTier.repasse * weight;
+      tier.guaranteeApplied = Math.max(0, tier.repasse - tier.actualCommission);
+    } else {
+      tier.repasse = tier.actualCommission;
+    }
+    tier.eventCount = tier.eventNames.size;
+    actualCommission += tier.actualCommission;
+    guaranteeApplied += tier.guaranteeApplied;
+    repasse += tier.repasse;
+  });
+  row.repasse = repasse;
+  row.actualCommission = actualCommission;
+  row.guaranteeApplied = guaranteeApplied;
+  row.eventCount = row.events.size;
+  row.tierRows = SETTLEMENT_TIER_ORDER.map((tierKey) => row.tiers[tierKey]).filter((tier) => tier.revenue || tier.sold || tier.complimentary || tier.guaranteedBase);
+  return row;
+}
+
+function buildSettlementAnalysis(events = filteredEvents()) {
+  const rows = new Map();
+  const specialPool = createSettlementAccumulator("RA / MARE / Mariana Parik", "100k garantido");
+  events.forEach((event) => {
+    const tierKey = settlementTierForEvent(event);
+    Object.entries(event.promoters || {}).forEach(([name, data]) => {
+      const key = normalizeCodeName(name);
+      if (!key) return;
+      const special = isSpecialSettlementCode(key);
+      if (!rows.has(key)) rows.set(key, createSettlementAccumulator(name, special ? "100k garantido" : "Padrao"));
+      addSettlementData(rows.get(key), tierKey, event, data);
+      if (special) addSettlementData(specialPool, tierKey, event, data);
+    });
+  });
+  finalizeSettlementRow(specialPool);
+  const finalizedRows = [...rows.values()].map((row) => finalizeSettlementRow(row, row.model === "100k garantido" ? { specialPool } : {}));
+  const summary = finalizedRows.reduce(
+    (acc, row) => {
+      acc.revenue += row.revenue;
+      acc.sold += row.sold;
+      acc.soldValidated += row.soldValidated;
+      acc.repasse += row.repasse;
+      acc.actualCommission += row.actualCommission;
+      acc.guaranteeApplied += row.guaranteeApplied;
+      acc.unclassifiedRevenue += Number(row.tiers.unclassified?.revenue || 0);
+      if (row.model === "100k garantido") acc.specialRepasse += row.repasse;
+      else acc.standardRepasse += row.repasse;
+      return acc;
+    },
+    { revenue: 0, sold: 0, soldValidated: 0, repasse: 0, actualCommission: 0, guaranteeApplied: 0, standardRepasse: 0, specialRepasse: 0, unclassifiedRevenue: 0 }
+  );
+  return {
+    rows: finalizedRows.sort((a, b) => b.repasse - a.repasse || b.revenue - a.revenue || b.sold - a.sold),
+    specialPool,
+    summary
+  };
+}
+
 function salesCodeKey(name) {
   return normalizeCodeName(name || "sem codigo");
 }
@@ -1770,6 +1957,7 @@ const NAV_ICON_PATHS = {
   overview: '<rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect>',
   events: '<path d="M8 2v4"></path><path d="M16 2v4"></path><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M3 10h18"></path>',
   commissioners: '<path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"></path><circle cx="9.5" cy="7" r="4"></circle><path d="M17 11l2 2 4-4"></path>',
+  settlement: '<path d="M4 3h16v18l-2-1-2 1-2-1-2 1-2-1-2 1-2-1-2 1V3Z"></path><path d="M8 8h8"></path><path d="M8 12h8"></path><path d="M8 16h5"></path>',
   audienceProfile: '<path d="M3 3v18h18"></path><path d="M7 15l3-3 3 2 5-6"></path><circle cx="7" cy="15" r="1"></circle><circle cx="10" cy="12" r="1"></circle><circle cx="13" cy="14" r="1"></circle><circle cx="18" cy="8" r="1"></circle>',
   mailing: '<rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 7l9 6 9-6"></path>',
   audienceRecurrence: '<path d="M3 12a8 8 0 0 1 13.66-5.66L19 8"></path><path d="M19 3v5h-5"></path><path d="M21 12a8 8 0 0 1-13.66 5.66L5 16"></path><path d="M5 21v-5h5"></path>',
@@ -1799,6 +1987,7 @@ function renderSidebar() {
     ["overview", "Visao geral"],
     ["events", "Eventos"],
     ["commissioners", "Comissarios"],
+    ["settlement", "Fechamento"],
     ["audienceProfile", "Perfil"],
     ["mailing", "Mailing"],
     ["audienceRecurrence", "Recorrencia"],
@@ -1833,6 +2022,7 @@ function renderTopbar() {
     overview: ["Visao geral", "Resumo consolidado de todos os eventos"],
     events: ["Eventos", "Compare resultados e abra o detalhe de cada evento"],
     commissioners: ["Comissarios/RPs", "Ranking geral com parcial por evento"],
+    settlement: ["Fechamento", "Repasse por tier, modelo padrao e 100k garantido"],
     audienceProfile: ["Perfil do publico", "Mapeamento demografico por evento e consolidado"],
     mailing: ["Mailing", "Contatos finais deduplicados por evento ou consolidado"],
     audienceRecurrence: ["Recorrencia de Compradores", "Clientes com compra paga em mais de um evento"],
@@ -1862,6 +2052,7 @@ function renderTopbar() {
 function renderView() {
   if (state.view === "events") return renderEvents();
   if (state.view === "commissioners") return renderCommissioners();
+  if (state.view === "settlement") return renderSettlement();
   if (state.view === "audienceProfile") return renderAudienceProfile();
   if (state.view === "mailing") return renderMailingPage();
   if (state.view === "audienceRecurrence") return renderAudienceRecurrence();
@@ -2323,6 +2514,125 @@ function renderCommissioners() {
           <input class="search" id="rankSearch" value="${esc(state.query)}" placeholder="Buscar comissario" />
         </div>
         ${renderRankingTable(rows)}
+      </div>
+    </section>
+  `;
+}
+
+function settlementModelLabel(model) {
+  return model === "100k garantido" ? "100k garantido" : "Modelo padrao";
+}
+
+function settlementTierSummary(tier, model) {
+  const hasGuarantee = model === "100k garantido" && Number(tier.guaranteedBase || 0) > 0;
+  return `
+    <div class="settlement-tier-card">
+      <div>
+        <strong>${esc(tier.label)}</strong>
+        <small>${int(tier.eventCount || 0)} eventos · ${pct(tier.commissionRate * 100)} comissao · ${pct(tier.discountRate * 100)} desconto</small>
+      </div>
+      <div class="settlement-tier-numbers">
+        <span><b>${money(tier.revenue)}</b><small>receita</small></span>
+        <span><b>${int(tier.sold)}</b><small>vendidos</small></span>
+        <span><b>${int(tier.soldValidated)}</b><small>validados</small></span>
+        <span><b>${money(tier.repasse)}</b><small>repasse${hasGuarantee ? " com garantia" : ""}</small></span>
+      </div>
+    </div>
+  `;
+}
+
+function renderSettlementTierList(row) {
+  return `
+    <div class="settlement-tier-list">
+      ${row.tierRows.map((tier) => settlementTierSummary(tier, row.model)).join("")}
+    </div>
+  `;
+}
+
+function renderSettlement() {
+  const events = filteredEvents();
+  const analysis = buildSettlementAnalysis(events);
+  const search = normalizeText(state.settlementFilters.search);
+  const modelFilter = state.settlementFilters.model;
+  const rows = analysis.rows.filter((row) => {
+    const searchMatch = !search || normalizeText(row.name).includes(search);
+    const modelMatch = modelFilter === "all" || row.model === modelFilter;
+    return searchMatch && modelMatch && (row.revenue || row.sold || row.complimentary || row.repasse);
+  });
+  const specialRows = analysis.rows.filter((row) => row.model === "100k garantido");
+  return `
+    <section class="grid settlement-page">
+      ${renderDashboardFilters(events)}
+      <div class="grid cards overview-metrics settlement-metrics">
+        ${metric("Repasse total", money(analysis.summary.repasse), "Comissoes calculadas pelo modelo de cada codigo")}
+        ${metric("Modelo padrao", money(analysis.summary.standardRepasse), "Demais comissarios por tier")}
+        ${metric("100k garantido", money(analysis.summary.specialRepasse), "RA, Mare e Mariana Parik agrupados")}
+        ${metric("Receita dos codigos", money(analysis.summary.revenue), `${int(analysis.summary.sold)} vendas por link`)}
+      </div>
+      ${
+        analysis.summary.unclassifiedRevenue
+          ? `<p class="notice warning">Ha ${money(analysis.summary.unclassifiedRevenue)} em receita de codigos em eventos sem tier configurado. Nenhuma comissao foi aplicada nesses casos.</p>`
+          : ""
+      }
+      <div class="card settlement-special-card">
+        <div class="section-title">
+          <h2>Negociacao especial RA / MARE / Mariana Parik</h2>
+          <p>Modelo 100k garantido: Ouro R$ 20 mil, Prata R$ 50 mil e Bronze R$ 30 mil. O repasse abaixo mostra o consolidado e a divisao proporcional por codigo.</p>
+        </div>
+        <div class="settlement-special-summary">
+          ${metric("Repasse consolidado", money(analysis.specialPool.repasse), `${money(analysis.specialPool.guaranteeApplied)} de garantia aplicada`)}
+          ${metric("Receita apurada", money(analysis.specialPool.revenue), `${int(analysis.specialPool.sold)} vendidos / ${int(analysis.specialPool.soldValidated)} validados`)}
+          ${metric("Codigos especiais", int(specialRows.length), specialRows.map((row) => row.name).join(", ") || "Sem vendas no recorte")}
+        </div>
+        ${renderSettlementTierList(analysis.specialPool)}
+      </div>
+      <div class="card settlement-filter-card">
+        <div class="section-title">
+          <h2>Fechamento por codigo</h2>
+          <p>Totais e tier de evento usados para calcular o repasse.</p>
+        </div>
+        <div class="filter-grid settlement-filter-grid">
+          <label class="filter-field">
+            <span>Buscar codigo</span>
+            <input class="search" id="settlementSearch" value="${esc(state.settlementFilters.search)}" placeholder="RA, Mare, Mariana, etc." />
+          </label>
+          <label class="filter-field">
+            <span>Modelo</span>
+            <select id="settlementModel">
+              <option value="all" ${modelFilter === "all" ? "selected" : ""}>Todos</option>
+              <option value="Padrao" ${modelFilter === "Padrao" ? "selected" : ""}>Modelo padrao</option>
+              <option value="100k garantido" ${modelFilter === "100k garantido" ? "selected" : ""}>100k garantido</option>
+            </select>
+          </label>
+        </div>
+        ${renderResponsiveTable({
+          className: "settlement-table",
+          columns: [
+            { label: "Codigo", render: (row) => `<strong>${esc(row.name)}</strong><small>${int(row.eventCount)} eventos com ocorrencia</small>` },
+            { label: "Modelo", render: (row) => `<span class="pill ${row.model === "100k garantido" ? "warn" : "soft"}">${esc(settlementModelLabel(row.model))}</span>` },
+            { label: "Receita", className: "money-col", render: (row) => money(row.revenue) },
+            { label: "Vendas", render: (row) => `${int(row.sold)}<small>${int(row.soldValidated)} validadas</small>` },
+            { label: "Repasse", className: "money-col", render: (row) => `<strong>${money(row.repasse)}</strong>${row.guaranteeApplied ? `<small>${money(row.guaranteeApplied)} garantia</small>` : ""}` },
+            { label: "Tiers", render: (row) => renderSettlementTierList(row) }
+          ],
+          rows,
+          empty: "Nenhum codigo encontrado no recorte atual."
+        })}
+      </div>
+      <div class="card settlement-rule-card">
+        <div class="section-title">
+          <h2>Regras aplicadas</h2>
+          <p>Os descontos sao exibidos como referencia da negociacao; o repasse usa a comissao de cada tier.</p>
+        </div>
+        ${renderResponsiveTable({
+          className: "settlement-rules-table",
+          columns: [
+            { label: "Tier", render: (row) => `<strong>${esc(row.label)}</strong>` },
+            { label: "Modelo padrao", render: (row) => `${pct(row.commissionRate * 100)} comissao · ${pct(row.discountRate * 100)} desconto` },
+            { label: "100k garantido", render: (row) => `${money(row.guaranteedBase)} base · ${pct(row.guaranteedCommissionRate * 100)} comissao · ${pct(row.guaranteedDiscountRate * 100)} desconto` }
+          ],
+          rows: SETTLEMENT_TIER_ORDER.filter((tierKey) => tierKey !== "unclassified").map((tierKey) => SETTLEMENT_TIERS[tierKey])
+        })}
       </div>
     </section>
   `;
@@ -3282,6 +3592,14 @@ function bindActions() {
   });
   document.getElementById("promoterLinkSearch")?.addEventListener("input", (event) => {
     state.promoterLinkSearch = event.target.value;
+    render();
+  });
+  document.getElementById("settlementSearch")?.addEventListener("input", (event) => {
+    state.settlementFilters.search = event.target.value;
+    renderKeepingFocus("settlementSearch");
+  });
+  document.getElementById("settlementModel")?.addEventListener("change", (event) => {
+    state.settlementFilters.model = event.target.value;
     render();
   });
   document.getElementById("batchSearch")?.addEventListener("input", (event) => {

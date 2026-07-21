@@ -898,6 +898,114 @@ h3 {
   font-size: 16px;
 }
 
+.settlement-page {
+  align-content: start;
+}
+
+.settlement-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.settlement-special-card,
+.settlement-filter-card,
+.settlement-rule-card {
+  display: grid;
+  gap: 16px;
+}
+
+.settlement-special-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.settlement-special-summary .metric {
+  min-height: 118px;
+  box-shadow: none;
+}
+
+.settlement-special-summary .metric strong,
+.settlement-special-summary .metric strong.compact-value {
+  font-size: clamp(24px, 2vw, 32px);
+}
+
+.settlement-filter-grid {
+  grid-template-columns: minmax(240px, 1fr) minmax(180px, 260px);
+}
+
+.settlement-table table {
+  min-width: 900px;
+}
+
+.settlement-table td:nth-child(3),
+.settlement-table th:nth-child(3),
+.settlement-table td:nth-child(4),
+.settlement-table th:nth-child(4),
+.settlement-table td:nth-child(5),
+.settlement-table th:nth-child(5) {
+  text-align: right;
+}
+
+.settlement-table td:first-child strong,
+.settlement-table .money-col strong {
+  display: block;
+}
+
+.settlement-table small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.settlement-tier-list {
+  display: grid;
+  gap: 8px;
+}
+
+.settlement-tier-card {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.7fr) minmax(0, 1.3fr);
+  gap: 12px;
+  align-items: start;
+  padding: 10px 12px;
+  border: 1px solid rgba(221, 206, 176, 0.78);
+  border-radius: 8px;
+  background: #fffaf1;
+}
+
+.settlement-tier-card strong {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.settlement-tier-card small {
+  margin-top: 3px;
+}
+
+.settlement-tier-numbers {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  text-align: right;
+}
+
+.settlement-tier-numbers span {
+  min-width: 0;
+}
+
+.settlement-tier-numbers b {
+  display: block;
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.15;
+}
+
+.settlement-rules-table table {
+  min-width: 720px;
+}
+
 .two {
   grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
 }
@@ -2372,6 +2480,11 @@ tr:last-child td {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .settlement-metrics,
+  .settlement-special-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .promoter-link-filter-grid,
   .promoter-link-summary {
     grid-template-columns: 1fr;
@@ -2499,6 +2612,18 @@ tr:last-child td {
   .compact-table table {
     min-width: 640px;
   }
+
+  .settlement-table table {
+    min-width: 760px;
+  }
+
+  .settlement-tier-card {
+    grid-template-columns: 1fr;
+  }
+
+  .settlement-tier-numbers {
+    text-align: left;
+  }
 }
 
 @media (max-width: 640px) {
@@ -2588,6 +2713,71 @@ tr:last-child td {
 
   .overview-metrics {
     grid-template-columns: 1fr;
+  }
+
+  .settlement-metrics,
+  .settlement-special-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .settlement-table table,
+  .settlement-table thead,
+  .settlement-table tbody,
+  .settlement-table tr,
+  .settlement-table td {
+    display: block;
+    min-width: 0;
+  }
+
+  .settlement-table table {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .settlement-table thead {
+    display: none;
+  }
+
+  .settlement-table tr {
+    margin-bottom: 10px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: #fffdf8;
+  }
+
+  .settlement-table td {
+    padding: 6px 0;
+    border-bottom: 0;
+    text-align: left !important;
+  }
+
+  .settlement-table td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 4px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.1;
+    font-weight: 820;
+    text-transform: uppercase;
+  }
+
+  .settlement-table td:first-child {
+    padding-top: 0;
+  }
+
+  .settlement-table td:first-child::before {
+    display: none;
+  }
+
+  .settlement-tier-card {
+    padding: 9px 10px;
+  }
+
+  .settlement-tier-numbers {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px 10px;
   }
 
   .overview-metrics .metric {
