@@ -5,8 +5,6 @@
 .vercel/
 dist/
 node_modules/
-private-data/
-data/private/
 data/incoming/**
 !data/incoming/.gitkeep
 launchd/
