@@ -184,6 +184,10 @@ const state = {
     ageBand: "all",
     segment: "main"
   },
+  rankingSort: {
+    key: "revenue",
+    dir: "desc"
+  },
   codeRankingSort: "revenue",
   promoterLinkSearch: "",
   settlementFilters: {
@@ -643,8 +647,8 @@ function renderPrivateDataGate(title = "Dados privados") {
         </div>
         ${
           state.privateDataError
-            ? `<p class="notice warning">${esc(state.privateDataError)}</p>`
-            : `<p class="notice">${state.privateDataLoading ? "Carregando dados privados..." : "Preparando carregamento seguro..."}</p>`
+            ? renderStatePanel(state.privateDataError, "", "error")
+            : renderStatePanel(state.privateDataLoading ? "Carregando dados privados..." : "Preparando carregamento seguro...", "", "loading")
         }
       </div>
     </section>
@@ -971,6 +975,74 @@ function exportSettlementCsv() {
     )
   ];
   downloadTextFile("fechamento-nossa-casa.csv", `\uFEFF${lines.join("\n")}`);
+}
+
+function rankingRowsForEvents(events = filteredEvents()) {
+  const repasseByCode = new Map(buildSettlementAnalysis(events).rows.map((row) => [normalizeCodeName(row.name), row.repasse]));
+  const query = normalizeText(state.query);
+  return sortRankingRows(
+    promoterRanking(events)
+      .map((row) => ({
+        ...row,
+        repasse: Number(repasseByCode.get(normalizeCodeName(row.name)) || 0)
+      }))
+      .filter((row) => normalizeText(row.name).includes(query))
+  );
+}
+
+function sortRankingRows(rows) {
+  const key = state.rankingSort.key || "revenue";
+  const dir = state.rankingSort.dir || (key === "name" ? "asc" : "desc");
+  return rows.slice().sort((a, b) => {
+    if (key === "name") return compareSettlementValues(a.name, b.name, dir);
+    if (key === "sold") return compareSettlementValues(a.sold, b.sold, dir) || Number(b.revenue || 0) - Number(a.revenue || 0);
+    if (key === "repasse") return compareSettlementValues(a.repasse, b.repasse, dir) || Number(b.revenue || 0) - Number(a.revenue || 0);
+    return compareSettlementValues(a.revenue, b.revenue, dir) || Number(b.sold || 0) - Number(a.sold || 0);
+  });
+}
+
+function rankingSortHeader(key, label) {
+  const active = state.rankingSort.key === key;
+  const dir = state.rankingSort.dir || (key === "name" ? "asc" : "desc");
+  const marker = !active ? "↕" : dir === "asc" ? "↑" : "↓";
+  return `<button class="table-sort-button ${active ? "active" : ""}" data-ranking-sort="${esc(key)}" aria-label="Ordenar ranking por ${esc(label)}">${esc(label)} <span>${marker}</span></button>`;
+}
+
+function exportRankingCsv() {
+  const rows = rankingRowsForEvents(filteredEvents());
+  const headers = ["Nome", "Receita", "Vendidos", "Validados vendas", "Cortesias", "Validadas cortesias", "Repasse"];
+  const lines = [
+    headers.map(csvValue).join(";"),
+    ...rows.map((row) =>
+      [row.name, money(row.revenue), row.sold, row.soldValidated, row.complimentary, row.complimentaryValidated, money(row.repasse)]
+        .map(csvValue)
+        .join(";")
+    )
+  ];
+  downloadTextFile("ranking-comissarios-nossa-casa.csv", `\uFEFF${lines.join("\n")}`);
+}
+
+async function exportAudienceProfileCsv() {
+  if (!state.privateDataLoaded) {
+    await ensurePrivateData();
+    if (!state.privateDataLoaded) return;
+  }
+  const events = filteredEvents();
+  const selectedEvent = state.profileEventId === "all" ? null : state.events.find((event) => event.id === state.profileEventId);
+  const scopeEvents = selectedEvent ? [selectedEvent] : events;
+  const profile = buildAudienceProfile(scopeEvents, state.profileFilters);
+  const rows = profileSegmentRows(profile, state.profileFilters.segment);
+  const headers = ["Categoria", "Perfil", "Pessoas", "Ingressos", "Validados", "Participacao"];
+  const lines = [
+    headers.map(csvValue).join(";"),
+    ...rows.map((row) =>
+      [row.category, row.label, row.peopleCount, row.tickets, row.validated, pct(safeRate(row.peopleCount, profile.summary.uniquePeople))]
+        .map(csvValue)
+        .join(";")
+    )
+  ];
+  const filename = selectedEvent ? `perfil-audiencia-${slugFileName(selectedEvent.name)}.csv` : "perfil-audiencia-nossa-casa.csv";
+  downloadTextFile(filename, `\uFEFF${lines.join("\n")}`);
 }
 
 function formatDate(value) {
@@ -2010,7 +2082,7 @@ function renderStatePanel(title, message, type = "empty", actions = "") {
       <div class="state-dot" aria-hidden="true"></div>
       <div>
         <strong>${esc(title)}</strong>
-        <p class="muted">${esc(message)}</p>
+        ${message ? `<p class="muted">${esc(message)}</p>` : ""}
         ${actions ? `<div class="state-actions">${actions}</div>` : ""}
       </div>
     </div>
@@ -2158,7 +2230,7 @@ function renderOverview() {
             .sort((a, b) => Number(b.revenue || 0) - Number(a.revenue || 0))
             .slice(0, 6)
             .map((event) => eventMini(event))
-            .join("") || `<p class="notice">Nenhum evento encontrado com os filtros atuais.</p>`}
+            .join("") || renderStatePanel("Nenhum evento encontrado com os filtros atuais.", "", "empty")}
         </div>
       </div>
     </section>
@@ -2265,12 +2337,12 @@ function eventMini(event) {
 }
 
 function renderRankingTable(rows) {
-  if (!rows.length) return `<p class="notice">Nenhum comissario encontrado.</p>`;
+  if (!rows.length) return renderStatePanel("Nenhum comissario encontrado.", "", "empty");
   const totalRevenue = totals().revenue;
   return `
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Comissario/RP</th><th>Receita</th><th>% Fat.</th><th>Vendidos</th><th>Val. vendas</th><th>Cortesias</th><th>Val. cortesias</th></tr></thead>
+        <thead><tr><th>${rankingSortHeader("name", "Comissario/RP")}</th><th>${rankingSortHeader("revenue", "Receita")}</th><th>% Fat.</th><th>${rankingSortHeader("sold", "Vendidos")}</th><th>Val. vendas</th><th>Cortesias</th><th>Val. cortesias</th><th>${rankingSortHeader("repasse", "Repasse")}</th></tr></thead>
         <tbody>
           ${rows
             .map((row, index) => {
@@ -2287,10 +2359,11 @@ function renderRankingTable(rows) {
                   <td>${row.sold ? rateCell(row.soldValidated, row.sold) : "-"}</td>
                   <td>${int(row.complimentary)}</td>
                   <td>${row.complimentary ? rateCell(row.complimentaryValidated, row.complimentary) : "-"}</td>
+                  <td>${money(row.repasse)}</td>
                 </tr>
                 ${
                   expanded
-                    ? `<tr><td colspan="7">${renderPromoterEvents(row.events)}</td></tr>`
+                    ? `<tr><td colspan="8">${renderPromoterEvents(row.events)}</td></tr>`
                     : ""
                 }
               `;
@@ -2303,7 +2376,7 @@ function renderRankingTable(rows) {
 }
 
 function renderSalesLinkTable(rows, totalRevenue, options = {}) {
-  if (!rows.length) return `<p class="notice">Nenhum link com venda registrada no recorte atual.</p>`;
+  if (!rows.length) return renderStatePanel("Nenhum link com venda registrada no recorte atual.", "", "empty");
   const compact = Boolean(options.compact);
   const showConversion = compact && state.codeRankingSort === "conversion";
   const salesHeaders = compact
@@ -2437,7 +2510,7 @@ function renderSalesCodeDrawer() {
 }
 
 function renderCourtesyLinkTable(rows, options = {}) {
-  if (!rows.length) return `<p class="notice">Nenhuma cortesia por link no recorte atual.</p>`;
+  if (!rows.length) return renderStatePanel("Nenhuma cortesia por link no recorte atual.", "", "empty");
   const compact = Boolean(options.compact);
   const orderedRows = options.preserveOrder ? rows : rows.slice().sort((a, b) => b.complimentaryValidated - a.complimentaryValidated || b.complimentary - a.complimentary);
   return `
@@ -2535,7 +2608,7 @@ function renderEvents() {
           `;
           }
         )
-        .join("") || `<p class="notice">Nenhum evento encontrado com os filtros atuais.</p>`}
+        .join("") || renderStatePanel("Nenhum evento encontrado com os filtros atuais.", "", "empty")}
       </div>
     </section>
   `;
@@ -2543,14 +2616,17 @@ function renderEvents() {
 
 function renderCommissioners() {
   const events = filteredEvents();
-  const rows = promoterRanking(events).filter((row) => normalizeText(row.name).includes(normalizeText(state.query)));
+  const rows = rankingRowsForEvents(events);
   return `
     <section class="grid">
       ${renderDashboardFilters(events)}
       <div class="card">
         <div class="toolbar">
           <div class="section-title"><h2>Ranking completo</h2><p>Receita, vendidos, cortesias e check-ins por RP.</p></div>
-          <input class="search" id="rankSearch" value="${esc(state.query)}" placeholder="Buscar comissario" />
+          <div class="mailing-actions">
+            <input class="search" id="rankSearch" value="${esc(state.query)}" placeholder="Buscar comissario" />
+            <button class="secondary" data-action="export-ranking">Exportar ranking (CSV)</button>
+          </div>
         </div>
         ${renderRankingTable(rows)}
       </div>
@@ -2666,7 +2742,7 @@ function renderSettlementPendingCard(analysis) {
 }
 
 function renderSettlementRows(rows) {
-  if (!rows.length) return `<p class="notice">Nenhum codigo encontrado no recorte atual.</p>`;
+  if (!rows.length) return renderStatePanel("Nenhum codigo encontrado no recorte atual.", "", "empty");
   return `
     <div class="table-wrap responsive-table settlement-table">
       <table>
@@ -2827,7 +2903,7 @@ function profileSegmentRows(profile, segment = "main") {
 }
 
 function renderAudienceSegmentTable(rows, total) {
-  if (!rows.length) return `<p class="notice">Nao ha dados suficientes para este recorte.</p>`;
+  if (!rows.length) return renderStatePanel("Nao ha dados suficientes para este recorte.", "", "empty");
   return `
     <div class="table-wrap compact-table profile-table profile-segment-table">
       <table>
@@ -2861,7 +2937,7 @@ function renderProfileBarChart(title, subtitle, rows, total, options = {}) {
     return `
       <div class="card profile-chart">
         <div class="section-title"><h3>${esc(title)}</h3><p>${esc(subtitle)}</p></div>
-        <p class="notice">Sem dados para este recorte.</p>
+        ${renderStatePanel("Sem dados para este recorte.", "", "empty")}
       </div>
     `;
   }
@@ -2952,6 +3028,7 @@ function renderAudienceProfile() {
                 <option value="all" ${state.profileFilters.segment === "all" ? "selected" : ""}>Tudo</option>
               </select>
             </label>
+            <button class="secondary" data-action="export-audience-profile">Exportar perfil de audiencia (CSV)</button>
           </div>
         </div>
       </div>
@@ -3141,7 +3218,7 @@ function renderAudienceRecurrence() {
 }
 
 function renderAudienceTable(rows, pageSize = 50, page = 1) {
-  if (!rows.length) return `<p class="notice">Nenhum comprador recorrente encontrado com os filtros atuais.</p>`;
+  if (!rows.length) return renderStatePanel("Nenhum comprador recorrente encontrado com os filtros atuais.", "", "empty");
   const start = (page - 1) * pageSize;
   return `
     <div class="table-wrap compact-table audience-table recurring-table">
@@ -3295,7 +3372,7 @@ function renderValidation() {
 
 function renderDetail() {
   const event = selectedEvent();
-  if (!event) return `<p class="notice">Nenhum evento selecionado.</p>`;
+  if (!event) return renderStatePanel("Nenhum evento selecionado.", "", "empty");
   const total = Number(event.sold || 0) + Number(event.complimentary || 0);
   const rate = (Number(event.validated || 0) / Math.max(total, 1)) * 100;
   const split = eventSalesBreakdown(event);
@@ -3333,7 +3410,7 @@ function tabLabel(tab) {
 
 function renderPne(event) {
   if (!event.pne) {
-    return `<p class="notice">Nao encontrei PDF PNE correspondente para este evento na pasta PNE.</p>`;
+    return renderStatePanel("Nao encontrei PDF PNE correspondente para este evento na pasta PNE.", "", "empty");
   }
   const rate = (Number(event.pne.converted || 0) / Math.max(Number(event.pne.inserted || 0), 1)) * 100;
   return `
@@ -3703,6 +3780,8 @@ function bindActions() {
       await exportMailingCsv(button.dataset.mailingScope === "event" ? button.dataset.eventId : "all");
     });
   });
+  document.querySelector("[data-action='export-ranking']")?.addEventListener("click", exportRankingCsv);
+  document.querySelector("[data-action='export-audience-profile']")?.addEventListener("click", exportAudienceProfileCsv);
   document.querySelector("[data-action='export-settlement']")?.addEventListener("click", exportSettlementCsv);
   document.querySelector("[data-action='logout']")?.addEventListener("click", logout);
   document.querySelector("[data-action='retry-access-requests']")?.addEventListener("click", () => {
@@ -3726,6 +3805,18 @@ function bindActions() {
   document.getElementById("rankSearch")?.addEventListener("input", (event) => {
     state.query = event.target.value;
     renderKeepingFocus("rankSearch");
+  });
+  document.querySelectorAll("[data-ranking-sort]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const key = button.dataset.rankingSort;
+      if (state.rankingSort.key === key) {
+        state.rankingSort.dir = state.rankingSort.dir === "asc" ? "desc" : "asc";
+      } else {
+        state.rankingSort.key = key;
+        state.rankingSort.dir = key === "name" ? "asc" : "desc";
+      }
+      render();
+    });
   });
   document.getElementById("dashboardSearch")?.addEventListener("input", (event) => {
     state.filters.search = event.target.value;
