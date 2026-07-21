@@ -1608,7 +1608,11 @@ function renderSignupForm() {
   }
   return `
     <form class="login-form signup-form" id="signupForm">
-      <h2>Solicitar acesso</h2>
+      <div class="login-form-head">
+        <span class="login-kicker">Novo cadastro</span>
+        <h2>Solicitar acesso</h2>
+        <p>Preencha seus dados para a administradora revisar e liberar o melhor nivel de permissao.</p>
+      </div>
       <label class="field">Nome<input id="signupName" name="name" type="text" required maxlength="120" /></label>
       <label class="field">E-mail<input id="signupEmail" name="email" type="email" required maxlength="160" /></label>
       <label class="field">Telefone (opcional)<input id="signupPhone" name="phone" type="tel" maxlength="40" /></label>
@@ -1624,7 +1628,10 @@ function renderSignupForm() {
       <p class="login-error" id="signupError" aria-live="polite"></p>
       <button class="primary" type="submit">Enviar solicitacao</button>
       <button class="secondary" type="button" data-action="hide-signup">Cancelar</button>
-      <p class="muted">A administradora recebe um aviso e decide o nivel de acesso liberado.</p>
+      <div class="login-secure-note" role="note">
+        <span aria-hidden="true">✓</span>
+        <p><strong>Fluxo revisado.</strong> A administradora recebe o pedido e decide o nivel de acesso liberado.</p>
+      </div>
     </form>
   `;
 }
@@ -1635,22 +1642,40 @@ function renderLogin() {
       <div class="login-panel">
         <div class="login-brand">
           <img class="logo-img" src="/assets/nossa-casa-logo-small.jpeg" alt="Nossa Casa" />
-          <h1>Nossa Casa</h1>
-          <p>Dashboard de performance de eventos, vendas, cortesias, validacoes e ranking de comissarios/RPs.</p>
+          <div class="login-brand-copy">
+            <span class="login-kicker">Performance de eventos</span>
+            <h1>Nossa Casa</h1>
+            <p>Gerencie eventos, vendas, validacoes, cortesias e performance dos comissarios em um unico painel.</p>
+            <ul class="login-feature-list" aria-label="Recursos do dashboard">
+              <li>Eventos e faturamento</li>
+              <li>Ranking de comissarios</li>
+              <li>Cortesias e validacoes</li>
+            </ul>
+          </div>
         </div>
         ${
           state.showSignup
             ? renderSignupForm()
             : `
         <form class="login-form" id="loginForm">
-          <h2>Acesso</h2>
+          <div class="login-form-head">
+            <span class="login-kicker">Central segura</span>
+            <h2>Acesso</h2>
+            <p>Bem-vindo de volta. Entre com sua conta para visualizar os indicadores em tempo real.</p>
+          </div>
           <label class="field">E-mail<input id="loginEmail" name="email" type="email" autocomplete="username" required /></label>
           <label class="field">Senha<input id="loginPassword" name="password" type="password" autocomplete="current-password" required /></label>
           <p class="login-error" id="loginError" aria-live="polite"></p>
           <button class="primary" type="submit">Entrar</button>
-          <p class="muted">Acesso validado no servidor. Dados privados so carregam apos sessao autenticada.</p>
+          <div class="login-signup-inline">
+            <span>Ainda nao possui acesso?</span>
+            <button class="link-button" type="button" data-action="show-signup">Solicitar cadastro</button>
+          </div>
+          <div class="login-secure-note" role="note">
+            <span aria-hidden="true">✓</span>
+            <p><strong>Ambiente seguro.</strong> As informacoes privadas sao carregadas somente apos o login.</p>
+          </div>
         </form>
-        <button class="ghost signup-link" type="button" data-action="show-signup">Nao tenho acesso ainda - solicitar cadastro</button>
         `
         }
       </div>
@@ -1665,13 +1690,22 @@ function bindLogin() {
     const email = document.getElementById("loginEmail")?.value?.trim() || "";
     const password = document.getElementById("loginPassword")?.value || "";
     const button = event.currentTarget.querySelector("button[type='submit']");
-    if (button) button.disabled = true;
+    if (button) {
+      button.disabled = true;
+      button.dataset.originalText = button.textContent || "";
+      button.textContent = "Entrando...";
+      button.setAttribute("aria-busy", "true");
+    }
     try {
       await login(email, password);
     } catch (error) {
       setLoginError(error.message || "E-mail ou senha invalidos.");
     } finally {
-      if (button) button.disabled = false;
+      if (button) {
+        button.disabled = false;
+        button.textContent = button.dataset.originalText || "Entrar";
+        button.removeAttribute("aria-busy");
+      }
     }
   });
   document.querySelector("[data-action='show-signup']")?.addEventListener("click", () => {
@@ -1697,7 +1731,12 @@ function bindLogin() {
       reason: document.getElementById("signupReason")?.value?.trim() || ""
     };
     const button = event.currentTarget.querySelector("button[type='submit']");
-    if (button) button.disabled = true;
+    if (button) {
+      button.disabled = true;
+      button.dataset.originalText = button.textContent || "";
+      button.textContent = "Enviando...";
+      button.setAttribute("aria-busy", "true");
+    }
     try {
       const response = await fetch("/api/signup", {
         method: "POST",
@@ -1713,7 +1752,11 @@ function bindLogin() {
       const errorField = document.getElementById("signupError");
       if (errorField) errorField.textContent = state.signupError;
     } finally {
-      if (button) button.disabled = false;
+      if (button) {
+        button.disabled = false;
+        button.textContent = button.dataset.originalText || "Enviar solicitacao";
+        button.removeAttribute("aria-busy");
+      }
     }
   });
 }
