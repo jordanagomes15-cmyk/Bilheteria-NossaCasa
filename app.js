@@ -2658,33 +2658,23 @@ function settlementEventMini(event) {
   const soldRate = safeRate(event.soldValidated, event.sold);
   const courtesyRate = safeRate(event.complimentaryValidated, event.complimentary);
   return `
-    <button class="event-mini settlement-event-mini" data-event="${esc(event.id)}">
-      <div>
-        <h3>${esc(event.name)}</h3>
-        <p class="muted">${money(event.revenue)} em receita de codigos</p>
-      </div>
-      <div class="event-mini-stats">
-        <span><b>${int(event.sold)}</b> vendidos</span>
-        <span><b>${int(event.soldValidated)}</b> val. vendas</span>
-        <span><b>${int(event.complimentary)}</b> cortesias</span>
-        <span><b>${int(event.complimentaryValidated)}</b> val. cortesias</span>
-      </div>
-      <div class="event-card-bars">
-        <div><span>Venda</span>${event.sold ? shareCell(event.soldValidated, event.sold) : "-"}</div>
-        <div><span>Cortesia</span>${event.complimentary ? shareCell(event.complimentaryValidated, event.complimentary) : "-"}</div>
-      </div>
-      <small class="muted">Presenca paga ${pct(soldRate)} · cortesia ${pct(courtesyRate)}</small>
-    </button>
+    <li class="settlement-event-list-item">
+      <button class="ghost settlement-event-list-button" data-event="${esc(event.id)}">
+        <span class="settlement-event-list-title">${esc(event.name)}</span>
+        <span class="settlement-event-list-meta">${int(event.sold)} vendidos - ${money(event.revenue)} - ${pct(soldRate)} validados</span>
+        <span class="settlement-event-list-extra">${int(event.complimentary)} cortesias - ${pct(courtesyRate)} validadas</span>
+      </button>
+    </li>
   `;
 }
 
 function renderSettlementEventCards(events) {
-  return renderEventHighlightGrid(events, {
-    preserveOrder: true,
-    renderer: settlementEventMini,
-    className: "settlement-tier-event-grid",
-    empty: "Nenhum evento neste tier."
-  });
+  if (!events.length) return `<p class="notice">Nenhum evento neste tier.</p>`;
+  return `
+    <ul class="settlement-tier-event-list">
+      ${events.map((event) => settlementEventMini(event)).join("")}
+    </ul>
+  `;
 }
 
 function settlementTierEventGroups(events = filteredEvents()) {
@@ -2738,7 +2728,7 @@ function renderSettlementTierEventsOverview(events) {
     <div class="card settlement-tier-events-card">
       <div class="section-title">
         <h2>Eventos por tier</h2>
-        <p>Ouro, Prata e Bronze detalhados no mesmo formato visual da Visao geral.</p>
+        <p>Ouro, Prata e Bronze em lista compacta por faturamento.</p>
       </div>
       <div class="settlement-tier-event-groups">
         ${groups

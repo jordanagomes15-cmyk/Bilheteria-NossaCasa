@@ -1133,10 +1133,13 @@ h3 {
   font-weight: 700;
 }
 
-.settlement-tier-event-grid {
+.settlement-tier-event-list {
+  display: grid;
+  gap: 8px;
   margin: 0;
-  padding: 12px;
+  padding: 10px;
   border-top: 1px solid rgba(221, 206, 176, 0.78);
+  list-style: none;
 }
 
 .settlement-tier-events {
@@ -1151,17 +1154,46 @@ h3 {
   font-size: 12px;
 }
 
-.settlement-tier-events .settlement-tier-event-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  padding: 10px;
+.settlement-event-list-item {
+  min-width: 0;
 }
 
-.settlement-event-mini .event-card-bars {
-  gap: 6px;
+.settlement-event-list-button {
+  display: grid;
+  width: 100%;
+  min-height: 0;
+  padding: 10px 12px;
+  gap: 4px;
+  border: 1px solid rgba(221, 206, 176, 0.72);
+  border-radius: 8px;
+  background: #fffdf8;
+  color: var(--text);
+  text-align: left;
 }
 
-.settlement-event-mini > small {
+.settlement-event-list-button:hover {
+  border-color: rgba(199, 143, 40, 0.62);
+  background: #fff8ec;
+}
+
+.settlement-event-list-title {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 950;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.settlement-event-list-meta,
+.settlement-event-list-extra {
+  color: var(--muted);
   font-size: 12px;
+  line-height: 1.3;
+}
+
+.settlement-event-list-meta {
+  color: var(--text-soft);
+  font-weight: 750;
 }
 
 .settlement-rule-card.compact {
@@ -2787,7 +2819,6 @@ tr:last-child td {
   }
 
   .event-highlight-grid,
-  .settlement-tier-events .settlement-tier-event-grid,
   .insight-grid,
   .profile-chart-grid {
     grid-template-columns: 1fr;
