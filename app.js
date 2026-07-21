@@ -157,7 +157,6 @@ const state = {
   view: "overview",
   events: loadEvents(),
   selectedEventId: null,
-  expandedPromoter: "",
   salesCodeDrawerKey: "",
   batchDrawerGroupKey: "",
   drawerReturnSelector: "",
@@ -2373,12 +2372,9 @@ function renderRankingTable(rows) {
         <tbody>
           ${rows
             .map((row, index) => {
-              const key = normalizeText(row.name);
-              const expanded = state.expandedPromoter === key;
-              const soldRate = safeRate(row.soldValidated, row.sold);
-              const courtesyRate = safeRate(row.complimentaryValidated, row.complimentary);
+              const key = salesCodeKey(row.name);
               return `
-                <tr class="rank-row" data-promoter="${esc(key)}">
+                <tr class="rank-row sales-code-row" data-sales-code="${esc(key)}" title="Clique para ver detalhes">
                   <td><strong>${index + 1}. ${esc(row.name)}</strong></td>
                   <td>${money(row.revenue)}</td>
                   <td>${shareCell(row.revenue, totalRevenue)}</td>
@@ -2388,11 +2384,6 @@ function renderRankingTable(rows) {
                   <td>${row.complimentary ? rateCell(row.complimentaryValidated, row.complimentary) : "-"}</td>
                   <td>${money(row.repasse)}</td>
                 </tr>
-                ${
-                  expanded
-                    ? `<tr><td colspan="8">${renderPromoterEvents(row.events)}</td></tr>`
-                    : ""
-                }
               `;
             })
             .join("")}
@@ -2503,7 +2494,7 @@ function renderSalesCodeDetail(row, totalRevenue) {
 
 function salesCodeDrawerContext() {
   if (!state.salesCodeDrawerKey) return null;
-  if (!["overview", "detail"].includes(state.view)) return null;
+  if (!["overview", "detail", "commissioners"].includes(state.view)) return null;
   const currentEvent = selectedEvent();
   const isDetail = state.view === "detail" && currentEvent;
   const scopeEvents = isDetail ? [currentEvent] : filteredEvents();
@@ -2513,7 +2504,8 @@ function salesCodeDrawerContext() {
   const totalRevenue = isDetail
     ? Number(currentEvent.revenue || 0)
     : scopeEvents.reduce((sum, event) => sum + Number(event.revenue || 0), 0);
-  return { row, totalRevenue, scopeTitle: isDetail ? currentEvent.name : "Visao geral" };
+  const scopeTitle = isDetail ? currentEvent.name : state.view === "commissioners" ? "Comissarios" : "Visao geral";
+  return { row, totalRevenue, scopeTitle };
 }
 
 function renderSalesCodeDrawer() {
@@ -2563,33 +2555,6 @@ function renderCourtesyLinkTable(rows, options = {}) {
                 </tr>
               `;
             })
-            .join("")}
-        </tbody>
-      </table>
-    </div>
-  `;
-}
-
-function renderPromoterEvents(events) {
-  return `
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Evento</th><th>Receita</th><th>Vendidos</th><th>Val. vendas</th><th>Cortesias</th><th>Val. cortesias</th></tr></thead>
-        <tbody>
-          ${events
-            .sort((a, b) => b.revenue - a.revenue)
-            .map(
-              (event) => `
-                <tr>
-                  <td><button class="ghost" data-event="${esc(event.id)}">${esc(event.name)}</button></td>
-                  <td>${money(event.revenue)}</td>
-                  <td>${int(event.sold)}</td>
-                  <td>${event.sold ? rateCell(event.soldValidated, event.sold) : "-"}</td>
-                  <td>${int(event.complimentary)}</td>
-                  <td>${event.complimentary ? rateCell(event.complimentaryValidated, event.complimentary) : "-"}</td>
-                </tr>
-              `
-            )
             .join("")}
         </tbody>
       </table>
@@ -3852,13 +3817,6 @@ function bindActions() {
   });
   document.querySelectorAll("[data-event]").forEach((button) => {
     button.addEventListener("click", () => openEvent(button.dataset.event));
-  });
-  document.querySelectorAll("[data-promoter]").forEach((row) => {
-    row.addEventListener("click", () => {
-      const key = row.dataset.promoter;
-      state.expandedPromoter = state.expandedPromoter === key ? "" : key;
-      renderPreservingElement(dataSelector("data-promoter", key));
-    });
   });
   document.querySelectorAll("[data-sales-code]").forEach((row) => {
     row.addEventListener("click", () => {
