@@ -2664,68 +2664,6 @@ function renderSettlementEventCards(events) {
   `;
 }
 
-function renderSettlementGoldEventNote(events) {
-  const goldEvents = events.filter((event) => settlementTierForEvent(event) === "gold").map((event) => event.name);
-  return `
-    <p class="settlement-tier-note"><strong>Eventos ouro:</strong> ${goldEvents.length ? goldEvents.map(esc).join(", ") : "nenhum evento ouro no recorte atual."}</p>
-  `;
-}
-
-function renderSettlementCommissionersByTier(analysis) {
-  const tierKeys = SETTLEMENT_TIER_ORDER.filter((tierKey) => tierKey !== "unclassified");
-  return `
-    <div class="card settlement-commissioners-tier-card">
-      <div class="section-title">
-        <h2>Comissarios por tier</h2>
-        <p>Receita por codigo dentro de Ouro, Prata e Bronze.</p>
-      </div>
-      <div class="settlement-commissioner-tier-groups">
-        ${tierKeys
-          .map((tierKey) => {
-            const tierRows = analysis.rows
-              .map((row) => ({ row, tier: row.tiers[tierKey] }))
-              .filter(({ tier }) => Number(tier?.sold || 0) > 0 || Number(tier?.revenue || 0) > 0)
-              .sort(({ tier: tierA }, { tier: tierB }) => Number(tierB.revenue || 0) - Number(tierA.revenue || 0) || Number(tierB.sold || 0) - Number(tierA.sold || 0));
-            const totals = tierRows.reduce(
-              (acc, { tier }) => {
-                acc.revenue += Number(tier.revenue || 0);
-                acc.sold += Number(tier.sold || 0);
-                acc.soldValidated += Number(tier.soldValidated || 0);
-                return acc;
-              },
-              { revenue: 0, sold: 0, soldValidated: 0 }
-            );
-            return `
-              <details class="settlement-commissioner-tier-group" ${tierRows.length ? "open" : ""}>
-                <summary>
-                  <span><strong>${esc(SETTLEMENT_TIERS[tierKey].label)}</strong><small>${int(tierRows.length)} comissarios · ${money(totals.revenue)} · ${int(totals.sold)} vendidos</small></span>
-                  <span>${pct(safeRate(totals.soldValidated, totals.sold))} validados</span>
-                </summary>
-                ${
-                  tierRows.length
-                    ? `<ul class="settlement-commissioner-tier-list">
-                        ${tierRows
-                          .map(
-                            ({ row, tier }) => `
-                              <li class="settlement-commissioner-tier-item">
-                                <strong>${esc(row.name)}</strong>
-                                <span>${money(tier.revenue)} - ${int(tier.sold)} vendidos - ${pct(safeRate(tier.soldValidated, tier.sold))} validados</span>
-                              </li>
-                            `
-                          )
-                          .join("")}
-                      </ul>`
-                    : `<p class="notice">Nenhum comissario neste tier.</p>`
-                }
-              </details>
-            `;
-          })
-          .join("")}
-      </div>
-    </div>
-  `;
-}
-
 function settlementTierSummary(tier, model) {
   const hasGuarantee = model === "100k garantido" && Number(tier.guaranteedBase || 0) > 0;
   const eventRows = Array.isArray(tier.eventRows) ? tier.eventRows : [];
@@ -2897,8 +2835,6 @@ function renderSettlement() {
         <button class="secondary compact-action settlement-rules-toggle" data-action="toggle-settlement-rules" aria-expanded="${state.settlementRulesOpen ? "true" : "false"}">${state.settlementRulesOpen ? "Ocultar regras de comissao" : "Ver regras de comissao"}</button>
         ${state.settlementRulesOpen ? settlementRulesTable() : ""}
       </div>
-      ${renderSettlementGoldEventNote(events)}
-      ${renderSettlementCommissionersByTier(analysis)}
       <div class="card settlement-special-card" id="settlementSpecialCard">
         <div class="section-title">
           <span class="special-rule-badge">Regra especial</span>

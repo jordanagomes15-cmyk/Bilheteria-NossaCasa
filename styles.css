@@ -1177,92 +1177,6 @@ h3 {
   font-weight: 750;
 }
 
-.settlement-tier-note {
-  margin: 0;
-  padding: 10px 14px;
-  border: 1px solid rgba(221, 206, 176, 0.78);
-  border-radius: 8px;
-  background: #fffaf1;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.45;
-}
-
-.settlement-tier-note strong {
-  color: var(--text);
-}
-
-.settlement-commissioners-tier-card {
-  gap: 14px;
-}
-
-.settlement-commissioner-tier-groups {
-  display: grid;
-  gap: 10px;
-}
-
-.settlement-commissioner-tier-group {
-  border: 1px solid rgba(221, 206, 176, 0.78);
-  border-radius: 8px;
-  background: #fffaf1;
-}
-
-.settlement-commissioner-tier-group summary {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px;
-  cursor: pointer;
-  color: var(--text);
-  font-weight: 850;
-}
-
-.settlement-commissioner-tier-group summary small {
-  display: block;
-  margin-top: 3px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.settlement-commissioner-tier-list {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  padding: 10px;
-  border-top: 1px solid rgba(221, 206, 176, 0.78);
-  list-style: none;
-}
-
-.settlement-commissioner-tier-item {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  justify-content: space-between;
-  min-width: 0;
-  padding: 10px 12px;
-  border: 1px solid rgba(221, 206, 176, 0.72);
-  border-radius: 8px;
-  background: #fffdf8;
-}
-
-.settlement-commissioner-tier-item strong {
-  min-width: 0;
-  color: var(--text);
-  font-size: 14px;
-  overflow-wrap: anywhere;
-}
-
-.settlement-commissioner-tier-item span {
-  flex: 0 0 auto;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 750;
-  line-height: 1.3;
-  text-align: right;
-}
-
 .settlement-rule-card.compact {
   gap: 12px;
 }
@@ -3196,17 +3110,6 @@ tr:last-child td {
   .settlement-tier-numbers {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 7px 10px;
-  }
-
-  .settlement-commissioner-tier-group summary,
-  .settlement-commissioner-tier-item {
-    display: grid;
-    gap: 6px;
-    align-items: start;
-  }
-
-  .settlement-commissioner-tier-item span {
-    text-align: left;
   }
 
   .overview-metrics .metric {
