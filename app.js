@@ -2228,6 +2228,7 @@ function renderOverview() {
       ${renderDashboardFilters(events)}
       <div class="grid cards overview-metrics">
         ${metric("Faturamento", money(sum.revenue), "Receita total registrada")}
+        ${metric("Ingressos vendidos", int(sum.sold), "Somente aba Compras Gandaya")}
         ${metric("Venda geral", money(split.generalRevenue), `${int(split.generalSold)} ingressos · ${pct(safeRate(split.generalRevenue, sum.revenue))} do faturamento`)}
         ${metric("Venda por link", money(split.linkRevenue), `${int(split.linkSold)} ingressos · ${pct(safeRate(split.linkRevenue, sum.revenue))} do faturamento`)}
       </div>
@@ -2273,8 +2274,8 @@ function renderSplitSummary(split) {
   return `
     <section class="insight-grid">
       <div class="insight-card">
-        <span>Ingressos vendidos</span>
-        <strong>${int(split.sold)}</strong>
+        <span>Origem dos ingressos</span>
+        <strong>${pct(linkSoldShare)} via link</strong>
         <div class="stacked-bar">
           <i class="gold" style="width:${clampPercent(generalSoldShare)}%"></i>
           <i class="green" style="width:${clampPercent(linkSoldShare)}%"></i>
@@ -3513,7 +3514,7 @@ function renderDetail() {
   return `
     <section class="grid">
       <div class="grid cards">
-        ${metric("Ingressos emitidos", int(total), `${int(event.sold)} vendas / ${int(event.complimentary)} cortesias`)}
+        ${metric("Ingressos vendidos", int(event.sold), "Somente aba Compras Gandaya")}
         ${metric("Faturamento", money(event.revenue), "Receita total do evento")}
         ${metric("Venda geral", money(split.generalRevenue), `${int(split.generalSold)} ingressos · ${pct(safeRate(split.generalRevenue, event.revenue))} do faturamento`)}
         ${metric("Venda por link", money(split.linkRevenue), `${int(split.linkSold)} ingressos · ${pct(safeRate(split.linkRevenue, event.revenue))} do faturamento`)}

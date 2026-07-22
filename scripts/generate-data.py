@@ -204,26 +204,15 @@ def get_cell(row, name):
     return row[name] if name in row else ""
 
 
-def clean_id(value):
-    text = str(value or "").strip()
-    if text.lower() == "nan":
-        return ""
-    return text
-
-
 def cancellation_contexts(cancelamentos):
-    purchase_ids = set()
     quotas = {}
     for _, row in cancelamentos.iterrows():
-        ticket_id = clean_id(get_cell(row, "Identificador do ingresso"))
-        if ticket_id:
-            purchase_ids.add(ticket_id)
         person_key = anonymous_person_key(get_cell(row, "Identificador do usuário"), get_cell(row, "E-mail"), get_cell(row, "Nome"))
         batch_key = normalize(get_cell(row, "Descrição")) or "sem lote"
         quantity = int(as_number(get_cell(row, "Quantidade")) or 1)
         if person_key and batch_key:
             quotas[(person_key, batch_key)] = quotas.get((person_key, batch_key), 0) + max(quantity, 1)
-    return purchase_ids, quotas
+    return quotas
 
 
 def consume_cancelled_quota(quotas, person_key, batch_key):
@@ -233,33 +222,6 @@ def consume_cancelled_quota(quotas, person_key, batch_key):
         return False
     quotas[key] = remaining - 1
     return True
-
-
-def build_purchase_units(compras):
-    units = {}
-    for _, row in compras.iterrows():
-        quantity = int(as_number(get_cell(row, "Quantidade")) or 0)
-        total = as_number(get_cell(row, "Total"))
-        if quantity <= 0 or total <= 0:
-            continue
-        description = get_cell(row, "Descrição")
-        person_key = anonymous_person_key(get_cell(row, "Identificador do usuário"), get_cell(row, "E-mail"), get_cell(row, "Nome"))
-        batch_key = normalize(description) or "sem lote"
-        key = (person_key, batch_key)
-        unit_value = total / quantity
-        promoter = promoter_from(description, get_cell(row, "Link"), False)
-        units.setdefault(key, [])
-        for _ in range(quantity):
-            units[key].append({"promoter": promoter, "revenue": unit_value})
-    return units
-
-
-def consume_purchase_unit(units, person_key, batch_key):
-    key = (person_key, batch_key)
-    rows = units.get(key) or []
-    if not rows:
-        return None
-    return rows.pop(0)
 
 
 def promoter_from(description, link, complimentary):
@@ -403,7 +365,7 @@ def parse_xlsx(path):
     envios = read_sheet(path, "Envios")
     cancelamentos = read_sheet(path, "Cancelamentos")
     contact_by_key = build_contact_map(usuarios, envios)
-    cancelled_purchase_ids, cancelled_quotas = cancellation_contexts(cancelamentos)
+    cancelled_quotas = cancellation_contexts(cancelamentos)
 
     price_by_batch = {}
     for _, row in resumo.iterrows():
@@ -420,8 +382,6 @@ def parse_xlsx(path):
     audience = []
     sold = complimentary = validated = 0
     revenue = 0.0
-    purchase_units = build_purchase_units(compras)
-
     for _, row in compras.iterrows():
         description = get_cell(row, "Descrição")
         batch_label = excel_label(description)
@@ -451,37 +411,6 @@ def parse_xlsx(path):
         add_promoter(promoters, promoter, sold=quantity, revenue=total)
         if quantity or total:
             add_attendee(attendees, row, event_id, name, sold=quantity, revenue=total)
-
-    for _, row in cancelamentos.iterrows():
-        cancel_value = as_number(get_cell(row, "Valor"))
-        if cancel_value <= 0:
-            continue
-        description = get_cell(row, "Descrição")
-        batch_label = excel_label(description)
-        batch_key = normalize(description) or "sem lote"
-        person_key = anonymous_person_key(get_cell(row, "Identificador do usuário"), get_cell(row, "E-mail"), get_cell(row, "Nome"))
-        cancel_quantity = int(as_number(get_cell(row, "Quantidade")) or 1)
-        cancel_quantity = max(cancel_quantity, 1)
-        matched_units = [consume_purchase_unit(purchase_units, person_key, batch_key) for _ in range(cancel_quantity)]
-        matched_units = [unit for unit in matched_units if unit]
-        promoter = matched_units[0]["promoter"] if matched_units else ""
-        batch = batches.setdefault(
-            batch_key,
-            {
-                "label": batch_label,
-                "rawLabel": batch_label,
-                "sold": 0,
-                "complimentary": 0,
-                "validated": 0,
-                "soldValidated": 0,
-                "complimentaryValidated": 0,
-                "revenue": 0,
-            },
-        )
-        sold -= cancel_quantity
-        batch["sold"] -= cancel_quantity
-        add_promoter(promoters, promoter, sold=-cancel_quantity)
-        add_attendee(attendees, row, event_id, name, sold=-cancel_quantity)
 
     for _, row in ingressos.iterrows():
         description = get_cell(row, "Descrição")
