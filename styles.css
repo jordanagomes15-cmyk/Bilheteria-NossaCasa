@@ -1093,6 +1093,30 @@ h3 {
   line-height: 1.15;
 }
 
+.settlement-tier-card-simple {
+  grid-template-columns: minmax(120px, 0.22fr) minmax(0, 1fr);
+  align-items: start;
+}
+
+.settlement-event-name-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.settlement-event-name-button {
+  min-height: 0;
+  padding: 0;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1.25;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
 .settlement-rules-table table {
   min-width: 720px;
 }
@@ -1270,6 +1294,7 @@ h3 {
 .settlement-details-toggle {
   display: grid;
   gap: 12px;
+  justify-items: start;
 }
 
 .settlement-details-toggle summary {
@@ -3105,6 +3130,10 @@ tr:last-child td {
 
   .settlement-tier-card {
     padding: 9px 10px;
+  }
+
+  .settlement-tier-card-simple {
+    grid-template-columns: 1fr;
   }
 
   .settlement-tier-numbers {

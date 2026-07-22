@@ -2664,9 +2664,29 @@ function renderSettlementEventCards(events) {
   `;
 }
 
-function settlementTierSummary(tier, model) {
+function renderSettlementEventNames(events) {
+  if (!events.length) return `<p class="notice">Nenhum evento neste tier.</p>`;
+  return `
+    <ul class="settlement-event-name-list">
+      ${events.map((event) => `<li><button class="ghost settlement-event-name-button" data-event="${esc(event.id)}">${esc(event.name)}</button></li>`).join("")}
+    </ul>
+  `;
+}
+
+function settlementTierSummary(tier, model, options = {}) {
   const hasGuarantee = model === "100k garantido" && Number(tier.guaranteedBase || 0) > 0;
   const eventRows = Array.isArray(tier.eventRows) ? tier.eventRows : [];
+  if (options.simpleEvents) {
+    return `
+      <div class="settlement-tier-card settlement-tier-card-simple">
+        <div>
+          <strong>${esc(tier.label)}</strong>
+          <small>${int(tier.eventCount || 0)} eventos</small>
+        </div>
+        ${renderSettlementEventNames(eventRows)}
+      </div>
+    `;
+  }
   return `
     <div class="settlement-tier-card">
       <div>
@@ -2688,10 +2708,10 @@ function settlementTierSummary(tier, model) {
   `;
 }
 
-function renderSettlementTierList(row) {
+function renderSettlementTierList(row, options = {}) {
   return `
     <div class="settlement-tier-list">
-      ${row.tierRows.map((tier) => settlementTierSummary(tier, row.model)).join("")}
+      ${row.tierRows.map((tier) => settlementTierSummary(tier, row.model, options)).join("")}
     </div>
   `;
 }
@@ -2848,7 +2868,7 @@ function renderSettlement() {
         </div>
         <details class="settlement-details-toggle">
           <summary>Ver distribuicao por tier</summary>
-          ${renderSettlementTierList(analysis.specialPool)}
+          ${renderSettlementTierList(analysis.specialPool, { simpleEvents: true })}
         </details>
       </div>
       <div class="card settlement-filter-card">
