@@ -2884,13 +2884,11 @@ function renderSettlementRows(rows) {
   return `
     <div class="table-wrap responsive-table settlement-table">
       <table>
-        <thead><tr><th>${settlementSortHeader("name", "Codigo")}</th><th>Modelo</th><th>${settlementSortHeader("revenue", "Receita")}</th><th>Vendas</th><th>${settlementSortHeader("repasse", "Repasse")}</th><th>Resumo dos tiers</th><th>Status</th></tr></thead>
+        <thead><tr><th>${settlementSortHeader("name", "Codigo")}</th><th>Modelo</th><th>${settlementSortHeader("revenue", "Receita")}</th><th>Vendas</th><th>${settlementSortHeader("repasse", "Repasse")}</th><th>Resumo dos tiers</th></tr></thead>
         <tbody>
           ${rows
             .map((row) => {
               const key = salesCodeKey(row.name);
-              const hasUnclassified = Number(row.tiers.unclassified?.revenue || 0) > 0 || Number(row.tiers.unclassified?.sold || 0) > 0;
-              const status = hasUnclassified ? "Tem pendencia" : Number(row.repasse || 0) > 0 ? "Pronto" : "Sem repasse";
               return `
                 <tr class="settlement-row" data-settlement-row="${esc(key)}">
                   <td data-label="Codigo"><button class="ghost settlement-code-link" data-settlement-code="${esc(key)}"><strong>${esc(row.name)}</strong></button><small>${int(row.eventCount)} eventos com ocorrencia</small></td>
@@ -2898,8 +2896,7 @@ function renderSettlementRows(rows) {
                   <td data-label="Receita" class="money-col">${money(row.revenue)}</td>
                   <td data-label="Vendas">${int(row.sold)}<small>${int(row.soldValidated)} validadas</small></td>
                   <td data-label="Repasse" class="money-col"><strong>${money(row.repasse)}</strong>${row.guaranteeApplied ? `<small>${money(row.guaranteeApplied)} garantia</small>` : ""}</td>
-                  <td data-label="Resumo dos tiers"><span class="tier-summary-text">${esc(settlementTierCompactSummary(row))}</span><button class="secondary compact-action" data-settlement-code="${esc(key)}">Ver detalhamento</button></td>
-                  <td data-label="Status"><span class="pill ${hasUnclassified ? "warn" : Number(row.repasse || 0) > 0 ? "good" : "muted-pill"}">${esc(status)}</span></td>
+                  <td data-label="Resumo dos tiers" class="settlement-tier-summary-cell"><span class="tier-summary-text">${esc(settlementTierCompactSummary(row))}</span><button class="secondary compact-action" data-settlement-code="${esc(key)}">Ver detalhamento</button></td>
                 </tr>
               `;
             })
