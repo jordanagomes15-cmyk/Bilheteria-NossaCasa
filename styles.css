@@ -1001,7 +1001,7 @@ h3 {
 }
 
 .settlement-table table {
-  min-width: 860px;
+  min-width: min(860px, 100%);
 }
 
 .settlement-table th:first-child,
@@ -1119,7 +1119,7 @@ h3 {
 
 .settlement-tier-card {
   display: grid;
-  grid-template-columns: minmax(180px, 0.9fr) minmax(420px, 1.1fr);
+  grid-template-columns: minmax(160px, 0.8fr) minmax(min(100%, 360px), 1.2fr);
   gap: var(--space-4);
   align-items: center;
   padding: var(--space-4);
@@ -1147,7 +1147,7 @@ h3 {
 
 .settlement-tier-numbers {
   display: grid;
-  grid-template-columns: repeat(4, minmax(92px, 1fr));
+  grid-template-columns: repeat(4, minmax(min(100%, 92px), 1fr));
   gap: var(--space-2);
   text-align: right;
 }
@@ -1208,7 +1208,7 @@ h3 {
 }
 
 .settlement-tier-event-table table {
-  min-width: 760px;
+  min-width: min(760px, 100%);
 }
 
 .settlement-tier-event-table td:first-child,
@@ -1237,7 +1237,7 @@ h3 {
 
 .settlement-rules-table table {
   table-layout: fixed;
-  min-width: 720px;
+  min-width: min(720px, 100%);
 }
 
 .settlement-rules-table th:first-child,
@@ -1420,7 +1420,8 @@ h3 {
 
 .overview-link-grid .table-wrap {
   margin-inline: auto;
-  overflow-x: hidden;
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .overview-link-grid .overview-compact-table {
@@ -1534,7 +1535,7 @@ h3 {
   display: grid;
   align-content: space-between;
   gap: var(--space-2);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .metric::before {
@@ -1561,12 +1562,13 @@ h3 {
 .metric strong {
   max-width: 100%;
   font-size: clamp(var(--text-xl), 2.05vw, var(--text-3xl));
-  line-height: 1;
+  line-height: 1.06;
   font-weight: var(--fw-bold);
-  white-space: nowrap;
+  white-space: normal;
   font-variant-numeric: tabular-nums;
-  overflow: hidden;
-  text-overflow: clip;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: unset;
 }
 
 .metric strong.compact-value {
@@ -1575,6 +1577,7 @@ h3 {
 
 .metric strong.money-value {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   gap: 0.16em;
   min-width: 0;
@@ -1596,8 +1599,9 @@ h3 {
   line-height: 1;
   font-weight: var(--fw-bold) !important;
   text-transform: none !important;
-  white-space: nowrap !important;
-  overflow: hidden;
+  white-space: normal !important;
+  overflow: visible;
+  overflow-wrap: anywhere;
 }
 
 .metric small {
@@ -1838,11 +1842,11 @@ h3 {
 }
 
 .compact-table table {
-  min-width: 680px;
+  min-width: min(680px, 100%);
 }
 
 .sales-link-table table {
-  min-width: 860px;
+  min-width: min(860px, 100%);
   table-layout: fixed;
 }
 
@@ -1857,7 +1861,7 @@ h3 {
 }
 
 .courtesy-link-table table {
-  min-width: 620px;
+  min-width: min(620px, 100%);
   table-layout: fixed;
 }
 
@@ -2505,7 +2509,7 @@ td small {
 
 table {
   width: 100%;
-  min-width: 820px;
+  min-width: min(820px, 100%);
   border-collapse: collapse;
   table-layout: auto;
 }
@@ -2894,6 +2898,26 @@ tr:last-child td {
   display: none;
 }
 
+@media (max-width: 1280px) {
+  .overview-link-grid,
+  .two {
+    grid-template-columns: 1fr;
+  }
+
+  .settlement-table table,
+  .sales-link-table table,
+  .courtesy-link-table table,
+  .compact-table table,
+  table {
+    min-width: min(720px, 100%);
+  }
+
+  .settlement-tier-numbers {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    text-align: left;
+  }
+}
+
 @media (max-width: 1100px) {
   .two,
   .recurring-grid,
@@ -3031,15 +3055,15 @@ tr:last-child td {
   }
 
   table {
-    min-width: 760px;
+    min-width: min(760px, 100%);
   }
 
   .compact-table table {
-    min-width: 640px;
+    min-width: min(640px, 100%);
   }
 
   .settlement-table table {
-    min-width: 760px;
+    min-width: min(760px, 100%);
   }
 
   .settlement-tier-card {
