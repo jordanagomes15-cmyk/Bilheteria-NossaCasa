@@ -2199,8 +2199,6 @@ function renderOverview() {
   const events = filteredEvents();
   const sum = totals(events);
   const split = salesBreakdown(events);
-  const rate = (sum.validated / Math.max(sum.sold + sum.complimentary, 1)) * 100;
-  const courtesyRate = safeRate(split.complimentaryValidated, split.complimentary);
   const codeRows = promoterRanking(events);
   const salesCodeRows = sortCodeRanking(codeRows.filter((row) => row.revenue > 0 || row.sold > 0), "sales").slice(0, 5);
   const courtesyCodeRows = sortCodeRanking(codeRows.filter((row) => row.complimentary > 0), "courtesy").slice(0, 5);
@@ -2209,11 +2207,8 @@ function renderOverview() {
       ${renderDashboardFilters(events)}
       <div class="grid cards overview-metrics">
         ${metric("Faturamento", money(sum.revenue), "Receita total registrada")}
-        ${metric("Venda geral", money(split.generalRevenue), `${int(split.generalSold)} ingressos sem link`)}
-        ${metric("Venda por link", money(split.linkRevenue), `${pct(safeRate(split.linkRevenue, sum.revenue))} do faturamento`)}
-        ${metric("Cortesias", int(sum.complimentary), `${int(split.complimentaryValidated)} validadas (${pct(courtesyRate)})`)}
-        ${metric("Check-ins", int(sum.validated), `${pct(rate)} de presenca`)}
-        ${metric("PNE inseridos", int(sum.pneInserted), `${int(sum.pneConverted)} convertidos`)}
+        ${metric("Venda geral", money(split.generalRevenue), `${int(split.generalSold)} ingressos · ${pct(safeRate(split.generalRevenue, sum.revenue))} do faturamento`)}
+        ${metric("Venda por link", money(split.linkRevenue), `${int(split.linkSold)} ingressos · ${pct(safeRate(split.linkRevenue, sum.revenue))} do faturamento`)}
       </div>
       ${renderSplitSummary(split, sum)}
       <div class="card code-ranking-control">
@@ -3499,8 +3494,8 @@ function renderDetail() {
       <div class="grid cards">
         ${metric("Ingressos emitidos", int(total), `${int(event.sold)} vendas / ${int(event.complimentary)} cortesias`)}
         ${metric("Faturamento", money(event.revenue), "Receita total do evento")}
-        ${metric("Venda geral", money(split.generalRevenue), `${int(split.generalSold)} ingressos sem link`)}
-        ${metric("Venda por link", money(split.linkRevenue), `${pct(safeRate(split.linkRevenue, event.revenue))} do faturamento`)}
+        ${metric("Venda geral", money(split.generalRevenue), `${int(split.generalSold)} ingressos · ${pct(safeRate(split.generalRevenue, event.revenue))} do faturamento`)}
+        ${metric("Venda por link", money(split.linkRevenue), `${int(split.linkSold)} ingressos · ${pct(safeRate(split.linkRevenue, event.revenue))} do faturamento`)}
         ${metric("Cortesias", int(event.complimentary), `${int(split.complimentaryValidated)} validadas (${pct(safeRate(split.complimentaryValidated, event.complimentary))})`)}
         ${metric("Check-ins", int(event.validated), `${pct(rate)} de presenca`)}
         ${metric("Compradores unicos", int(audienceSummary.uniqueBuyers), "Participantes finais com compra")}
