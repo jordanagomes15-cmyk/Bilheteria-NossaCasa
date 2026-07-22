@@ -2716,15 +2716,33 @@ function renderSettlementTierList(row, options = {}) {
   `;
 }
 
-function settlementRulesTable() {
+function settlementRuleRows(events = filteredEvents()) {
+  return SETTLEMENT_TIER_ORDER.filter((tierKey) => tierKey !== "unclassified").map((tierKey) => {
+    const eventNames = events
+      .filter((event) => settlementTierForEvent(event) === tierKey)
+      .map((event) => event.name);
+    return {
+      ...SETTLEMENT_TIERS[tierKey],
+      eventNames
+    };
+  });
+}
+
+function settlementRulesTable(events = filteredEvents()) {
   return renderResponsiveTable({
     className: "settlement-rules-table",
     columns: [
-      { label: "Tier", render: (row) => `<strong>${esc(row.label)}</strong>` },
+      {
+        label: "Tier",
+        render: (row) => `
+          <strong>${esc(row.label)}</strong>
+          <small class="settlement-rule-tier-note">${row.eventNames.length ? row.eventNames.map(esc).join(", ") : "Nenhuma festa no recorte atual"}</small>
+        `
+      },
       { label: "Modelo padrao", render: (row) => `${pct(row.commissionRate * 100)} comissao · ${pct(row.discountRate * 100)} desconto` },
       { label: "100k garantido", render: (row) => `${money(row.guaranteedBase)} base · ${pct(row.guaranteedCommissionRate * 100)} comissao · ${pct(row.guaranteedDiscountRate * 100)} desconto` }
     ],
-    rows: SETTLEMENT_TIER_ORDER.filter((tierKey) => tierKey !== "unclassified").map((tierKey) => SETTLEMENT_TIERS[tierKey])
+    rows: settlementRuleRows(events)
   });
 }
 
@@ -2853,7 +2871,7 @@ function renderSettlement() {
           <p>Referencia das negociacoes usadas no fechamento.</p>
         </div>
         <button class="secondary compact-action settlement-rules-toggle" data-action="toggle-settlement-rules" aria-expanded="${state.settlementRulesOpen ? "true" : "false"}">${state.settlementRulesOpen ? "Ocultar regras de comissao" : "Ver regras de comissao"}</button>
-        ${state.settlementRulesOpen ? settlementRulesTable() : ""}
+        ${state.settlementRulesOpen ? settlementRulesTable(events) : ""}
       </div>
       <div class="card settlement-special-card" id="settlementSpecialCard">
         <div class="section-title">
