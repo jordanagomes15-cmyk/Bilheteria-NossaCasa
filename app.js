@@ -2566,14 +2566,14 @@ function renderSplitSummary(split) {
         <strong>${pct(soldRate)}</strong>
         <div class="bar"><i style="width:${clampPercent(soldRate)}%"></i></div>
         <small>${int(split.soldValidated)} de ${int(split.sold)} vendidos validados</small>
-        <small class="insight-pending">${int(pendingSoldValidation)} pagamentos ainda nao validados</small>
+        <small>${int(pendingSoldValidation)} pagamentos nao validados</small>
       </div>
       <div class="insight-card">
         <span>Validacao cortesia</span>
         <strong>${pct(courtesyRate)}</strong>
         <div class="bar"><i style="width:${clampPercent(courtesyRate)}%"></i></div>
         <small>${int(split.complimentaryValidated)} de ${int(split.complimentary)} cortesias validadas</small>
-        <small class="insight-pending">${int(pendingCourtesyValidation)} cortesias ainda nao validadas</small>
+        <small>${int(pendingCourtesyValidation)} cortesias nao validadas</small>
       </div>
     </section>
   `;
