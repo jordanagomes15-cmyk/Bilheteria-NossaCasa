@@ -1,5 +1,5 @@
 const { json, requireSession } = require("./_auth");
-const { listIssuesByLabel, isConfigured } = require("./_github");
+const { githubErrorResponse, listIssuesByLabel, isConfigured } = require("./_github");
 
 function parseField(body, label) {
   const match = body.match(new RegExp(`\\*\\*${label}:\\*\\*\\s*(.+)`));
@@ -28,6 +28,7 @@ module.exports = async function accessRequests(req, res) {
     }));
     return json(res, 200, { ok: true, requests });
   } catch (error) {
-    return json(res, 502, { ok: false, error: error.message || "Falha ao consultar solicitacoes." });
+    const result = githubErrorResponse(error, "Falha ao consultar solicitacoes.");
+    return json(res, result.status, result.body);
   }
 };

@@ -1,5 +1,5 @@
 const { json, requireSession } = require("./_auth");
-const { commentOnIssue, updateIssue, isConfigured } = require("./_github");
+const { commentOnIssue, githubErrorResponse, updateIssue, isConfigured } = require("./_github");
 
 const TIER_LABELS = {
   overview: "Visao geral (sem dados pessoais)",
@@ -53,6 +53,7 @@ module.exports = async function accessDecide(req, res) {
     });
     return json(res, 200, { ok: true });
   } catch (error) {
-    return json(res, 502, { ok: false, error: error.message || "Falha ao registrar decisao." });
+    const result = githubErrorResponse(error, "Falha ao registrar decisao.");
+    return json(res, result.status, result.body);
   }
 };

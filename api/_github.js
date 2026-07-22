@@ -1,5 +1,14 @@
 const API_BASE = "https://api.github.com";
 
+class GithubIntegrationError extends Error {
+  constructor(message, code, status = 502) {
+    super(message);
+    this.name = "GithubIntegrationError";
+    this.code = code;
+    this.status = status;
+  }
+}
+
 function config() {
   const repo = process.env.GITHUB_REPO;
   const token = process.env.GITHUB_TOKEN;
@@ -13,7 +22,13 @@ function isConfigured() {
 
 async function githubRequest(path, options = {}) {
   const cfg = config();
-  if (!cfg) throw new Error("GITHUB_REPO/GITHUB_TOKEN nao configurados no servidor.");
+  if (!cfg) {
+    throw new GithubIntegrationError(
+      "GITHUB_REPO/GITHUB_TOKEN nao configurados no servidor.",
+      "github_not_configured",
+      503
+    );
+  }
   const response = await fetch(`${API_BASE}/repos/${cfg.repo}${path}`, {
     ...options,
     headers: {
@@ -33,15 +48,27 @@ async function githubRequest(path, options = {}) {
   }
   if (!response.ok) {
     if (response.status === 401) {
-      throw new Error("Token do GitHub invalido ou expirado. Atualize GITHUB_TOKEN na Vercel.");
+      throw new GithubIntegrationError(
+        "Token do GitHub invalido ou expirado. Atualize GITHUB_TOKEN na Vercel.",
+        "github_token_invalid",
+        503
+      );
     }
     if (response.status === 403) {
-      throw new Error("Token do GitHub sem permissao suficiente. Garanta Issues: Read and write no repositorio.");
+      throw new GithubIntegrationError(
+        "Token do GitHub sem permissao suficiente. Garanta Issues: Read and write no repositorio.",
+        "github_token_scope",
+        503
+      );
     }
     if (response.status === 404) {
-      throw new Error("Repositorio do GitHub nao encontrado. Confira GITHUB_REPO e o acesso do token.");
+      throw new GithubIntegrationError(
+        "Repositorio do GitHub nao encontrado. Confira GITHUB_REPO e o acesso do token.",
+        "github_repo_not_found",
+        503
+      );
     }
-    throw new Error(data?.message || `GitHub API respondeu ${response.status}`);
+    throw new GithubIntegrationError(data?.message || `GitHub API respondeu ${response.status}`, "github_api_error");
   }
   return data;
 }
@@ -62,4 +89,17 @@ function updateIssue(number, patch) {
   return githubRequest(`/issues/${number}`, { method: "PATCH", body: JSON.stringify(patch) });
 }
 
-module.exports = { createIssue, listIssuesByLabel, commentOnIssue, updateIssue, isConfigured };
+function githubErrorResponse(error, fallback = "Falha na integracao com GitHub.") {
+  if (error instanceof GithubIntegrationError) {
+    return {
+      status: error.status,
+      body: { ok: false, error: error.message, code: error.code }
+    };
+  }
+  return {
+    status: 502,
+    body: { ok: false, error: error?.message || fallback, code: "github_unknown_error" }
+  };
+}
+
+module.exports = { createIssue, listIssuesByLabel, commentOnIssue, updateIssue, isConfigured, githubErrorResponse };

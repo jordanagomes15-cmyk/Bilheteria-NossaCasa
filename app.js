@@ -220,11 +220,13 @@ const state = {
   showSignup: false,
   signupSubmitting: false,
   signupError: "",
+  signupErrorCode: "",
   signupSuccess: false,
   accessRequests: [],
   accessRequestsLoaded: false,
   accessRequestsLoading: false,
   accessRequestsError: "",
+  accessRequestsErrorCode: "",
   accessDecisionBusy: ""
 };
 
@@ -1664,15 +1666,21 @@ async function ensureAccessRequests() {
   if (state.accessRequestsLoaded || state.accessRequestsLoading) return;
   state.accessRequestsLoading = true;
   state.accessRequestsError = "";
+  state.accessRequestsErrorCode = "";
   render();
   try {
     const response = await fetch("/api/access-requests", { credentials: "include", cache: "no-store" });
     const data = await response.json();
-    if (!response.ok || !data.ok) throw new Error(data.error || "Nao foi possivel carregar as solicitacoes.");
+    if (!response.ok || !data.ok) {
+      const err = new Error(data.error || "Nao foi possivel carregar as solicitacoes.");
+      err.code = data.code || "";
+      throw err;
+    }
     state.accessRequests = data.requests || [];
     state.accessRequestsLoaded = true;
   } catch (error) {
     state.accessRequestsError = error.message || "Nao foi possivel carregar as solicitacoes.";
+    state.accessRequestsErrorCode = error.code || "";
   } finally {
     state.accessRequestsLoading = false;
     render();
@@ -1681,6 +1689,7 @@ async function ensureAccessRequests() {
 
 async function decideAccessRequest(issueNumber, decision, tier) {
   state.accessDecisionBusy = String(issueNumber);
+  state.accessRequestsErrorCode = "";
   render();
   try {
     const response = await fetch("/api/access-decide", {
@@ -1690,10 +1699,15 @@ async function decideAccessRequest(issueNumber, decision, tier) {
       body: JSON.stringify({ issueNumber, decision, tier })
     });
     const data = await response.json().catch(() => ({ ok: false, error: "Falha ao registrar decisao." }));
-    if (!response.ok || !data.ok) throw new Error(data.error || "Falha ao registrar decisao.");
+    if (!response.ok || !data.ok) {
+      const err = new Error(data.error || "Falha ao registrar decisao.");
+      err.code = data.code || "";
+      throw err;
+    }
     state.accessRequests = state.accessRequests.filter((request) => request.number !== issueNumber);
   } catch (error) {
     state.accessRequestsError = error.message || "Falha ao registrar decisao.";
+    state.accessRequestsErrorCode = error.code || "";
   } finally {
     state.accessDecisionBusy = "";
     render();
@@ -1709,7 +1723,8 @@ function renderAccessRequests() {
       "Nao foi possivel carregar",
       state.accessRequestsError,
       "error",
-      `<button class="secondary" type="button" data-action="retry-access-requests">Tentar novamente</button>`
+      `${isGithubIntegrationError(state.accessRequestsErrorCode) ? renderGithubIntegrationHelp() : ""}
+      <button class="secondary" type="button" data-action="retry-access-requests">Tentar novamente</button>`
     );
   }
   if (!state.accessRequests.length) {
@@ -1976,6 +1991,7 @@ function renderSignupForm() {
       </label>
       <label class="field">Motivo/observacoes (opcional)<textarea id="signupReason" name="reason" rows="3" maxlength="600"></textarea></label>
       <p class="login-error" id="signupError" aria-live="polite"></p>
+      <div id="signupIntegrationHelp">${state.signupError && isGithubIntegrationError(state.signupErrorCode) ? renderGithubIntegrationHelp(true) : ""}</div>
       <button class="primary" type="submit">Enviar solicitacao</button>
       <button class="secondary" type="button" data-action="hide-signup">Cancelar</button>
       <div class="login-secure-note" role="note">
@@ -2062,17 +2078,20 @@ function bindLogin() {
     state.showSignup = true;
     state.signupSuccess = false;
     state.signupError = "";
+    state.signupErrorCode = "";
     render();
   });
   document.querySelector("[data-action='hide-signup']")?.addEventListener("click", () => {
     state.showSignup = false;
     state.signupSuccess = false;
     state.signupError = "";
+    state.signupErrorCode = "";
     render();
   });
   document.getElementById("signupForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     state.signupError = "";
+    state.signupErrorCode = "";
     const payload = {
       name: document.getElementById("signupName")?.value?.trim() || "",
       email: document.getElementById("signupEmail")?.value?.trim() || "",
@@ -2094,13 +2113,20 @@ function bindLogin() {
         body: JSON.stringify(payload)
       });
       const data = await response.json().catch(() => ({ ok: false, error: "Falha ao enviar solicitacao." }));
-      if (!response.ok || !data.ok) throw new Error(data.error || "Falha ao enviar solicitacao.");
+      if (!response.ok || !data.ok) {
+        const err = new Error(data.error || "Falha ao enviar solicitacao.");
+        err.code = data.code || "";
+        throw err;
+      }
       state.signupSuccess = true;
       render();
     } catch (error) {
       state.signupError = error.message || "Falha ao enviar solicitacao.";
+      state.signupErrorCode = error.code || "";
       const errorField = document.getElementById("signupError");
       if (errorField) errorField.textContent = state.signupError;
+      const helpField = document.getElementById("signupIntegrationHelp");
+      if (helpField) helpField.innerHTML = isGithubIntegrationError(state.signupErrorCode) ? renderGithubIntegrationHelp(true) : "";
     } finally {
       if (button) {
         button.disabled = false;
@@ -2136,6 +2162,22 @@ function renderStatePanel(title, message, type = "empty", actions = "") {
         ${message ? `<p class="muted">${esc(message)}</p>` : ""}
         ${actions ? `<div class="state-actions">${actions}</div>` : ""}
       </div>
+    </div>
+  `;
+}
+
+function isGithubIntegrationError(code) {
+  return String(code || "").startsWith("github_");
+}
+
+function renderGithubIntegrationHelp(compact = false) {
+  const text = compact
+    ? "Atualize o GITHUB_TOKEN de producao na Vercel com um token fine-grained ativo e permissao Issues: Read and write para o repositorio."
+    : "A fila de solicitacoes usa GitHub Issues. Atualize o GITHUB_TOKEN de producao na Vercel com um token fine-grained ativo e permissao Issues: Read and write para o repositorio Bilheteria-NossaCasa.";
+  return `
+    <div class="login-secure-note warning" role="note">
+      <span aria-hidden="true">!</span>
+      <p><strong>Integracao GitHub pausada.</strong> ${esc(text)}</p>
     </div>
   `;
 }

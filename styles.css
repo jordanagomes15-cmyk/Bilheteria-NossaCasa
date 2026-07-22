@@ -362,6 +362,19 @@ h3 {
   color: var(--good);
 }
 
+.login-secure-note.warning {
+  background: rgba(255, 240, 207, 0.74);
+  border-color: rgba(157, 95, 5, 0.24);
+}
+
+.login-secure-note.warning > span {
+  background: var(--accent);
+}
+
+.login-secure-note.warning strong {
+  color: var(--accent);
+}
+
 .signup-success {
   padding: var(--space-10);
   display: grid;

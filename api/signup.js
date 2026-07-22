@@ -1,5 +1,5 @@
 const { json } = require("./_auth");
-const { createIssue, isConfigured } = require("./_github");
+const { createIssue, githubErrorResponse, isConfigured } = require("./_github");
 
 const ACCESS_LEVELS = {
   overview: "Visao geral (sem dados pessoais)",
@@ -57,6 +57,7 @@ module.exports = async function signup(req, res) {
     const issue = await createIssue({ title, body: requestBody, labels: ["acesso-pendente"] });
     return json(res, 200, { ok: true, id: issue.number });
   } catch (error) {
-    return json(res, 502, { ok: false, error: "Nao foi possivel registrar a solicitacao agora. Tente novamente em instantes." });
+    const result = githubErrorResponse(error, "Nao foi possivel registrar a solicitacao agora. Tente novamente em instantes.");
+    return json(res, result.status, result.body);
   }
 };
