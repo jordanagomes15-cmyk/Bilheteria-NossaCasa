@@ -1,4 +1,5 @@
 const { json } = require("./_auth");
+const { createLocalRequest } = require("./_access-store");
 const { createIssue, githubErrorResponse, isConfigured } = require("./_github");
 
 const ACCESS_LEVELS = {
@@ -15,12 +16,6 @@ module.exports = async function signup(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return json(res, 405, { ok: false, error: "Metodo nao permitido." });
-  }
-  if (!isConfigured()) {
-    return json(res, 503, {
-      ok: false,
-      error: "Cadastro de solicitacoes ainda nao configurado no servidor (GITHUB_REPO/GITHUB_TOKEN)."
-    });
   }
 
   const chunks = [];
@@ -53,11 +48,30 @@ module.exports = async function signup(req, res) {
     "_Enviado automaticamente pelo formulario de cadastro do dashboard Nossa Casa._"
   ].join("\n");
 
+  const fallbackRequest = () =>
+    createLocalRequest({
+      name,
+      email,
+      phone: phone || "nao informado",
+      accessLevel: ACCESS_LEVELS[accessLevel],
+      reason: reason || "nao informado",
+      url: ""
+    });
+
+  if (!isConfigured()) {
+    const request = fallbackRequest();
+    return json(res, 200, { ok: true, id: request.number, fallback: true });
+  }
+
   try {
     const issue = await createIssue({ title, body: requestBody, labels: ["acesso-pendente"] });
     return json(res, 200, { ok: true, id: issue.number });
   } catch (error) {
     const result = githubErrorResponse(error, "Nao foi possivel registrar a solicitacao agora. Tente novamente em instantes.");
+    if (result.body?.code && String(result.body.code).startsWith("github_")) {
+      const request = fallbackRequest();
+      return json(res, 200, { ok: true, id: request.number, fallback: true, warning: result.body.error });
+    }
     return json(res, result.status, result.body);
   }
 };

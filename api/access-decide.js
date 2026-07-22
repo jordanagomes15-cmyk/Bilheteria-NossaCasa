@@ -1,4 +1,5 @@
 const { json, requireSession } = require("./_auth");
+const { closeLocalRequest } = require("./_access-store");
 const { commentOnIssue, githubErrorResponse, updateIssue, isConfigured } = require("./_github");
 
 const TIER_LABELS = {
@@ -12,9 +13,6 @@ module.exports = async function accessDecide(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return json(res, 405, { ok: false, error: "Metodo nao permitido." });
-  }
-  if (!isConfigured()) {
-    return json(res, 503, { ok: false, error: "GITHUB_REPO/GITHUB_TOKEN nao configurados no servidor." });
   }
 
   const chunks = [];
@@ -33,6 +31,11 @@ module.exports = async function accessDecide(req, res) {
 
   if (!issueNumber || !decision) {
     return json(res, 400, { ok: false, error: "Informe issueNumber e decision valida." });
+  }
+
+  if (!isConfigured() || issueNumber > 1000000000000) {
+    closeLocalRequest(issueNumber);
+    return json(res, 200, { ok: true, fallback: true });
   }
 
   const commentLines =
@@ -54,6 +57,10 @@ module.exports = async function accessDecide(req, res) {
     return json(res, 200, { ok: true });
   } catch (error) {
     const result = githubErrorResponse(error, "Falha ao registrar decisao.");
+    if (result.body?.code && String(result.body.code).startsWith("github_")) {
+      closeLocalRequest(issueNumber);
+      return json(res, 200, { ok: true, fallback: true, warning: result.body.error });
+    }
     return json(res, result.status, result.body);
   }
 };

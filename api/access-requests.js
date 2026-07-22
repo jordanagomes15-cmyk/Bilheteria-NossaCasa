@@ -1,4 +1,5 @@
 const { json, requireSession } = require("./_auth");
+const { listLocalRequests } = require("./_access-store");
 const { githubErrorResponse, listIssuesByLabel, isConfigured } = require("./_github");
 
 function parseField(body, label) {
@@ -8,11 +9,9 @@ function parseField(body, label) {
 
 module.exports = async function accessRequests(req, res) {
   if (!requireSession(req, res)) return;
+  const localRequests = listLocalRequests();
   if (!isConfigured()) {
-    return json(res, 503, {
-      ok: false,
-      error: "Solicitacoes de acesso ainda nao configuradas no servidor (GITHUB_REPO/GITHUB_TOKEN)."
-    });
+    return json(res, 200, { ok: true, requests: localRequests, degraded: true });
   }
   try {
     const issues = await listIssuesByLabel("acesso-pendente");
@@ -26,9 +25,12 @@ module.exports = async function accessRequests(req, res) {
       reason: parseField(issue.body || "", "Motivo/observacoes"),
       url: issue.html_url
     }));
-    return json(res, 200, { ok: true, requests });
+    return json(res, 200, { ok: true, requests: [...localRequests, ...requests] });
   } catch (error) {
     const result = githubErrorResponse(error, "Falha ao consultar solicitacoes.");
+    if (result.body?.code && String(result.body.code).startsWith("github_")) {
+      return json(res, 200, { ok: true, requests: localRequests, degraded: true, warning: result.body.error });
+    }
     return json(res, result.status, result.body);
   }
 };

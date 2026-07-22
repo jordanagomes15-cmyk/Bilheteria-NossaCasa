@@ -954,6 +954,127 @@ function currentSettlementRows(analysis) {
   );
 }
 
+function workbookSheetFromRows(headers, rows, options = {}) {
+  const sheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  const currencyColumns = new Set(options.currencyColumns || []);
+  const percentColumns = new Set(options.percentColumns || []);
+  const integerColumns = new Set(options.integerColumns || []);
+  sheet["!cols"] = headers.map((header, index) => {
+    const values = [header, ...rows.map((row) => row[index])].map((value) => String(value ?? ""));
+    const width = Math.min(42, Math.max(12, ...values.map((value) => value.length + 2)));
+    return { wch: width };
+  });
+  const range = XLSX.utils.decode_range(sheet["!ref"]);
+  for (let rowIndex = 1; rowIndex <= range.e.r; rowIndex += 1) {
+    headers.forEach((_, columnIndex) => {
+      const address = XLSX.utils.encode_cell({ r: rowIndex, c: columnIndex });
+      const cell = sheet[address];
+      if (!cell || typeof cell.v !== "number") return;
+      if (currencyColumns.has(columnIndex)) cell.z = '"R$" #,##0.00';
+      else if (percentColumns.has(columnIndex)) cell.z = "0%";
+      else if (integerColumns.has(columnIndex)) cell.z = "#,##0";
+    });
+  }
+  sheet["!freeze"] = { xSplit: 0, ySplit: 1 };
+  return sheet;
+}
+
+function exportSettlementWorkbook() {
+  if (!window.XLSX?.utils) {
+    exportSettlementCsv();
+    return;
+  }
+  const analysis = buildSettlementAnalysis(filteredEvents());
+  const rows = currentSettlementRows(analysis);
+  const workbook = XLSX.utils.book_new();
+  const summaryHeaders = ["Codigo", "Modelo", "Receita", "Vendidos", "Validados", "% validacao", "Repasse", "Comissao real", "Garantia aplicada", "Eventos"];
+  const summaryRows = rows.map((row) => [
+    row.name,
+    settlementModelLabel(row.model),
+    Number(row.revenue || 0),
+    Number(row.sold || 0),
+    Number(row.soldValidated || 0),
+    safeRate(row.soldValidated, row.sold) / 100,
+    Number(row.repasse || 0),
+    Number(row.actualCommission || 0),
+    Number(row.guaranteeApplied || 0),
+    Number(row.eventCount || 0)
+  ]);
+  XLSX.utils.book_append_sheet(
+    workbook,
+    workbookSheetFromRows(summaryHeaders, summaryRows, { currencyColumns: [2, 6, 7, 8], percentColumns: [5], integerColumns: [3, 4, 9] }),
+    "Fechamento"
+  );
+
+  const tierHeaders = [
+    "Codigo",
+    "Modelo",
+    "Tier",
+    "Eventos",
+    "Receita",
+    "Vendidos",
+    "Validados",
+    "% validacao",
+    "% comissao",
+    "% desconto",
+    "Base garantida",
+    "Comissao garantida",
+    "Comissao real",
+    "Repasse",
+    "Garantia aplicada"
+  ];
+  const tierRows = rows.flatMap((row) =>
+    row.tierRows.map((tier) => [
+      row.name,
+      settlementModelLabel(row.model),
+      tier.label,
+      Number(tier.eventCount || 0),
+      Number(tier.revenue || 0),
+      Number(tier.sold || 0),
+      Number(tier.soldValidated || 0),
+      safeRate(tier.soldValidated, tier.sold) / 100,
+      Number(tier.commissionRate || 0),
+      Number(tier.discountRate || 0),
+      Number(tier.guaranteedBase || 0),
+      Number(tier.guaranteedCommission || 0),
+      Number(tier.actualCommission || 0),
+      Number(tier.repasse || 0),
+      Number(tier.guaranteeApplied || 0)
+    ])
+  );
+  XLSX.utils.book_append_sheet(
+    workbook,
+    workbookSheetFromRows(tierHeaders, tierRows, { currencyColumns: [4, 10, 11, 12, 13, 14], percentColumns: [7, 8, 9], integerColumns: [3, 5, 6] }),
+    "Tiers"
+  );
+
+  const eventHeaders = ["Codigo", "Modelo", "Tier", "Evento", "Garantia elegivel", "Receita", "Vendidos", "Validados", "% validacao", "Cortesias", "Val. cortesias"];
+  const eventRows = rows.flatMap((row) =>
+    row.tierRows.flatMap((tier) =>
+      (tier.eventRows || []).map((eventRow) => [
+        row.name,
+        settlementModelLabel(row.model),
+        tier.label,
+        eventRow.name,
+        eventRow.guaranteeEligible === false ? "Nao" : "Sim",
+        Number(eventRow.revenue || 0),
+        Number(eventRow.sold || 0),
+        Number(eventRow.soldValidated || 0),
+        safeRate(eventRow.soldValidated, eventRow.sold) / 100,
+        Number(eventRow.complimentary || 0),
+        Number(eventRow.complimentaryValidated || 0)
+      ])
+    )
+  );
+  XLSX.utils.book_append_sheet(
+    workbook,
+    workbookSheetFromRows(eventHeaders, eventRows, { currencyColumns: [5], percentColumns: [8], integerColumns: [6, 7, 9, 10] }),
+    "Eventos por tier"
+  );
+
+  XLSX.writeFile(workbook, `fechamento-nossa-casa-${new Date().toISOString().slice(0, 10)}.xlsx`, { compression: true });
+}
+
 function exportSettlementCsv() {
   const analysis = buildSettlementAnalysis(filteredEvents());
   const rows = currentSettlementRows(analysis);
@@ -3142,7 +3263,7 @@ function renderSettlement() {
             <h2>Fechamento por codigo</h2>
             <p>Totais e tier de evento usados para calcular o repasse.</p>
           </div>
-          <button class="secondary" data-action="export-settlement">Exportar fechamento (CSV)</button>
+          <button class="secondary" data-action="export-settlement">Exportar fechamento (XLS)</button>
         </div>
         <div class="filter-grid settlement-filter-grid">
           <label class="filter-field">
@@ -4093,7 +4214,7 @@ function bindActions() {
   });
   document.querySelector("[data-action='export-ranking']")?.addEventListener("click", exportRankingCsv);
   document.querySelector("[data-action='export-audience-profile']")?.addEventListener("click", exportAudienceProfileCsv);
-  document.querySelector("[data-action='export-settlement']")?.addEventListener("click", exportSettlementCsv);
+  document.querySelector("[data-action='export-settlement']")?.addEventListener("click", exportSettlementWorkbook);
   document.getElementById("settlementAccessForm")?.addEventListener("submit", (event) => {
     event.preventDefault();
     const password = document.getElementById("settlementAccessPassword")?.value || "";
