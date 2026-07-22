@@ -1357,6 +1357,7 @@ const SETTLEMENT_TIER_ORDER = ["gold", "silver", "bronze", "unclassified"];
 const SPECIAL_SETTLEMENT_CODES = new Set(["ra", "mare", "marianaparik"]);
 const SETTLEMENT_GUARANTEE_EXCLUDED_DATES = new Set(["2026-07-12", "2026-07-15", "2026-07-19"]);
 const SETTLEMENT_COURTESY_VALIDATION_FEE = 10;
+const SETTLEMENT_MINIMUM_COMMISSION_SOLD = 10;
 
 function isSpecialSettlementCode(name) {
   return SPECIAL_SETTLEMENT_CODES.has(normalizeCodeName(name));
@@ -1633,6 +1634,15 @@ function buildSettlementAnalysis(events = filteredEvents()) {
       acc.courtesyValidationRepasse += row.courtesyValidationRepasse;
       acc.gandayaCourtesyValidated += row.gandayaCourtesyValidated;
       acc.pneCourtesyValidated += row.pneCourtesyValidated;
+      const salesCommissionRepasse = Math.max(0, Number(row.repasse || 0) - Number(row.courtesyValidationRepasse || 0));
+      acc.minimumSalesRepasse += Number(row.courtesyValidationRepasse || 0);
+      if (Number(row.sold || 0) >= SETTLEMENT_MINIMUM_COMMISSION_SOLD) {
+        acc.minimumSalesRepasse += salesCommissionRepasse;
+        if (salesCommissionRepasse > 0) acc.minimumSalesEligibleCodes += 1;
+      } else if (salesCommissionRepasse > 0) {
+        acc.minimumSalesBlockedRepasse += salesCommissionRepasse;
+        acc.minimumSalesBlockedCodes += 1;
+      }
       acc.unclassifiedRevenue += Number(row.tiers.unclassified?.revenue || 0);
       if (row.model === "100k garantido") acc.specialRepasse += row.repasse;
       else acc.standardRepasse += row.repasse;
@@ -1648,6 +1658,10 @@ function buildSettlementAnalysis(events = filteredEvents()) {
       courtesyValidationRepasse: 0,
       gandayaCourtesyValidated: 0,
       pneCourtesyValidated: 0,
+      minimumSalesRepasse: 0,
+      minimumSalesEligibleCodes: 0,
+      minimumSalesBlockedCodes: 0,
+      minimumSalesBlockedRepasse: 0,
       standardRepasse: 0,
       specialRepasse: 0,
       unclassifiedRevenue: 0
@@ -3319,6 +3333,7 @@ function renderSettlement() {
       ${renderDashboardFilters(events)}
       <div class="grid cards overview-metrics settlement-metrics">
         ${metric("Repasse total", money(analysis.summary.repasse), "Comissoes calculadas pelo modelo de cada codigo")}
+        ${metric(`Repasse com minimo ${int(SETTLEMENT_MINIMUM_COMMISSION_SOLD)} vendas`, money(analysis.summary.minimumSalesRepasse), `${int(analysis.summary.minimumSalesEligibleCodes)} codigos com comissao · ${money(analysis.summary.minimumSalesBlockedRepasse)} sem minimo`)}
         ${metric("Cortesias validadas", money(analysis.summary.courtesyValidationRepasse), `${int(analysis.summary.gandayaCourtesyValidated)} Gandaya / ${int(analysis.summary.pneCourtesyValidated)} PNE · R$ ${int(SETTLEMENT_COURTESY_VALIDATION_FEE)} por pessoa`)}
         ${metric("Modelo padrao", money(analysis.summary.standardRepasse), "Demais comissarios por tier")}
         ${metric("100k garantido", money(analysis.summary.specialRepasse), "RA, Mare e Mariana Parik agrupados", `<button class="metric-link" data-action="scroll-special-settlement">Ver regra especial</button>`)}
