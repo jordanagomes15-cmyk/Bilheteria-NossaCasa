@@ -2210,7 +2210,7 @@ function renderOverview() {
         ${metric("Venda geral", money(split.generalRevenue), `${int(split.generalSold)} ingressos · ${pct(safeRate(split.generalRevenue, sum.revenue))} do faturamento`)}
         ${metric("Venda por link", money(split.linkRevenue), `${int(split.linkSold)} ingressos · ${pct(safeRate(split.linkRevenue, sum.revenue))} do faturamento`)}
       </div>
-      ${renderSplitSummary(split, sum)}
+      ${renderSplitSummary(split)}
       <div class="card code-ranking-control">
         <div class="section-title">
           <h2>Ranking dos codigos</h2>
@@ -2244,21 +2244,21 @@ function renderOverview() {
   `;
 }
 
-function renderSplitSummary(split, sum) {
-  const linkShare = safeRate(split.linkRevenue, sum.revenue);
-  const generalShare = safeRate(split.generalRevenue, sum.revenue);
+function renderSplitSummary(split) {
+  const linkSoldShare = safeRate(split.linkSold, split.sold);
+  const generalSoldShare = safeRate(split.generalSold, split.sold);
   const courtesyRate = safeRate(split.complimentaryValidated, split.complimentary);
   const soldRate = safeRate(split.soldValidated, split.sold);
   return `
     <section class="insight-grid">
       <div class="insight-card">
-        <span>Origem da receita</span>
-        <strong>${pct(linkShare)} via link</strong>
+        <span>Ingressos vendidos</span>
+        <strong>${int(split.sold)}</strong>
         <div class="stacked-bar">
-          <i class="gold" style="width:${clampPercent(generalShare)}%"></i>
-          <i class="green" style="width:${clampPercent(linkShare)}%"></i>
+          <i class="gold" style="width:${clampPercent(generalSoldShare)}%"></i>
+          <i class="green" style="width:${clampPercent(linkSoldShare)}%"></i>
         </div>
-        <small>${money(split.generalRevenue)} geral / ${money(split.linkRevenue)} por link</small>
+        <small>${int(split.generalSold)} geral / ${int(split.linkSold)} por link</small>
       </div>
       <div class="insight-card">
         <span>Validacao paga</span>
