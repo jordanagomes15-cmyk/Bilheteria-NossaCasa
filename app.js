@@ -160,6 +160,8 @@ const state = {
   salesCodeDrawerKey: "",
   salesCodeExpandedEventId: "",
   batchDrawerGroupKey: "",
+  settlementDrawerKey: "",
+  settlementExpandedTierKey: "",
   drawerReturnSelector: "",
   pendingDrawerFocus: false,
   drawerOpen: false,
@@ -197,7 +199,6 @@ const state = {
     sort: "repasse",
     sortDir: "desc"
   },
-  expandedSettlementCode: "",
   settlementShowAll: false,
   settlementRulesOpen: false,
   batchFilters: {
@@ -1721,6 +1722,8 @@ function setView(view) {
   state.salesCodeDrawerKey = "";
   state.salesCodeExpandedEventId = "";
   state.batchDrawerGroupKey = "";
+  state.settlementDrawerKey = "";
+  state.settlementExpandedTierKey = "";
   state.drawerReturnSelector = "";
   state.pendingDrawerFocus = false;
   state.drawerOpen = false;
@@ -1733,6 +1736,8 @@ function openEvent(id) {
   state.salesCodeDrawerKey = "";
   state.salesCodeExpandedEventId = "";
   state.batchDrawerGroupKey = "";
+  state.settlementDrawerKey = "";
+  state.settlementExpandedTierKey = "";
   state.drawerReturnSelector = "";
   state.pendingDrawerFocus = false;
   state.drawerOpen = false;
@@ -1774,6 +1779,7 @@ function render() {
     </div>
     ${renderSalesCodeDrawer()}
     ${renderBatchLotDrawer()}
+    ${renderSettlementDrawer()}
   `;
   bindActions();
   syncDrawerBodyState();
@@ -1789,7 +1795,7 @@ function renderPreservingScroll() {
 }
 
 function hasOpenDrawer() {
-  return Boolean(state.salesCodeDrawerKey || state.batchDrawerGroupKey);
+  return Boolean(state.salesCodeDrawerKey || state.batchDrawerGroupKey || state.settlementDrawerKey);
 }
 
 function syncDrawerBodyState() {
@@ -1833,6 +1839,8 @@ function closeActiveDrawer() {
   state.salesCodeDrawerKey = "";
   state.salesCodeExpandedEventId = "";
   state.batchDrawerGroupKey = "";
+  state.settlementDrawerKey = "";
+  state.settlementExpandedTierKey = "";
   state.drawerReturnSelector = "";
   state.pendingDrawerFocus = false;
   renderPreservingScroll();
@@ -2658,6 +2666,8 @@ function renderSettlementEventNote(events) {
 function settlementTierSummary(tier, model, options = {}) {
   const hasGuarantee = model === "100k garantido" && Number(tier.guaranteedBase || 0) > 0;
   const eventRows = Array.isArray(tier.eventRows) ? tier.eventRows : [];
+  const tierKey = options.rowKey ? `${options.rowKey}:${tier.key}` : tier.key;
+  const expanded = options.interactiveEvents && state.settlementExpandedTierKey === tierKey;
   if (options.simpleEvents) {
     return `
       <div class="settlement-tier-card settlement-tier-card-simple">
@@ -2670,11 +2680,15 @@ function settlementTierSummary(tier, model, options = {}) {
     `;
   }
   return `
-    <div class="settlement-tier-card">
+    <div class="settlement-tier-card ${expanded ? "is-expanded" : ""}">
       <div>
         <strong>${esc(tier.label)}</strong>
         <small>${int(tier.eventCount || 0)} eventos · ${pct(tier.commissionRate * 100)} comissao · ${pct(tier.discountRate * 100)} desconto</small>
-        ${renderSettlementEventNote(eventRows)}
+        ${
+          options.interactiveEvents && eventRows.length
+            ? `<button class="ghost settlement-tier-event-toggle" data-settlement-tier="${esc(tierKey)}" aria-expanded="${expanded ? "true" : "false"}">${expanded ? "Ocultar eventos" : `Ver eventos ${esc(tier.label)}`}</button>`
+            : renderSettlementEventNote(eventRows)
+        }
       </div>
       <div class="settlement-tier-numbers">
         <span><b>${money(tier.revenue)}</b><small>receita</small></span>
@@ -2682,14 +2696,16 @@ function settlementTierSummary(tier, model, options = {}) {
         <span><b>${int(tier.soldValidated)}</b><small>validados</small></span>
         <span><b>${money(tier.repasse)}</b><small>repasse${hasGuarantee ? " com garantia" : ""}</small></span>
       </div>
+      ${expanded ? `<div class="settlement-tier-event-breakdown">${renderSettlementTierEventBreakdown(eventRows)}</div>` : ""}
     </div>
   `;
 }
 
 function renderSettlementTierList(row, options = {}) {
+  const rowKey = salesCodeKey(row.name);
   return `
     <div class="settlement-tier-list">
-      ${row.tierRows.map((tier) => settlementTierSummary(tier, row.model, options)).join("")}
+      ${row.tierRows.map((tier) => settlementTierSummary(tier, row.model, { ...options, rowKey })).join("")}
     </div>
   `;
 }
@@ -2790,6 +2806,62 @@ function settlementTierCompactSummary(row) {
   return `${countLabel}${tierParts.length ? ` - ${tierParts.join(" - ")}` : ""}`;
 }
 
+function settlementDrawerContext() {
+  if (!state.settlementDrawerKey || state.view !== "settlement") return null;
+  const events = filteredEvents();
+  const analysis = buildSettlementAnalysis(events);
+  const row = analysis.rows.find((item) => salesCodeKey(item.name) === state.settlementDrawerKey);
+  return row ? { row, analysis } : null;
+}
+
+function renderSettlementTierEventBreakdown(events) {
+  if (!events.length) return renderStatePanel("Nenhum evento neste tier.", "", "empty");
+  return `
+    <div class="table-wrap nested-detail-table settlement-tier-event-table" tabindex="0">
+      <table>
+        <thead><tr><th>Evento</th><th>Vendidos</th><th>Receita</th><th>Validados</th><th>Cortesias</th></tr></thead>
+        <tbody>
+          ${events
+            .map(
+              (event) => `
+                <tr>
+                  <td data-label="Evento"><button class="ghost detail-event-link" data-event="${esc(event.id)}"><span>${esc(event.name)}</span></button></td>
+                  <td data-label="Vendidos">${int(event.sold)}</td>
+                  <td data-label="Receita">${money(event.revenue)}</td>
+                  <td data-label="Validados">${int(event.soldValidated)} (${pct(safeRate(event.soldValidated, event.sold))})</td>
+                  <td data-label="Cortesias">${int(event.complimentary)} (${pct(safeRate(event.complimentaryValidated, event.complimentary))} val.)</td>
+                </tr>
+              `
+            )
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderSettlementDrawer() {
+  const context = settlementDrawerContext();
+  if (!context) return "";
+  const { row } = context;
+  return `
+    <div class="batch-drawer-backdrop" data-action="close-settlement-drawer"></div>
+    <aside class="batch-drawer" role="dialog" aria-modal="true" aria-label="Detalhes do fechamento">
+      <div class="batch-drawer-head">
+        <div>
+          <span class="eyebrow">Fechamento</span>
+          <h3>${esc(row.name)}</h3>
+          <p>${int(row.sold)} vendidos · ${int(row.soldValidated)} validados · ${money(row.revenue)} · ${money(row.repasse)} repasse</p>
+        </div>
+        <button class="ghost icon-button" data-action="close-settlement-drawer" aria-label="Fechar detalhes">×</button>
+      </div>
+      <div class="settlement-drawer-body">
+        ${renderSettlementTierList(row, { interactiveEvents: true })}
+      </div>
+    </aside>
+  `;
+}
+
 function renderSettlementPendingCard(analysis) {
   if (!analysis.summary.unclassifiedRevenue) return "";
   const pendingRows = analysis.rows
@@ -2817,24 +2889,18 @@ function renderSettlementRows(rows) {
           ${rows
             .map((row) => {
               const key = salesCodeKey(row.name);
-              const expanded = state.expandedSettlementCode === key;
               const hasUnclassified = Number(row.tiers.unclassified?.revenue || 0) > 0 || Number(row.tiers.unclassified?.sold || 0) > 0;
               const status = hasUnclassified ? "Tem pendencia" : Number(row.repasse || 0) > 0 ? "Pronto" : "Sem repasse";
               return `
-                <tr class="settlement-row ${expanded ? "is-expanded" : ""}" data-settlement-row="${esc(key)}">
-                  <td data-label="Codigo"><strong>${esc(row.name)}</strong><small>${int(row.eventCount)} eventos com ocorrencia</small></td>
+                <tr class="settlement-row" data-settlement-row="${esc(key)}">
+                  <td data-label="Codigo"><button class="ghost settlement-code-link" data-settlement-code="${esc(key)}"><strong>${esc(row.name)}</strong></button><small>${int(row.eventCount)} eventos com ocorrencia</small></td>
                   <td data-label="Modelo"><span class="pill ${row.model === "100k garantido" ? "warn" : "soft"}">${esc(settlementModelLabel(row.model))}</span></td>
                   <td data-label="Receita" class="money-col">${money(row.revenue)}</td>
                   <td data-label="Vendas">${int(row.sold)}<small>${int(row.soldValidated)} validadas</small></td>
                   <td data-label="Repasse" class="money-col"><strong>${money(row.repasse)}</strong>${row.guaranteeApplied ? `<small>${money(row.guaranteeApplied)} garantia</small>` : ""}</td>
-                  <td data-label="Resumo dos tiers"><span class="tier-summary-text">${esc(settlementTierCompactSummary(row))}</span><button class="secondary compact-action" data-settlement-code="${esc(key)}" aria-expanded="${expanded ? "true" : "false"}">${expanded ? "Ocultar detalhamento" : "Ver detalhamento"}</button></td>
+                  <td data-label="Resumo dos tiers"><span class="tier-summary-text">${esc(settlementTierCompactSummary(row))}</span><button class="secondary compact-action" data-settlement-code="${esc(key)}">Ver detalhamento</button></td>
                   <td data-label="Status"><span class="pill ${hasUnclassified ? "warn" : Number(row.repasse || 0) > 0 ? "good" : "muted-pill"}">${esc(status)}</span></td>
                 </tr>
-                ${
-                  expanded
-                    ? `<tr class="settlement-detail-row"><td colspan="7">${renderSettlementTierList(row)}</td></tr>`
-                    : ""
-                }
               `;
             })
             .join("")}
@@ -3774,6 +3840,8 @@ function bindActions() {
       state.salesCodeDrawerKey = key;
       state.salesCodeExpandedEventId = "";
       state.batchDrawerGroupKey = "";
+      state.settlementDrawerKey = "";
+      state.settlementExpandedTierKey = "";
       state.drawerReturnSelector = dataSelector("data-sales-code", key);
       state.pendingDrawerFocus = true;
       renderPreservingElement(dataSelector("data-sales-code", key));
@@ -3794,7 +3862,10 @@ function bindActions() {
     row.addEventListener("click", () => {
       const key = row.dataset.batchGroup;
       state.salesCodeDrawerKey = "";
+      state.salesCodeExpandedEventId = "";
       state.batchDrawerGroupKey = key;
+      state.settlementDrawerKey = "";
+      state.settlementExpandedTierKey = "";
       state.drawerReturnSelector = dataSelector("data-batch-group", key);
       state.pendingDrawerFocus = true;
       renderPreservingElement(dataSelector("data-batch-group", key));
@@ -3896,26 +3967,30 @@ function bindActions() {
   });
   document.getElementById("settlementSearch")?.addEventListener("input", (event) => {
     state.settlementFilters.search = event.target.value;
-    state.expandedSettlementCode = "";
+    state.settlementDrawerKey = "";
+    state.settlementExpandedTierKey = "";
     state.settlementShowAll = false;
     renderKeepingFocus("settlementSearch");
   });
   document.getElementById("settlementModel")?.addEventListener("change", (event) => {
     state.settlementFilters.model = event.target.value;
-    state.expandedSettlementCode = "";
+    state.settlementDrawerKey = "";
+    state.settlementExpandedTierKey = "";
     state.settlementShowAll = false;
     render();
   });
   document.getElementById("settlementStatus")?.addEventListener("change", (event) => {
     state.settlementFilters.status = event.target.value;
-    state.expandedSettlementCode = "";
+    state.settlementDrawerKey = "";
+    state.settlementExpandedTierKey = "";
     state.settlementShowAll = false;
     render();
   });
   document.getElementById("settlementSort")?.addEventListener("change", (event) => {
     state.settlementFilters.sort = event.target.value;
     state.settlementFilters.sortDir = event.target.value === "name" ? "asc" : "desc";
-    state.expandedSettlementCode = "";
+    state.settlementDrawerKey = "";
+    state.settlementExpandedTierKey = "";
     state.settlementShowAll = false;
     render();
   });
@@ -3928,7 +4003,8 @@ function bindActions() {
         state.settlementFilters.sort = key;
         state.settlementFilters.sortDir = key === "name" ? "asc" : "desc";
       }
-      state.expandedSettlementCode = "";
+      state.settlementDrawerKey = "";
+      state.settlementExpandedTierKey = "";
       state.settlementShowAll = false;
       render();
     });
@@ -3937,7 +4013,8 @@ function bindActions() {
     state.settlementFilters.status = "unclassified";
     state.settlementFilters.sort = "pending";
     state.settlementFilters.sortDir = "desc";
-    state.expandedSettlementCode = "";
+    state.settlementDrawerKey = "";
+    state.settlementExpandedTierKey = "";
     state.settlementShowAll = false;
     render();
   });
@@ -3947,7 +4024,6 @@ function bindActions() {
   });
   document.querySelector("[data-action='settlement-show-less']")?.addEventListener("click", () => {
     state.settlementShowAll = false;
-    state.expandedSettlementCode = "";
     render();
   });
   document.querySelector("[data-action='toggle-settlement-rules']")?.addEventListener("click", () => {
@@ -3961,9 +4037,26 @@ function bindActions() {
     button.addEventListener("click", (event) => {
       event.stopPropagation();
       const key = button.dataset.settlementCode;
-      state.expandedSettlementCode = state.expandedSettlementCode === key ? "" : key;
-      renderPreservingElement(dataSelector("data-settlement-row", key));
+      state.salesCodeDrawerKey = "";
+      state.salesCodeExpandedEventId = "";
+      state.batchDrawerGroupKey = "";
+      state.settlementDrawerKey = key;
+      state.settlementExpandedTierKey = "";
+      state.drawerReturnSelector = dataSelector("data-settlement-code", key);
+      state.pendingDrawerFocus = true;
+      renderPreservingElement(dataSelector("data-settlement-code", key));
     });
+  });
+  document.querySelectorAll("[data-settlement-tier]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const key = button.dataset.settlementTier;
+      state.settlementExpandedTierKey = state.settlementExpandedTierKey === key ? "" : key;
+      renderPreservingElement(dataSelector("data-settlement-tier", key));
+    });
+  });
+  document.querySelectorAll("[data-action='close-settlement-drawer']").forEach((element) => {
+    element.addEventListener("click", closeActiveDrawer);
   });
   document.getElementById("batchSearch")?.addEventListener("input", (event) => {
     state.batchFilters.search = event.target.value;

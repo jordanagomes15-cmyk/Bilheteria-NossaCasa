@@ -1033,21 +1033,29 @@ h3 {
   line-height: 1.25;
 }
 
-.settlement-detail-row td {
-  padding: 14px;
-  background: #fffaf1;
-}
-
-.settlement-detail-row:hover td {
-  background: #fffaf1;
-}
-
 .settlement-table small {
   display: block;
   margin-top: 4px;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.25;
+}
+
+.settlement-code-link {
+  display: inline-flex;
+  min-height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: left;
+}
+
+.settlement-code-link:hover,
+.settlement-code-link:focus-visible {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .settlement-tier-list {
@@ -1064,6 +1072,11 @@ h3 {
   border: 1px solid rgba(221, 206, 176, 0.78);
   border-radius: 8px;
   background: #fffaf1;
+}
+
+.settlement-tier-card.is-expanded {
+  border-color: rgba(196, 143, 37, 0.52);
+  background: #fffdf8;
 }
 
 .settlement-tier-card strong {
@@ -1107,6 +1120,39 @@ h3 {
   font-weight: 600;
   line-height: 1.35;
   overflow-wrap: anywhere;
+}
+
+.settlement-tier-event-toggle {
+  display: inline-flex;
+  min-height: 0;
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 850;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.settlement-tier-event-breakdown {
+  grid-column: 1 / -1;
+  margin-top: 6px;
+}
+
+.settlement-drawer-body {
+  display: grid;
+  gap: 14px;
+}
+
+.settlement-tier-event-table table {
+  min-width: 760px;
+}
+
+.settlement-tier-event-table td:first-child,
+.settlement-tier-event-table th:first-child {
+  min-width: 300px;
 }
 
 .settlement-event-name-list {
@@ -3087,20 +3133,6 @@ tr:last-child td {
   }
 
   .settlement-table td:first-child::before {
-    display: none;
-  }
-
-  .settlement-detail-row {
-    padding: 0 !important;
-    border: 0 !important;
-    background: transparent !important;
-  }
-
-  .settlement-detail-row td {
-    padding: 8px 0 0;
-  }
-
-  .settlement-detail-row td::before {
     display: none;
   }
 
