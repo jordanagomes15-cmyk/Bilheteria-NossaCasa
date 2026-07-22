@@ -2355,7 +2355,8 @@ const NAV_ICON_PATHS = {
   mailing: '<rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 7l9 6 9-6"></path>',
   audienceRecurrence: '<path d="M3 12a8 8 0 0 1 13.66-5.66L19 8"></path><path d="M19 3v5h-5"></path><path d="M21 12a8 8 0 0 1-13.66 5.66L5 16"></path><path d="M5 21v-5h5"></path>',
   validation: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="M22 4L12 14.01l-3-3"></path>',
-  accessRequests: '<path d="M9 3h6l1 2h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h3l1-2Z"></path><path d="M9 12h6"></path><path d="M9 16h4"></path>'
+  accessRequests: '<path d="M9 3h6l1 2h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h3l1-2Z"></path><path d="M9 12h6"></path><path d="M9 16h4"></path>',
+  logout: '<path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path><path d="M21 3v18"></path>'
 };
 
 function navIcon(id) {
@@ -2426,6 +2427,10 @@ function renderSidebar() {
         <strong>${state.events.length} eventos</strong><br />
         Gandaya + PNE sincronizados.
       </div>
+      <button class="sidebar-logout" type="button" data-action="logout" title="Sair" aria-label="Sair da conta">
+        ${navIcon("logout")}
+        <span>Sair</span>
+      </button>
     </aside>
   `;
 }
