@@ -241,10 +241,22 @@ def promoter_empty():
         "soldValidated": 0,
         "complimentaryValidated": 0,
         "revenue": 0,
+        "batches": {},
     }
 
 
-def add_promoter(promoters, name, sold=0, complimentary=0, validated=0, sold_validated=0, complimentary_validated=0, revenue=0):
+def add_promoter(
+    promoters,
+    name,
+    sold=0,
+    complimentary=0,
+    validated=0,
+    sold_validated=0,
+    complimentary_validated=0,
+    revenue=0,
+    batch_key="",
+    batch_label="",
+):
     key = normalize(name)
     if not key:
         return
@@ -255,6 +267,26 @@ def add_promoter(promoters, name, sold=0, complimentary=0, validated=0, sold_val
     row["soldValidated"] += sold_validated
     row["complimentaryValidated"] += complimentary_validated
     row["revenue"] += revenue
+    if batch_key and (sold or complimentary or validated or sold_validated or complimentary_validated or revenue):
+        batch = row["batches"].setdefault(
+            batch_key,
+            {
+                "label": batch_label or excel_label(batch_key),
+                "rawLabel": batch_label or excel_label(batch_key),
+                "sold": 0,
+                "complimentary": 0,
+                "validated": 0,
+                "soldValidated": 0,
+                "complimentaryValidated": 0,
+                "revenue": 0,
+            },
+        )
+        batch["sold"] += sold
+        batch["complimentary"] += complimentary
+        batch["validated"] += validated
+        batch["soldValidated"] += sold_validated
+        batch["complimentaryValidated"] += complimentary_validated
+        batch["revenue"] += revenue
 
 
 def append_unique(values, value):
@@ -408,7 +440,7 @@ def parse_xlsx(path):
         revenue += total
         batch["sold"] += quantity
         batch["revenue"] += total
-        add_promoter(promoters, promoter, sold=quantity, revenue=total)
+        add_promoter(promoters, promoter, sold=quantity, revenue=total, batch_key=batch_key, batch_label=batch_label)
         if quantity or total:
             add_attendee(attendees, row, event_id, name, sold=quantity, revenue=total)
 
@@ -459,7 +491,7 @@ def parse_xlsx(path):
         if complimentary_ticket:
             complimentary += 1
             batch["complimentary"] += 1
-            add_promoter(promoters, promoter, complimentary=1)
+            add_promoter(promoters, promoter, complimentary=1, batch_key=batch_key, batch_label=batch_label)
         else:
             pass
 
@@ -468,10 +500,10 @@ def parse_xlsx(path):
             batch["validated"] += 1
             if complimentary_ticket:
                 batch["complimentaryValidated"] += 1
-                add_promoter(promoters, promoter, validated=1, complimentary_validated=1)
+                add_promoter(promoters, promoter, validated=1, complimentary_validated=1, batch_key=batch_key, batch_label=batch_label)
             else:
                 batch["soldValidated"] += 1
-                add_promoter(promoters, promoter, validated=1, sold_validated=1)
+                add_promoter(promoters, promoter, validated=1, sold_validated=1, batch_key=batch_key, batch_label=batch_label)
                 add_attendee(attendees, row, event_id, name, validated=1, sold_validated=1)
 
     return {

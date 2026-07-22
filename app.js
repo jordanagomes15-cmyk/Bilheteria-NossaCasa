@@ -1448,6 +1448,19 @@ function normalizeCodeName(name) {
 function salesCodeBatchRows(row, eventRow) {
   const event = state.events.find((item) => item.id === eventRow.id);
   const codeKey = normalizeCodeName(row.name);
+  const promoterData = Object.entries(event?.promoters || {}).find(([name]) => normalizeCodeName(name) === codeKey)?.[1];
+  const purchaseBatchRows = Object.values(promoterData?.batches || {})
+    .filter((batch) => Number(batch.sold || 0) > 0 || Number(batch.revenue || 0) > 0)
+    .map((batch) => ({
+      label: batch.rawLabel || batch.label || "Sem lote",
+      sold: Number(batch.sold || 0),
+      soldValidated: Number(batch.soldValidated || 0),
+      revenue: Number(batch.revenue || 0),
+      revenueEstimated: false
+    }))
+    .sort((a, b) => b.revenue - a.revenue || b.sold - a.sold || b.soldValidated - a.soldValidated || a.label.localeCompare(b.label));
+  if (purchaseBatchRows.length) return purchaseBatchRows;
+
   const grouped = new Map();
   let hasRevenueByEntry = false;
   (event?.audience || []).forEach((entry) => {
