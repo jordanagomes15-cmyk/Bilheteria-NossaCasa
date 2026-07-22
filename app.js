@@ -2641,29 +2641,6 @@ function settlementModelLabel(model) {
   return model === "100k garantido" ? "100k garantido" : "Modelo padrao";
 }
 
-function settlementEventMini(event) {
-  const soldRate = safeRate(event.soldValidated, event.sold);
-  const courtesyRate = safeRate(event.complimentaryValidated, event.complimentary);
-  return `
-    <li class="settlement-event-list-item">
-      <button class="ghost settlement-event-list-button" data-event="${esc(event.id)}">
-        <span class="settlement-event-list-title">${esc(event.name)}</span>
-        <span class="settlement-event-list-meta">${int(event.sold)} vendidos - ${money(event.revenue)} - ${pct(soldRate)} validados</span>
-        <span class="settlement-event-list-extra">${int(event.complimentary)} cortesias - ${pct(courtesyRate)} validadas</span>
-      </button>
-    </li>
-  `;
-}
-
-function renderSettlementEventCards(events) {
-  if (!events.length) return `<p class="notice">Nenhum evento neste tier.</p>`;
-  return `
-    <ul class="settlement-tier-event-list">
-      ${events.map((event) => settlementEventMini(event)).join("")}
-    </ul>
-  `;
-}
-
 function renderSettlementEventNames(events) {
   if (!events.length) return `<p class="notice">Nenhum evento neste tier.</p>`;
   return `
@@ -2671,6 +2648,11 @@ function renderSettlementEventNames(events) {
       ${events.map((event) => `<li><button class="ghost settlement-event-name-button" data-event="${esc(event.id)}">${esc(event.name)}</button></li>`).join("")}
     </ul>
   `;
+}
+
+function renderSettlementEventNote(events) {
+  if (!events.length) return "";
+  return `<small class="settlement-tier-event-note">${events.map((event) => esc(event.name)).join(", ")}</small>`;
 }
 
 function settlementTierSummary(tier, model, options = {}) {
@@ -2692,6 +2674,7 @@ function settlementTierSummary(tier, model, options = {}) {
       <div>
         <strong>${esc(tier.label)}</strong>
         <small>${int(tier.eventCount || 0)} eventos · ${pct(tier.commissionRate * 100)} comissao · ${pct(tier.discountRate * 100)} desconto</small>
+        ${renderSettlementEventNote(eventRows)}
       </div>
       <div class="settlement-tier-numbers">
         <span><b>${money(tier.revenue)}</b><small>receita</small></span>
@@ -2699,11 +2682,6 @@ function settlementTierSummary(tier, model, options = {}) {
         <span><b>${int(tier.soldValidated)}</b><small>validados</small></span>
         <span><b>${money(tier.repasse)}</b><small>repasse${hasGuarantee ? " com garantia" : ""}</small></span>
       </div>
-      ${
-        eventRows.length
-          ? `<details class="settlement-tier-events"><summary>Ver eventos ${esc(tier.label)}</summary>${renderSettlementEventCards(eventRows)}</details>`
-          : ""
-      }
     </div>
   `;
 }
