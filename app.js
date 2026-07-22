@@ -3527,13 +3527,13 @@ function renderDetail() {
   return `
     <section class="grid">
       <div class="grid cards">
-        ${metric("Ingressos vendidos", int(event.sold), "Somente aba Compras Gandaya")}
         ${metric("Faturamento", money(event.revenue), "Receita total do evento")}
         ${metric("Venda geral", money(split.generalRevenue), `${int(split.generalSold)} ingressos · ${pct(safeRate(split.generalRevenue, event.revenue))} do faturamento`)}
         ${metric("Venda por link", money(split.linkRevenue), `${int(split.linkSold)} ingressos · ${pct(safeRate(split.linkRevenue, event.revenue))} do faturamento`)}
-        ${metric("Cortesias", int(event.complimentary), `${int(split.complimentaryValidated)} validadas (${pct(safeRate(split.complimentaryValidated, event.complimentary))})`)}
+        ${metric("Ingressos vendidos", int(event.sold), "Somente aba Compras Gandaya")}
         ${metric("Check-ins", int(event.validated), `${pct(rate)} de presenca`)}
         ${metric("Compradores unicos", int(audienceSummary.uniqueBuyers), "Participantes finais com compra")}
+        ${metric("Cortesias", int(event.complimentary), `${int(split.complimentaryValidated)} validadas (${pct(safeRate(split.complimentaryValidated, event.complimentary))})`)}
         ${metric("Convidados unicos", int(audienceSummary.uniqueCourtesy), "Participantes finais com cortesia")}
         ${metric("PNE", event.pne ? `${int(event.pne.converted)}/${int(event.pne.inserted)}` : "-", "Convertidos / inseridos")}
       </div>
