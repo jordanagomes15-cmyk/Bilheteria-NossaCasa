@@ -2548,6 +2548,8 @@ function renderSplitSummary(split) {
   const generalSoldShare = safeRate(split.generalSold, split.sold);
   const courtesyRate = safeRate(split.complimentaryValidated, split.complimentary);
   const soldRate = safeRate(split.soldValidated, split.sold);
+  const pendingSoldValidation = Math.max(0, split.sold - split.soldValidated);
+  const pendingCourtesyValidation = Math.max(0, split.complimentary - split.complimentaryValidated);
   return `
     <section class="insight-grid">
       <div class="insight-card">
@@ -2564,12 +2566,14 @@ function renderSplitSummary(split) {
         <strong>${pct(soldRate)}</strong>
         <div class="bar"><i style="width:${clampPercent(soldRate)}%"></i></div>
         <small>${int(split.soldValidated)} de ${int(split.sold)} vendidos validados</small>
+        <small class="insight-pending">${int(pendingSoldValidation)} pagamentos ainda nao validados</small>
       </div>
       <div class="insight-card">
         <span>Validacao cortesia</span>
         <strong>${pct(courtesyRate)}</strong>
         <div class="bar"><i style="width:${clampPercent(courtesyRate)}%"></i></div>
         <small>${int(split.complimentaryValidated)} de ${int(split.complimentary)} cortesias validadas</small>
+        <small class="insight-pending">${int(pendingCourtesyValidation)} cortesias ainda nao validadas</small>
       </div>
     </section>
   `;
