@@ -1014,6 +1014,18 @@ h3 {
   align-content: start;
 }
 
+.settlement-access-card {
+  width: min(560px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: var(--space-4);
+}
+
+.settlement-access-form {
+  display: grid;
+  gap: var(--space-3);
+}
+
 .settlement-metrics {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }

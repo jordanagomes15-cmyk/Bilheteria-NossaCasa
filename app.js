@@ -199,6 +199,10 @@ const state = {
     sort: "repasse",
     sortDir: "desc"
   },
+  settlementAccessChecked: false,
+  settlementAccessLoading: false,
+  settlementAccessGranted: false,
+  settlementAccessError: "",
   settlementShowAll: false,
   settlementRulesOpen: false,
   batchFilters: {
@@ -1625,6 +1629,10 @@ async function logout() {
   state.privateDataLoaded = false;
   state.privateDataLoading = false;
   state.privateDataError = "";
+  state.settlementAccessChecked = false;
+  state.settlementAccessLoading = false;
+  state.settlementAccessGranted = false;
+  state.settlementAccessError = "";
   state.events = loadEvents();
   render();
 }
@@ -1710,6 +1718,50 @@ async function decideAccessRequest(issueNumber, decision, tier) {
     state.accessRequestsErrorCode = error.code || "";
   } finally {
     state.accessDecisionBusy = "";
+    render();
+  }
+}
+
+async function ensureSettlementAccess() {
+  if (state.settlementAccessChecked || state.settlementAccessLoading) return;
+  state.settlementAccessLoading = true;
+  state.settlementAccessError = "";
+  render();
+  try {
+    const response = await fetch("/api/settlement-access", { credentials: "include", cache: "no-store" });
+    const data = await response.json().catch(() => ({ ok: false }));
+    state.settlementAccessGranted = Boolean(response.ok && data.ok);
+    state.settlementAccessChecked = true;
+  } catch {
+    state.settlementAccessGranted = false;
+    state.settlementAccessError = "Nao foi possivel verificar o acesso ao fechamento.";
+  } finally {
+    state.settlementAccessLoading = false;
+    render();
+  }
+}
+
+async function unlockSettlement(password) {
+  state.settlementAccessLoading = true;
+  state.settlementAccessError = "";
+  render();
+  try {
+    const response = await fetch("/api/settlement-access", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password })
+    });
+    const data = await response.json().catch(() => ({ ok: false, error: "Nao foi possivel validar a senha." }));
+    if (!response.ok || !data.ok) throw new Error(data.error || "Senha do fechamento invalida.");
+    state.settlementAccessGranted = true;
+    state.settlementAccessChecked = true;
+    state.settlementAccessError = "";
+  } catch (error) {
+    state.settlementAccessGranted = false;
+    state.settlementAccessError = error.message || "Senha do fechamento invalida.";
+  } finally {
+    state.settlementAccessLoading = false;
     render();
   }
 }
@@ -2256,7 +2308,15 @@ function renderTopbar() {
 function renderView() {
   if (state.view === "events") return renderEvents();
   if (state.view === "commissioners") return renderCommissioners();
-  if (state.view === "settlement") return renderSettlement();
+  if (state.view === "settlement") {
+    if (!state.settlementAccessGranted) {
+      if (!state.settlementAccessChecked && !state.settlementAccessLoading) {
+        setTimeout(() => ensureSettlementAccess(), 0);
+      }
+      return renderSettlementAccessGate();
+    }
+    return renderSettlement();
+  }
   if (state.view === "audienceProfile") return renderAudienceProfile();
   if (state.view === "mailing") return renderMailingPage();
   if (state.view === "audienceRecurrence") return renderAudienceRecurrence();
@@ -2976,6 +3036,36 @@ function renderSettlementRows(rows) {
         </tbody>
       </table>
     </div>
+  `;
+}
+
+function renderSettlementAccessGate() {
+  const loading = state.settlementAccessLoading && !state.settlementAccessChecked;
+  return `
+    <section class="grid settlement-page">
+      <div class="card settlement-access-card">
+        <div class="card-head">
+          <div>
+            <h2>Acesso ao fechamento</h2>
+            <p>Digite a senha para visualizar repasses, tiers e valores por codigo.</p>
+          </div>
+        </div>
+        ${
+          loading
+            ? renderStatePanel("Verificando acesso", "Conferindo permissao segura para a aba Fechamento.", "loading")
+            : `
+              <form class="settlement-access-form" id="settlementAccessForm">
+                <label class="field">
+                  Senha do fechamento
+                  <input id="settlementAccessPassword" name="password" type="password" autocomplete="current-password" required />
+                </label>
+                <p class="login-error" id="settlementAccessError" aria-live="polite">${esc(state.settlementAccessError)}</p>
+                <button class="primary" type="submit" ${state.settlementAccessLoading ? "disabled" : ""}>${state.settlementAccessLoading ? "Validando..." : "Liberar fechamento"}</button>
+              </form>
+            `
+        }
+      </div>
+    </section>
   `;
 }
 
@@ -3978,6 +4068,11 @@ function bindActions() {
   document.querySelector("[data-action='export-ranking']")?.addEventListener("click", exportRankingCsv);
   document.querySelector("[data-action='export-audience-profile']")?.addEventListener("click", exportAudienceProfileCsv);
   document.querySelector("[data-action='export-settlement']")?.addEventListener("click", exportSettlementCsv);
+  document.getElementById("settlementAccessForm")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const password = document.getElementById("settlementAccessPassword")?.value || "";
+    unlockSettlement(password);
+  });
   document.querySelector("[data-action='logout']")?.addEventListener("click", logout);
   document.querySelector("[data-action='retry-access-requests']")?.addEventListener("click", () => {
     state.accessRequestsError = "";
