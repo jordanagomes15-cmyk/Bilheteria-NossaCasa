@@ -2437,6 +2437,10 @@ td small {
   font-size: 12px;
 }
 
+.overview-ranking-link {
+  justify-self: start;
+}
+
 .sales-link-table th:nth-child(3),
 .sales-link-table td:nth-child(3),
 .sales-link-table th:nth-child(5),
@@ -3114,8 +3118,7 @@ tr:last-child td {
   .settlement-table table,
   .settlement-table thead,
   .settlement-table tbody,
-  .settlement-table tr,
-  .settlement-table td {
+  .settlement-table tr {
     display: block;
     min-width: 0;
   }
@@ -3138,6 +3141,8 @@ tr:last-child td {
   }
 
   .settlement-table td {
+    display: block;
+    min-width: 0;
     padding: 6px 0;
     border-bottom: 0;
     text-align: left !important;
@@ -3262,8 +3267,7 @@ tr:last-child td {
   .overview-link-grid .overview-compact-table table,
   .overview-link-grid .overview-compact-table thead,
   .overview-link-grid .overview-compact-table tbody,
-  .overview-link-grid .overview-compact-table tr,
-  .overview-link-grid .overview-compact-table td {
+  .overview-link-grid .overview-compact-table tr {
     display: block;
     width: 100%;
   }
@@ -3287,6 +3291,7 @@ tr:last-child td {
   }
 
   .overview-link-grid .overview-compact-table td {
+    width: 100%;
     height: auto;
     min-height: 20px;
     padding: 1px 0;
@@ -3440,8 +3445,7 @@ tr:last-child td {
   .nested-detail-table.batch-lot-table table,
   .nested-detail-table.batch-lot-table thead,
   .nested-detail-table.batch-lot-table tbody,
-  .nested-detail-table.batch-lot-table tr,
-  .nested-detail-table.batch-lot-table td {
+  .nested-detail-table.batch-lot-table tr {
     display: block;
     width: 100%;
     min-width: 0;
@@ -3466,6 +3470,8 @@ tr:last-child td {
   }
 
   .nested-detail-table.batch-lot-table td {
+    width: 100%;
+    min-width: 0;
     min-height: 20px;
     padding: 1px 0;
     border-bottom: 0;
@@ -3664,8 +3670,7 @@ tr:last-child td {
   .recurring-table table,
   .recurring-table thead,
   .recurring-table tbody,
-  .recurring-table tr,
-  .recurring-table td {
+  .recurring-table tr {
     display: block;
     width: 100%;
   }
@@ -3689,6 +3694,7 @@ tr:last-child td {
   }
 
   .recurring-table td {
+    width: 100%;
     min-height: 20px;
     padding: 1px 0;
     border-bottom: 0;
@@ -3796,8 +3802,7 @@ tr:last-child td {
   .responsive-table table,
   .responsive-table thead,
   .responsive-table tbody,
-  .responsive-table tr,
-  .responsive-table td {
+  .responsive-table tr {
     display: block;
     width: 100%;
   }
@@ -3821,6 +3826,7 @@ tr:last-child td {
   }
 
   .responsive-table td {
+    width: 100%;
     min-height: 20px;
     padding: 1px 0;
     border-bottom: 0;
@@ -3860,8 +3866,7 @@ tr:last-child td {
   .profile-table table,
   .profile-table thead,
   .profile-table tbody,
-  .profile-table tr,
-  .profile-table td {
+  .profile-table tr {
     display: block;
     width: 100%;
   }
@@ -3885,6 +3890,7 @@ tr:last-child td {
   }
 
   .profile-table td {
+    width: 100%;
     min-height: 20px;
     padding: 1px 0;
     border-bottom: 0;

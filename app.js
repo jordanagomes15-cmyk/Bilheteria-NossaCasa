@@ -345,10 +345,6 @@ function esc(value) {
     .replaceAll('"', "&quot;");
 }
 
-function slug(value) {
-  return normalizeText(value).replaceAll(" ", "-") || `evento-${Date.now()}`;
-}
-
 function normalizeText(value) {
   return String(value || "")
     .normalize("NFD")
@@ -575,17 +571,6 @@ function recurringPeople(events = filteredEvents()) {
     courtesyEventCount: row.courtesyEventIds.size,
     courtesyContextCount: row.courtesyContexts.size
   }));
-}
-
-function recurringAnalysis(events = filteredEvents()) {
-  const people = recurringPeople(events);
-  const buyers = people
-    .filter((row) => row.paidEventCount > 1)
-    .sort((a, b) => b.revenue - a.revenue || b.sold - a.sold || b.paidEventCount - a.paidEventCount);
-  const courtesy = people
-    .filter((row) => row.courtesyContextCount > 1 && row.complimentaryValidated > 0)
-    .sort((a, b) => b.complimentaryValidated - a.complimentaryValidated || b.courtesyContextCount - a.courtesyContextCount || b.courtesyEventCount - a.courtesyEventCount);
-  return { buyers, courtesy, people };
 }
 
 function normalizeParticipantKey(participant) {
@@ -2209,8 +2194,8 @@ function renderOverview() {
   const rate = (sum.validated / Math.max(sum.sold + sum.complimentary, 1)) * 100;
   const courtesyRate = safeRate(split.complimentaryValidated, split.complimentary);
   const codeRows = promoterRanking(events);
-  const salesCodeRows = sortCodeRanking(codeRows.filter((row) => row.revenue > 0 || row.sold > 0), "sales").slice(0, 18);
-  const courtesyCodeRows = sortCodeRanking(codeRows.filter((row) => row.complimentary > 0), "courtesy").slice(0, 18);
+  const salesCodeRows = sortCodeRanking(codeRows.filter((row) => row.revenue > 0 || row.sold > 0), "sales").slice(0, 5);
+  const courtesyCodeRows = sortCodeRanking(codeRows.filter((row) => row.complimentary > 0), "courtesy").slice(0, 5);
   return `
     <section class="grid">
       ${renderDashboardFilters(events)}
@@ -2240,10 +2225,12 @@ function renderOverview() {
         <div class="card">
           <div class="section-title"><h2>Vendas por link</h2><p>Receita, volume vendido e participacao no faturamento.</p></div>
           ${renderSalesLinkTable(salesCodeRows, sum.revenue, { compact: true })}
+          <button class="secondary compact-action overview-ranking-link" data-view="commissioners">Ver ranking completo</button>
         </div>
         <div class="card">
           <div class="section-title"><h2>Cortesias por link</h2><p>Emitidas, validadas e taxa de presenca.</p></div>
           ${renderCourtesyLinkTable(courtesyCodeRows, { compact: true, preserveOrder: true })}
+          <button class="secondary compact-action overview-ranking-link" data-view="commissioners">Ver ranking completo</button>
         </div>
       </div>
       <div class="card">
@@ -3246,18 +3233,6 @@ function renderMailingPage() {
       ${renderPagination(rows.length, page, pageSize, "mailing-page")}
     </section>
   `;
-}
-
-function recurringEventNames(row, limit = 3) {
-  const names = [];
-  row.events.forEach((event) => {
-    if ((event.sold > 0 || event.complimentary > 0 || event.complimentaryValidated > 0) && !names.includes(event.name)) {
-      names.push(event.name);
-    }
-  });
-  const visible = names.slice(0, limit).map((name) => esc(name)).join(", ");
-  const extra = names.length > limit ? ` +${names.length - limit}` : "";
-  return visible ? `${visible}${extra}` : "-";
 }
 
 function renderAudienceFilters(events) {
