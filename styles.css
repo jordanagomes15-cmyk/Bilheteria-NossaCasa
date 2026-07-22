@@ -1118,18 +1118,60 @@ h3 {
 }
 
 .settlement-rules-table table {
+  table-layout: fixed;
   min-width: 720px;
+}
+
+.settlement-rules-table th:first-child,
+.settlement-rules-table td:first-child {
+  width: 48%;
+}
+
+.settlement-rules-table th:nth-child(2),
+.settlement-rules-table td:nth-child(2),
+.settlement-rules-table th:nth-child(3),
+.settlement-rules-table td:nth-child(3) {
+  width: 26%;
+  vertical-align: middle;
+}
+
+.settlement-rule-tier-cell {
+  display: grid;
+  max-width: 780px;
+  gap: 6px;
+  text-align: left;
 }
 
 .settlement-rule-tier-note {
   display: block;
-  max-width: 520px;
-  margin-top: 5px;
+  margin-top: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.settlement-rule-value {
+  display: grid;
+  gap: 4px;
+  justify-items: end;
+  color: var(--text-soft);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+  text-align: right;
+}
+
+.settlement-rule-value strong {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.settlement-rule-value small {
   color: var(--muted);
   font-size: 12px;
   font-weight: 650;
-  line-height: 1.3;
-  overflow-wrap: anywhere;
 }
 
 .settlement-tier-events {
@@ -3145,6 +3187,20 @@ tr:last-child td {
 
   .settlement-tier-card-simple {
     grid-template-columns: 1fr;
+  }
+
+  .settlement-rules-table th:first-child,
+  .settlement-rules-table td:first-child,
+  .settlement-rules-table th:nth-child(2),
+  .settlement-rules-table td:nth-child(2),
+  .settlement-rules-table th:nth-child(3),
+  .settlement-rules-table td:nth-child(3) {
+    width: 100%;
+  }
+
+  .settlement-rule-value {
+    justify-items: start;
+    text-align: left;
   }
 
   .settlement-tier-numbers {

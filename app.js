@@ -2735,12 +2735,30 @@ function settlementRulesTable(events = filteredEvents()) {
       {
         label: "Tier",
         render: (row) => `
-          <strong>${esc(row.label)}</strong>
-          <small class="settlement-rule-tier-note">${row.eventNames.length ? row.eventNames.map(esc).join(", ") : "Nenhuma festa no recorte atual"}</small>
+          <div class="settlement-rule-tier-cell">
+            <strong>${esc(row.label)}</strong>
+            <small class="settlement-rule-tier-note">${row.eventNames.length ? row.eventNames.map(esc).join(", ") : "Nenhuma festa no recorte atual"}</small>
+          </div>
         `
       },
-      { label: "Modelo padrao", render: (row) => `${pct(row.commissionRate * 100)} comissao · ${pct(row.discountRate * 100)} desconto` },
-      { label: "100k garantido", render: (row) => `${money(row.guaranteedBase)} base · ${pct(row.guaranteedCommissionRate * 100)} comissao · ${pct(row.guaranteedDiscountRate * 100)} desconto` }
+      {
+        label: "Modelo padrao",
+        render: (row) => `
+          <div class="settlement-rule-value">
+            <strong>${pct(row.commissionRate * 100)} comissao</strong>
+            <small>${pct(row.discountRate * 100)} desconto</small>
+          </div>
+        `
+      },
+      {
+        label: "100k garantido",
+        render: (row) => `
+          <div class="settlement-rule-value">
+            <strong>${money(row.guaranteedBase)} base</strong>
+            <small>${pct(row.guaranteedCommissionRate * 100)} comissao · ${pct(row.guaranteedDiscountRate * 100)} desconto</small>
+          </div>
+        `
+      }
     ],
     rows: settlementRuleRows(events)
   });
