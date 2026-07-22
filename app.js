@@ -1226,6 +1226,7 @@ const SETTLEMENT_TIERS = {
 
 const SETTLEMENT_TIER_ORDER = ["gold", "silver", "bronze", "unclassified"];
 const SPECIAL_SETTLEMENT_CODES = new Set(["ra", "mare", "marianaparik"]);
+const SETTLEMENT_GUARANTEE_EXCLUDED_DATES = new Set(["2026-07-12", "2026-07-15", "2026-07-19"]);
 
 function isSpecialSettlementCode(name) {
   return SPECIAL_SETTLEMENT_CODES.has(normalizeCodeName(name));
@@ -1263,6 +1264,21 @@ function settlementTierForEvent(event) {
   return "unclassified";
 }
 
+function isSettlementGuaranteeEligibleEvent(event) {
+  if (SETTLEMENT_GUARANTEE_EXCLUDED_DATES.has(event?.eventDate)) return false;
+  const name = normalizeText(`${event?.name || ""} ${event?.source || ""}`);
+  return !(
+    name.includes("12/07") ||
+    name.includes("12-07") ||
+    name.includes("15/07") ||
+    name.includes("15-07") ||
+    name.includes("19/07") ||
+    name.includes("19-07") ||
+    name.includes("semi final") ||
+    name.includes("final petroski")
+  );
+}
+
 function createSettlementAccumulator(name, model) {
   return {
     key: normalizeCodeName(name),
@@ -1286,6 +1302,8 @@ function createSettlementAccumulator(name, model) {
         complimentary: 0,
         complimentaryValidated: 0,
         revenue: 0,
+        guaranteeEligibleSold: 0,
+        guaranteeEligibleRevenue: 0,
         repasse: 0,
         actualCommission: 0,
         guaranteedBase: 0,
@@ -1301,6 +1319,7 @@ function createSettlementAccumulator(name, model) {
 
 function addSettlementData(row, tierKey, event, data) {
   const tier = row.tiers[tierKey] || row.tiers.unclassified;
+  const guaranteeEligible = isSettlementGuaranteeEligibleEvent(event);
   const sold = Number(data.sold || 0);
   const soldValidated = rowSoldValidated(data);
   const complimentary = Number(data.complimentary || 0);
@@ -1317,6 +1336,10 @@ function addSettlementData(row, tierKey, event, data) {
   tier.complimentary += complimentary;
   tier.complimentaryValidated += complimentaryValidated;
   tier.revenue += revenue;
+  if (guaranteeEligible) {
+    tier.guaranteeEligibleSold += sold;
+    tier.guaranteeEligibleRevenue += revenue;
+  }
   tier.eventNames.add(event.name);
   if (!tier.eventRows.has(event.id)) {
     tier.eventRows.set(event.id, {
@@ -1327,7 +1350,8 @@ function addSettlementData(row, tierKey, event, data) {
       complimentary: 0,
       complimentaryValidated: 0,
       validated: 0,
-      revenue: 0
+      revenue: 0,
+      guaranteeEligible
     });
   }
   const eventRow = tier.eventRows.get(event.id);
@@ -1352,17 +1376,17 @@ function finalizeSettlementRow(row, options = {}) {
     tier.discountRate = row.model === "100k garantido" ? rule.guaranteedDiscountRate : rule.discountRate;
     tier.actualCommission = tier.revenue * commissionRate;
     if (row.model === "100k garantido" && !specialPool) {
-      const hasTierActivity = Number(tier.revenue || 0) > 0 || Number(tier.sold || 0) > 0;
+      const hasTierActivity = Number(tier.guaranteeEligibleRevenue || 0) > 0 || Number(tier.guaranteeEligibleSold || 0) > 0;
       tier.guaranteedBase = hasTierActivity ? rule.guaranteedBase : 0;
       tier.guaranteedCommission = tier.guaranteedBase * commissionRate;
       tier.repasse = Math.max(tier.actualCommission, tier.guaranteedCommission);
       tier.guaranteeApplied = Math.max(0, tier.repasse - tier.actualCommission);
     } else if (row.model === "100k garantido" && specialPool) {
       const poolTier = specialPool.tiers[tierKey];
-      const poolRevenue = Number(poolTier.revenue || 0);
-      const poolSold = Number(poolTier.sold || 0);
-      const revenueWeight = poolRevenue ? tier.revenue / poolRevenue : 0;
-      const soldWeight = !poolRevenue && poolSold ? tier.sold / poolSold : 0;
+      const poolRevenue = Number(poolTier.guaranteeEligibleRevenue || 0);
+      const poolSold = Number(poolTier.guaranteeEligibleSold || 0);
+      const revenueWeight = poolRevenue ? tier.guaranteeEligibleRevenue / poolRevenue : 0;
+      const soldWeight = !poolRevenue && poolSold ? tier.guaranteeEligibleSold / poolSold : 0;
       const weight = revenueWeight || soldWeight || 0;
       tier.guaranteedBase = poolTier.guaranteedBase * weight;
       tier.guaranteedCommission = poolTier.guaranteedCommission * weight;
@@ -1396,6 +1420,8 @@ function syncSpecialSettlementPool(specialPool, specialRows) {
     poolTier.guaranteeApplied = specialRows.reduce((acc, row) => acc + Number(row.tiers[tierKey]?.guaranteeApplied || 0), 0);
     poolTier.guaranteedBase = specialRows.reduce((acc, row) => acc + Number(row.tiers[tierKey]?.guaranteedBase || 0), 0);
     poolTier.guaranteedCommission = specialRows.reduce((acc, row) => acc + Number(row.tiers[tierKey]?.guaranteedCommission || 0), 0);
+    poolTier.guaranteeEligibleRevenue = specialRows.reduce((acc, row) => acc + Number(row.tiers[tierKey]?.guaranteeEligibleRevenue || 0), 0);
+    poolTier.guaranteeEligibleSold = specialRows.reduce((acc, row) => acc + Number(row.tiers[tierKey]?.guaranteeEligibleSold || 0), 0);
   });
   specialPool.tierRows = SETTLEMENT_TIER_ORDER.map((tierKey) => specialPool.tiers[tierKey]).filter((tier) => tier.revenue || tier.sold || tier.complimentary || tier.guaranteedBase);
   return specialPool;
@@ -3098,7 +3124,7 @@ function renderSettlement() {
         <div class="section-title">
           <span class="special-rule-badge">Regra especial</span>
           <h2>Negociacao especial RA / MARE / Mariana Parik</h2>
-          <p>Modelo 100k garantido: Ouro R$ 20 mil, Prata R$ 50 mil e Bronze R$ 30 mil. O repasse abaixo mostra o consolidado dos codigos especiais.</p>
+          <p>Modelo 100k garantido: Ouro R$ 20 mil, Prata R$ 50 mil e Bronze R$ 30 mil. Dias 12/07, 15/07 e 19/07 nao acionam a base garantida.</p>
         </div>
         <div class="settlement-special-summary">
           ${metric("Repasse consolidado", money(analysis.specialPool.repasse), `${money(analysis.specialPool.guaranteeApplied)} de garantia aplicada`)}
