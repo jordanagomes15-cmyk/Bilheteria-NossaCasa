@@ -3500,7 +3500,6 @@ function renderDetail() {
         ${metric("Check-ins", int(event.validated), `${pct(rate)} de presenca`)}
         ${metric("Compradores unicos", int(audienceSummary.uniqueBuyers), "Participantes finais com compra")}
         ${metric("Convidados unicos", int(audienceSummary.uniqueCourtesy), "Participantes finais com cortesia")}
-        ${metric("Pessoas unicas", int(audienceSummary.uniquePeople), "Deduplicadas para mailing")}
         ${metric("PNE", event.pne ? `${int(event.pne.converted)}/${int(event.pne.inserted)}` : "-", "Convertidos / inseridos")}
       </div>
       <div class="card">
