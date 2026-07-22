@@ -1,4 +1,4 @@
-const { json } = require("./_auth");
+const { json, sha256 } = require("./_auth");
 const { createLocalRequest } = require("./_access-store");
 const { createIssue, githubErrorResponse, isConfigured } = require("./_github");
 
@@ -31,11 +31,16 @@ module.exports = async function signup(req, res) {
   const email = String(body.email || "").trim().toLowerCase().slice(0, 160);
   const phone = String(body.phone || "").trim().slice(0, 40);
   const reason = String(body.reason || "").trim().slice(0, 600);
+  const password = String(body.password || "");
   const accessLevel = ACCESS_LEVELS[body.accessLevel] ? body.accessLevel : "overview";
 
   if (!name || !isValidEmail(email)) {
     return json(res, 400, { ok: false, error: "Informe nome e um e-mail valido." });
   }
+  if (password.length < 4) {
+    return json(res, 400, { ok: false, error: "Crie uma senha com pelo menos 4 caracteres." });
+  }
+  const passwordHash = sha256(password);
 
   const title = `Solicitacao de acesso: ${name} (${email})`;
   const requestBody = [
@@ -43,6 +48,7 @@ module.exports = async function signup(req, res) {
     `**E-mail:** ${email}`,
     `**Telefone:** ${phone || "nao informado"}`,
     `**Nivel de acesso solicitado:** ${ACCESS_LEVELS[accessLevel]}`,
+    `**Senha hash:** ${passwordHash}`,
     `**Motivo/observacoes:** ${reason || "nao informado"}`,
     "",
     "_Enviado automaticamente pelo formulario de cadastro do dashboard Nossa Casa._"
@@ -54,6 +60,7 @@ module.exports = async function signup(req, res) {
       email,
       phone: phone || "nao informado",
       accessLevel: ACCESS_LEVELS[accessLevel],
+      passwordHash,
       reason: reason || "nao informado",
       url: ""
     });

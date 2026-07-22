@@ -1,5 +1,5 @@
 const { json, requireSession } = require("./_auth");
-const { closeLocalRequest } = require("./_access-store");
+const { approveLocalRequest, closeLocalRequest } = require("./_access-store");
 const { commentOnIssue, githubErrorResponse, updateIssue, isConfigured } = require("./_github");
 
 const TIER_LABELS = {
@@ -33,8 +33,10 @@ module.exports = async function accessDecide(req, res) {
     return json(res, 400, { ok: false, error: "Informe issueNumber e decision valida." });
   }
 
-  if (!isConfigured() || issueNumber > 1000000000000) {
-    closeLocalRequest(issueNumber);
+  const isLocalRequest = issueNumber > 1000000000000;
+  if (!isConfigured() || isLocalRequest) {
+    if (decision === "approved") approveLocalRequest(issueNumber, tier);
+    else closeLocalRequest(issueNumber);
     return json(res, 200, { ok: true, fallback: true });
   }
 
@@ -57,8 +59,9 @@ module.exports = async function accessDecide(req, res) {
     return json(res, 200, { ok: true });
   } catch (error) {
     const result = githubErrorResponse(error, "Falha ao registrar decisao.");
-    if (result.body?.code && String(result.body.code).startsWith("github_")) {
-      closeLocalRequest(issueNumber);
+    if (isLocalRequest && result.body?.code && String(result.body.code).startsWith("github_")) {
+      if (decision === "approved") approveLocalRequest(issueNumber, tier);
+      else closeLocalRequest(issueNumber);
       return json(res, 200, { ok: true, fallback: true, warning: result.body.error });
     }
     return json(res, result.status, result.body);

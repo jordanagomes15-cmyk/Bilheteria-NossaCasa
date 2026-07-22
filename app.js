@@ -2165,7 +2165,7 @@ function renderSignupForm() {
     return `
       <div class="signup-success" role="status">
         <p><strong>Solicitacao enviada.</strong></p>
-        <p class="muted">A administradora foi avisada e vai revisar seu pedido de acesso em breve.</p>
+        <p class="muted">A administradora foi avisada. Depois da aprovacao, use este e-mail e a senha cadastrada para entrar.</p>
         <button class="secondary" type="button" data-action="hide-signup">Voltar ao login</button>
       </div>
     `;
@@ -2179,6 +2179,8 @@ function renderSignupForm() {
       </div>
       <label class="field">Nome<input id="signupName" name="name" type="text" required maxlength="120" /></label>
       <label class="field">E-mail<input id="signupEmail" name="email" type="email" required maxlength="160" /></label>
+      <label class="field">Senha para login<input id="signupPassword" name="password" type="password" autocomplete="new-password" required minlength="4" /></label>
+      <label class="field">Confirmar senha<input id="signupPasswordConfirm" name="passwordConfirm" type="password" autocomplete="new-password" required minlength="4" /></label>
       <label class="field">Telefone (opcional)<input id="signupPhone" name="phone" type="tel" maxlength="40" /></label>
       <label class="field">
         Nivel de acesso desejado
@@ -2195,7 +2197,7 @@ function renderSignupForm() {
       <button class="secondary" type="button" data-action="hide-signup">Cancelar</button>
       <div class="login-secure-note" role="note">
         <span aria-hidden="true">✓</span>
-        <p><strong>Fluxo revisado.</strong> A administradora recebe o pedido e decide o nivel de acesso liberado.</p>
+        <p><strong>Fluxo revisado.</strong> A senha nao fica visivel no painel; depois da aprovacao, a pessoa entra com esse e-mail e senha.</p>
       </div>
     </form>
   `;
@@ -2294,10 +2296,18 @@ function bindLogin() {
     const payload = {
       name: document.getElementById("signupName")?.value?.trim() || "",
       email: document.getElementById("signupEmail")?.value?.trim() || "",
+      password: document.getElementById("signupPassword")?.value || "",
       phone: document.getElementById("signupPhone")?.value?.trim() || "",
       accessLevel: document.getElementById("signupAccessLevel")?.value || "overview",
       reason: document.getElementById("signupReason")?.value?.trim() || ""
     };
+    const passwordConfirm = document.getElementById("signupPasswordConfirm")?.value || "";
+    if (payload.password.length < 4 || payload.password !== passwordConfirm) {
+      state.signupError = payload.password.length < 4 ? "Crie uma senha com pelo menos 4 caracteres." : "As senhas nao conferem.";
+      const errorField = document.getElementById("signupError");
+      if (errorField) errorField.textContent = state.signupError;
+      return;
+    }
     const button = event.currentTarget.querySelector("button[type='submit']");
     if (button) {
       button.disabled = true;

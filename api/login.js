@@ -1,4 +1,30 @@
 const { createSession, json, safeEqual, setSessionCookie, sha256 } = require("./_auth");
+const { findLocalUser } = require("./_access-store");
+const { listIssuesByLabel } = require("./_github");
+
+const APPROVED_LABELS = ["acesso-aprovado:overview", "acesso-aprovado:full", "acesso-aprovado:promoter"];
+
+function parseField(body, label) {
+  const match = String(body || "").match(new RegExp(`\\*\\*${label}:\\*\\*\\s*(.+)`));
+  return match ? match[1].trim() : "";
+}
+
+async function findApprovedGithubUser(email) {
+  const normalized = String(email || "").trim().toLowerCase();
+  if (!normalized) return null;
+  const batches = await Promise.all(
+    APPROVED_LABELS.map((label) =>
+      listIssuesByLabel(label, "closed").catch(() => [])
+    )
+  );
+  return batches
+    .flat()
+    .map((issue) => ({
+      email: parseField(issue.body, "E-mail").toLowerCase(),
+      passwordHash: parseField(issue.body, "Senha hash")
+    }))
+    .find((user) => user.email === normalized && user.passwordHash) || null;
+}
 
 module.exports = async function login(req, res) {
   if (req.method !== "POST") {
@@ -23,12 +49,29 @@ module.exports = async function login(req, res) {
 
   const email = String(body.email || "").trim().toLowerCase();
   const password = String(body.password || "");
-  const emailOk = !expectedEmail || safeEqual(email, expectedEmail.toLowerCase());
-  const passwordOk = safeEqual(sha256(password), expectedHash);
-  if (!emailOk || !passwordOk) {
-    return json(res, 401, { ok: false, error: "E-mail ou senha invalidos." });
+  const passwordHash = sha256(password);
+  const adminEmailOk = !expectedEmail || safeEqual(email, expectedEmail.toLowerCase());
+  const adminPasswordOk = safeEqual(passwordHash, expectedHash);
+  if (adminEmailOk && adminPasswordOk) {
+    setSessionCookie(res, createSession(email || "dashboard"));
+    return json(res, 200, { ok: true });
   }
 
-  setSessionCookie(res, createSession(email || "dashboard"));
-  return json(res, 200, { ok: true });
+  const localUser = findLocalUser(email);
+  if (localUser?.passwordHash && safeEqual(passwordHash, localUser.passwordHash)) {
+    setSessionCookie(res, createSession(email || "dashboard"));
+    return json(res, 200, { ok: true });
+  }
+
+  try {
+    const githubUser = await findApprovedGithubUser(email);
+    if (githubUser?.passwordHash && safeEqual(passwordHash, githubUser.passwordHash)) {
+      setSessionCookie(res, createSession(email || "dashboard"));
+      return json(res, 200, { ok: true });
+    }
+  } catch {
+    // Se o GitHub estiver indisponivel, o login admin/local continua funcionando.
+  }
+
+  return json(res, 401, { ok: false, error: "E-mail ou senha invalidos ou acesso ainda pendente de aprovacao." });
 };

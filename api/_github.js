@@ -77,8 +77,8 @@ function createIssue({ title, body, labels }) {
   return githubRequest("/issues", { method: "POST", body: JSON.stringify({ title, body, labels }) });
 }
 
-function listIssuesByLabel(label) {
-  return githubRequest(`/issues?state=open&labels=${encodeURIComponent(label)}&per_page=100&sort=created&direction=desc`);
+function listIssuesByLabel(label, state = "open") {
+  return githubRequest(`/issues?state=${encodeURIComponent(state)}&labels=${encodeURIComponent(label)}&per_page=100&sort=created&direction=desc`);
 }
 
 function commentOnIssue(number, body) {
