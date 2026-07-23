@@ -3427,11 +3427,11 @@ function renderSettlement() {
     <section class="grid settlement-page">
       ${renderDashboardFilters(events)}
       <div class="grid cards overview-metrics settlement-metrics">
-        ${metric("Repasse total", money(analysis.summary.repasse), "Comissoes calculadas pelo modelo de cada codigo")}
-        ${metric(`Repasse com minimo ${int(SETTLEMENT_MINIMUM_COMMISSION_SOLD)} vendas`, money(analysis.summary.minimumSalesRepasse), `${int(analysis.summary.minimumSalesEligibleCodes)} codigos com comissao · ${money(analysis.summary.minimumSalesBlockedRepasse)} sem minimo`)}
-        ${metric("Cortesias validadas", money(analysis.summary.courtesyValidationRepasse), `${int(analysis.summary.gandayaCourtesyValidated)} Gandaya / ${int(analysis.summary.pneCourtesyValidated)} PNE · R$ ${int(SETTLEMENT_COURTESY_VALIDATION_FEE)} por pessoa`)}
-        ${metric("Modelo padrao", money(analysis.summary.standardRepasse), "Demais comissarios por tier")}
-        ${metric("100k garantido", money(analysis.summary.specialRepasse), "RA, Mare e Mariana Parik agrupados", `<button class="metric-link" data-action="scroll-special-settlement">Ver regra especial</button>`)}
+        ${metric("Repasse total", money(analysis.summary.repasse), "Modelo padrao + 100k, ja incluindo cortesias validadas")}
+        ${metric(`Repasse com minimo ${int(SETTLEMENT_MINIMUM_COMMISSION_SOLD)} vendas`, money(analysis.summary.minimumSalesRepasse), `${int(analysis.summary.minimumSalesEligibleCodes)} codigos com comissao de venda · ${money(analysis.summary.minimumSalesBlockedRepasse)} bloqueados`)}
+        ${metric("Repasse por cortesias", money(analysis.summary.courtesyValidationRepasse), `Ja incluido no total · ${int(analysis.summary.gandayaCourtesyValidated)} Gandaya / ${int(analysis.summary.pneCourtesyValidated)} PNE · R$ ${int(SETTLEMENT_COURTESY_VALIDATION_FEE)} por pessoa`)}
+        ${metric("Modelo padrao", money(analysis.summary.standardRepasse), "Comissao por tier + cortesias dos demais codigos")}
+        ${metric("100k garantido", money(analysis.summary.specialRepasse), "RA, Mare e Mariana Parik: comissao/garantia + cortesias", `<button class="metric-link" data-action="scroll-special-settlement">Ver regra especial</button>`)}
         ${metric("Receita dos codigos", money(analysis.summary.revenue), `${int(analysis.summary.sold)} vendas por link`)}
       </div>
       ${renderSettlementPendingCard(analysis)}
