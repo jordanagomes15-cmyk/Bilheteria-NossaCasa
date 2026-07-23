@@ -1392,6 +1392,7 @@ const SETTLEMENT_EXCLUDED_CODES = new Set(
     "Gui Araújo",
     "Gudi",
     "Djpuff",
+    "Dj Victinho",
     "Prevendaff",
     "Duolugui",
     "nossa casa",
