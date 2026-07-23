@@ -1680,22 +1680,32 @@ function salesCodeBatchRows(row, eventRow) {
   const event = state.events.find((item) => item.id === eventRow.id);
   const codeKey = normalizeCodeName(row.name);
   const promoterData = Object.entries(event?.promoters || {}).find(([name]) => normalizeCodeName(name) === codeKey)?.[1];
-  const purchaseBatchRows = Object.values(promoterData?.batches || {})
-    .filter((batch) => Number(batch.sold || 0) > 0 || Number(batch.revenue || 0) > 0)
+  const promoterBatchRows = Object.values(promoterData?.batches || {})
+    .filter((batch) => Number(batch.sold || 0) > 0 || Number(batch.revenue || 0) > 0 || Number(batch.complimentary || 0) > 0 || rowComplimentaryValidated(batch) > 0)
     .map((batch) => ({
       label: batch.rawLabel || batch.label || "Sem lote",
       sold: Number(batch.sold || 0),
       soldValidated: Number(batch.soldValidated || 0),
+      complimentary: Number(batch.complimentary || 0),
+      complimentaryValidated: rowComplimentaryValidated(batch),
       revenue: Number(batch.revenue || 0),
       revenueEstimated: false
     }))
-    .sort((a, b) => b.revenue - a.revenue || b.sold - a.sold || b.soldValidated - a.soldValidated || a.label.localeCompare(b.label));
-  if (purchaseBatchRows.length) return purchaseBatchRows;
+    .sort(
+      (a, b) =>
+        b.revenue - a.revenue ||
+        b.sold - a.sold ||
+        b.complimentary - a.complimentary ||
+        b.soldValidated - a.soldValidated ||
+        b.complimentaryValidated - a.complimentaryValidated ||
+        a.label.localeCompare(b.label)
+    );
+  if (promoterBatchRows.length) return promoterBatchRows;
 
   const grouped = new Map();
   let hasRevenueByEntry = false;
   (event?.audience || []).forEach((entry) => {
-    if (entry.type !== "purchase") return;
+    if (!["purchase", "courtesy"].includes(entry.type)) return;
     if (normalizeCodeName(entry.linkOrCommissioner || "") !== codeKey) return;
     const batchName = entry.batchName || "Sem lote";
     const batchKey = normalizeBatch(batchName);
@@ -1704,19 +1714,26 @@ function salesCodeBatchRows(row, eventRow) {
         label: batchName,
         sold: 0,
         soldValidated: 0,
+        complimentary: 0,
+        complimentaryValidated: 0,
         revenue: 0,
         revenueEstimated: false
       });
     }
     const batch = grouped.get(batchKey);
-    batch.sold += 1;
-    if (entry.validated) batch.soldValidated += 1;
-    if (Number.isFinite(Number(entry.revenue)) && Number(entry.revenue) > 0) {
+    if (entry.type === "purchase") {
+      batch.sold += 1;
+      if (entry.validated) batch.soldValidated += 1;
+    } else {
+      batch.complimentary += 1;
+      if (entry.validated) batch.complimentaryValidated += 1;
+    }
+    if (entry.type === "purchase" && Number.isFinite(Number(entry.revenue)) && Number(entry.revenue) > 0) {
       hasRevenueByEntry = true;
       batch.revenue += Number(entry.revenue || 0);
     }
   });
-  const rows = [...grouped.values()].sort((a, b) => b.sold - a.sold || b.soldValidated - a.soldValidated || a.label.localeCompare(b.label));
+  const rows = [...grouped.values()].sort((a, b) => b.sold - a.sold || b.complimentary - a.complimentary || b.soldValidated - a.soldValidated || b.complimentaryValidated - a.complimentaryValidated || a.label.localeCompare(b.label));
   if (rows.length) {
     if (!hasRevenueByEntry && Number(eventRow.revenue || 0) > 0) {
       const soldTotal = rows.reduce((sum, batch) => sum + Number(batch.sold || 0), 0);
@@ -1732,6 +1749,8 @@ function salesCodeBatchRows(row, eventRow) {
       label: "Total do link no evento",
       sold: Number(eventRow.sold || 0),
       soldValidated: Number(eventRow.soldValidated || 0),
+      complimentary: Number(eventRow.complimentary || 0),
+      complimentaryValidated: Number(eventRow.complimentaryValidated || 0),
       revenue: Number(eventRow.revenue || 0),
       revenueEstimated: false
     }
@@ -2829,16 +2848,18 @@ function renderSalesCodeBatchTable(batchRows) {
   return `
     <div class="table-wrap nested-detail-table" tabindex="0">
       <table class="sales-detail-table">
-        <thead><tr><th>Lote</th><th>Quantidade</th><th>Receita</th><th>Validados</th></tr></thead>
+        <thead><tr><th>Lote</th><th>Vendidos</th><th>Val. vendas</th><th>Cortesias</th><th>Val. cortesias</th><th>Receita</th></tr></thead>
         <tbody>
           ${batchRows
             .map(
               (batch) => `
                 <tr class="detail-batch-row">
                   <td class="detail-lot-cell" data-label="Lote">${esc(batch.label)}</td>
-                  <td class="detail-count-cell" data-label="Quantidade">${int(batch.sold)}</td>
+                  <td class="detail-count-cell" data-label="Vendidos">${int(batch.sold)}</td>
+                  <td class="detail-count-cell" data-label="Val. vendas">${int(batch.soldValidated)}</td>
+                  <td class="detail-count-cell" data-label="Cortesias">${int(batch.complimentary)}</td>
+                  <td class="detail-count-cell" data-label="Val. cortesias">${int(batch.complimentaryValidated)}</td>
                   <td class="detail-count-cell" data-label="Receita">${money(batch.revenue)}${batch.revenueEstimated ? ` <small title="Receita estimada proporcionalmente aos vendidos do lote.">estimado</small>` : ""}</td>
-                  <td class="detail-count-cell" data-label="Validados">${int(batch.soldValidated)}</td>
                 </tr>
               `
             )
@@ -2880,11 +2901,7 @@ function renderSalesCodeDetail(row, totalRevenue) {
                   <button class="ghost detail-event-link sales-code-event-title" data-event="${esc(eventRow.id)}">
                     <span>${esc(eventRow.name)}</span>
                   </button>
-                  ${
-                    eventRow.batchRows.length > 1
-                      ? `<button class="ghost sales-code-lot-toggle" data-action="toggle-sales-event-detail" data-sales-event="${esc(eventRow.key)}" aria-label="${expanded ? "Ocultar lotes de " : "Ver lotes de "}${esc(eventRow.name)}" aria-expanded="${expanded ? "true" : "false"}">${expanded ? "Ocultar lotes" : "Ver lotes"}</button>`
-                      : ""
-                  }
+                  <button class="ghost sales-code-lot-toggle" data-action="toggle-sales-event-detail" data-sales-event="${esc(eventRow.key)}" aria-label="${expanded ? "Ocultar lotes de " : "Ver lotes de "}${esc(eventRow.name)}" aria-expanded="${expanded ? "true" : "false"}">${expanded ? "Ocultar lotes" : "Ver lotes"}</button>
                 </div>
                 <p class="sales-code-event-meta">
                   ${int(eventRow.sold)} vendidos - ${money(eventRow.revenue)} - ${validationRate} validados
