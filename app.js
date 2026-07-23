@@ -2821,12 +2821,12 @@ function renderSalesCodeDetail(row, totalRevenue) {
             const courtesyValidated = Number(eventRow.complimentaryValidated || 0);
             const courtesyRate = courtesyIssued ? pct(safeRate(courtesyValidated, courtesyIssued)) : "-";
             return `
-              <article class="sales-code-event-item ${expanded ? "is-expanded" : ""}">
+              <article class="sales-code-event-item ${expanded ? "is-expanded" : ""}" data-sales-event-item="${esc(eventRow.key)}">
                 <div class="sales-code-event-main">
-                  <button class="ghost detail-event-link sales-code-event-title" data-event="${esc(eventRow.id)}">
+                  <button type="button" class="ghost detail-event-link sales-code-event-title" data-event="${esc(eventRow.id)}">
                     <span>${esc(eventRow.name)}</span>
                   </button>
-                  <button class="ghost sales-code-lot-toggle" data-action="toggle-sales-event-detail" data-sales-event="${esc(eventRow.key)}" aria-label="${expanded ? "Ocultar lotes de " : "Ver lotes de "}${esc(eventRow.name)}" aria-expanded="${expanded ? "true" : "false"}">${expanded ? "Ocultar lotes" : "Ver lotes"}</button>
+                  <button type="button" class="ghost sales-code-lot-toggle" data-action="toggle-sales-event-detail" data-sales-event="${esc(eventRow.key)}" aria-label="${expanded ? "Ocultar lotes de " : "Ver lotes de "}${esc(eventRow.name)}" aria-expanded="${expanded ? "true" : "false"}">${expanded ? "Ocultar lotes" : "Ver lotes"}</button>
                 </div>
                 <p class="sales-code-event-meta">
                   ${int(eventRow.sold)} vendidos - ${money(eventRow.revenue)} - ${validationRate} validados
@@ -4211,10 +4211,12 @@ function bindActions() {
   });
   document.querySelectorAll("[data-action='toggle-sales-event-detail']").forEach((button) => {
     button.addEventListener("click", (event) => {
+      event.preventDefault();
       event.stopPropagation();
       const key = button.dataset.salesEvent;
+      if (!key) return;
       state.salesCodeExpandedEventId = state.salesCodeExpandedEventId === key ? "" : key;
-      renderPreservingElement(dataSelector("data-sales-event", key));
+      renderPreservingElement(dataSelector("data-sales-event-item", key));
     });
   });
   document.querySelectorAll("[data-action='close-sales-code-drawer']").forEach((element) => {
