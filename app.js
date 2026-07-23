@@ -1364,6 +1364,7 @@ const SETTLEMENT_EXCLUDED_CODES = new Set(
     "patrocinador",
     "artístico",
     "aniversariante",
+    "unisex",
     "unissex",
     "ufa",
     "rub formatura",
