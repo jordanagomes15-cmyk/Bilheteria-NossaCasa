@@ -3445,6 +3445,7 @@ function renderSettlement() {
       <div class="grid cards overview-metrics settlement-metrics">
         ${metric("Comissao vendas padrao", money(analysis.summary.standardSalesRepasse), `${pct(SETTLEMENT_STANDARD_COMMISSION_RATE * 100)} da receita vendida · ${int(analysis.summary.standardSold)} ingressos`)}
         ${metric("Repasse por cortesias", money(analysis.summary.courtesyValidationRepasse), `${int(analysis.summary.gandayaCourtesyValidated)} Gandaya / ${int(analysis.summary.pneCourtesyValidated)} PNE · R$ ${int(SETTLEMENT_COURTESY_VALIDATION_FEE)} por pessoa`)}
+        ${metric("Padrao + cortesias", money(analysis.summary.standardSalesRepasse + analysis.summary.courtesyValidationRepasse), "Comissao de vendas padrao somada ao repasse por cortesias")}
         ${metric("Repasse total", money(analysis.summary.repasse), "Comissao vendas padrao + cortesias validadas + 100k")}
         ${metric(`Repasse com minimo ${int(SETTLEMENT_MINIMUM_COMMISSION_SOLD)} vendas`, money(analysis.summary.minimumSalesRepasse), `${int(analysis.summary.minimumSalesEligibleCodes)} codigos com comissao de venda · ${money(analysis.summary.minimumSalesBlockedRepasse)} bloqueados`)}
         ${metric("100k garantido", money(analysis.summary.specialSalesRepasse), "RA, Mare e Mariana Parik sem cortesias", `<button class="metric-link" data-action="scroll-special-settlement">Ver regra especial</button>`)}
