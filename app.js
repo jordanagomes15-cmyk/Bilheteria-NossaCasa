@@ -1210,36 +1210,44 @@ function shareCell(value, total) {
 
 function promoterRanking(events = filteredEvents()) {
   const map = new Map();
+  const addRow = (event, name, data) => {
+    const key = normalizeText(name);
+    if (!key) return;
+    if (!map.has(key)) {
+      map.set(key, {
+        name: data.displayName || displayName(name),
+        sold: 0,
+        complimentary: 0,
+        validated: 0,
+        soldValidated: 0,
+        complimentaryValidated: 0,
+        revenue: 0,
+        events: []
+      });
+    }
+    const row = map.get(key);
+    const sold = Number(data.sold || 0);
+    const complimentary = Number(data.complimentary || 0);
+    const validated = Number(data.validated || 0);
+    const soldValidated = rowSoldValidated(data);
+    const complimentaryValidated = rowComplimentaryValidated(data);
+    const revenue = Number(data.revenue || 0);
+    row.sold += sold;
+    row.complimentary += complimentary;
+    row.validated += validated;
+    row.soldValidated += soldValidated;
+    row.complimentaryValidated += complimentaryValidated;
+    row.revenue += revenue;
+    row.events.push({ id: event.id, name: event.name, ...data, sold, complimentary, validated, soldValidated, complimentaryValidated, revenue });
+  };
   events.forEach((event) => {
     Object.entries(event.promoters || {}).forEach(([name, data]) => {
-      const key = normalizeText(name);
-      if (!key) return;
-      if (!map.has(key)) {
-        map.set(key, {
-          name: displayName(key),
-          sold: 0,
-          complimentary: 0,
-          validated: 0,
-          soldValidated: 0,
-          complimentaryValidated: 0,
-          revenue: 0,
-          events: []
-        });
+      const capacityRows = splitCapacityGenericPromoter(name, data);
+      if (capacityRows) {
+        capacityRows.forEach((row) => addRow(event, row.name, row.data));
+        return;
       }
-      const row = map.get(key);
-      const sold = Number(data.sold || 0);
-      const complimentary = Number(data.complimentary || 0);
-      const validated = Number(data.validated || 0);
-      const soldValidated = rowSoldValidated(data);
-      const complimentaryValidated = rowComplimentaryValidated(data);
-      const revenue = Number(data.revenue || 0);
-      row.sold += sold;
-      row.complimentary += complimentary;
-      row.validated += validated;
-      row.soldValidated += soldValidated;
-      row.complimentaryValidated += complimentaryValidated;
-      row.revenue += revenue;
-      row.events.push({ id: event.id, name: event.name, sold, complimentary, validated, soldValidated, complimentaryValidated, revenue });
+      addRow(event, name, data);
     });
   });
   return [...map.values()].sort((a, b) => b.revenue - a.revenue || b.sold - a.sold || b.validated - a.validated);
@@ -1262,6 +1270,68 @@ function sortCodeRanking(rows, type = "sales") {
       );
     }
     return Number(b.revenue || 0) - Number(a.revenue || 0) || Number(b.sold || 0) - Number(a.sold || 0) || Number(b.validated || 0) - Number(a.validated || 0);
+  });
+}
+
+const CAPACITY_GENERIC_CODE_KEYS = new Set(["sujeitoalotacao", "sujeitoalocacao"]);
+
+function isCapacityGenericCode(name) {
+  return CAPACITY_GENERIC_CODE_KEYS.has(normalizeCodeName(name));
+}
+
+function capacityBatchDisplayName(batch, fallbackName = "") {
+  const rawLabel = String(batch?.rawLabel || batch?.label || fallbackName || "").trim();
+  const parts = rawLabel
+    .split(/\s+-\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const subject = parts.find((part) => normalizeText(part).includes("sujeito")) || "Sujeito a lotação";
+  const usefulParts = parts.filter((part) => {
+    const normalized = normalizeText(part);
+    return normalized !== "cortesia" && !normalized.includes("sujeito");
+  });
+  const lot = usefulParts[0] || "";
+  const code = usefulParts.slice(1).join(" - ");
+  if (code && lot) return `${code} - ${lot} (${subject})`;
+  if (code) return `${code} (${subject})`;
+  if (lot) return `${lot} (${subject})`;
+  return rawLabel || displayName(fallbackName);
+}
+
+function salesCodeBatchRowFromBatch(batch) {
+  return {
+    label: batch.rawLabel || batch.label || "Sem lote",
+    sold: Number(batch.sold || 0),
+    soldValidated: rowSoldValidated(batch),
+    complimentary: Number(batch.complimentary || 0),
+    complimentaryValidated: rowComplimentaryValidated(batch),
+    revenue: Number(batch.revenue || 0),
+    revenueEstimated: false
+  };
+}
+
+function splitCapacityGenericPromoter(name, data) {
+  const batches = Object.values(data?.batches || {}).filter((batch) => Number(batch.sold || 0) > 0 || Number(batch.revenue || 0) > 0 || Number(batch.complimentary || 0) > 0 || rowComplimentaryValidated(batch) > 0);
+  if (!isCapacityGenericCode(name) || !batches.length) return null;
+  return batches.map((batch) => {
+    const sold = Number(batch.sold || 0);
+    const complimentary = Number(batch.complimentary || 0);
+    const soldValidated = rowSoldValidated(batch);
+    const complimentaryValidated = rowComplimentaryValidated(batch);
+    return {
+      name: capacityBatchDisplayName(batch, name),
+      data: {
+        ...batch,
+        displayName: capacityBatchDisplayName(batch, name),
+        sold,
+        complimentary,
+        soldValidated,
+        complimentaryValidated,
+        validated: soldValidated + complimentaryValidated,
+        revenue: Number(batch.revenue || 0),
+        batchRows: [salesCodeBatchRowFromBatch(batch)]
+      }
+    };
   });
 }
 
@@ -1630,6 +1700,7 @@ function normalizeCodeName(name) {
 }
 
 function salesCodeBatchRows(row, eventRow) {
+  if (Array.isArray(eventRow.batchRows) && eventRow.batchRows.length) return eventRow.batchRows;
   const event = state.events.find((item) => item.id === eventRow.id);
   const codeKey = normalizeCodeName(row.name);
   const promoterData = Object.entries(event?.promoters || {}).find(([name]) => normalizeCodeName(name) === codeKey)?.[1];
@@ -3957,16 +4028,20 @@ function renderPne(event) {
 
 function eventPromoters(event) {
   return Object.entries(event.promoters || {})
-    .map(([name, data]) => ({
-      name: displayName(name),
-      sold: Number(data.sold || 0),
-      complimentary: Number(data.complimentary || 0),
-      validated: Number(data.validated || 0),
-      soldValidated: rowSoldValidated(data),
-      complimentaryValidated: rowComplimentaryValidated(data),
-      revenue: Number(data.revenue || 0),
-      events: [{ id: event.id, name: event.name, ...data, soldValidated: rowSoldValidated(data), complimentaryValidated: rowComplimentaryValidated(data) }]
-    }))
+    .flatMap(([name, data]) => {
+      const capacityRows = splitCapacityGenericPromoter(name, data);
+      const rows = capacityRows || [{ name, data }];
+      return rows.map((row) => ({
+        name: row.data.displayName || displayName(row.name),
+        sold: Number(row.data.sold || 0),
+        complimentary: Number(row.data.complimentary || 0),
+        validated: Number(row.data.validated || 0),
+        soldValidated: rowSoldValidated(row.data),
+        complimentaryValidated: rowComplimentaryValidated(row.data),
+        revenue: Number(row.data.revenue || 0),
+        events: [{ id: event.id, name: event.name, ...row.data, soldValidated: rowSoldValidated(row.data), complimentaryValidated: rowComplimentaryValidated(row.data) }]
+      }));
+    })
     .sort((a, b) => b.revenue - a.revenue || b.sold - a.sold);
 }
 
