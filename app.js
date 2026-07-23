@@ -302,7 +302,7 @@ function setSyncStatus(status, options = {}) {
 }
 
 async function refreshGeneratedData() {
-  if (location.protocol === "file:") return;
+  if (window.location?.protocol === "file:") return;
   const previousStatus = state.syncStatus;
   state.syncStatus = "syncing";
   try {
@@ -503,81 +503,6 @@ function salesBreakdown(events = filteredEvents()) {
       soldValidated: 0
     }
   );
-}
-
-function recurringPeople(events = filteredEvents()) {
-  const map = new Map();
-  events.forEach((event) => {
-    (event.attendees || []).forEach((person) => {
-      const key = person.key || normalizeText(person.name);
-      if (!key) return;
-      if (!map.has(key)) {
-        map.set(key, {
-          key,
-          name: person.name || "Sem nome",
-          eventIds: new Set(),
-          paidEventIds: new Set(),
-          courtesyEventIds: new Set(),
-          sold: 0,
-          soldValidated: 0,
-          complimentary: 0,
-          complimentaryValidated: 0,
-          validated: 0,
-          revenue: 0,
-          transferRecipients: new Set(),
-          transferSenders: new Set(),
-          transferQuantity: 0,
-          courtesyContexts: new Set(),
-          courtesyLabels: new Set(),
-          events: []
-        });
-      }
-      const row = map.get(key);
-      const sold = Number(person.sold || 0);
-      const soldValidated = rowSoldValidated(person);
-      const complimentary = Number(person.complimentary || 0);
-      const complimentaryValidated = rowComplimentaryValidated(person);
-      const eventId = person.eventId || event.id;
-      const eventName = person.eventName || event.name;
-      row.eventIds.add(eventId);
-      if (sold > 0) row.paidEventIds.add(eventId);
-      if (complimentary > 0) row.courtesyEventIds.add(eventId);
-      row.sold += sold;
-      row.soldValidated += soldValidated;
-      row.complimentary += complimentary;
-      row.complimentaryValidated += complimentaryValidated;
-      row.validated += Number(person.validated || 0);
-      row.revenue += Number(person.revenue || 0);
-      (person.transferRecipients || []).forEach((name) => row.transferRecipients.add(name));
-      (person.transferSenders || []).forEach((name) => row.transferSenders.add(name));
-      (person.courtesyContexts || []).forEach((context) => row.courtesyContexts.add(context));
-      (person.courtesyLabels || []).forEach((label) => row.courtesyLabels.add(label));
-      row.transferQuantity += Number(person.transferQuantity || 0);
-      row.events.push({
-        id: eventId,
-        name: eventName,
-        sold,
-        soldValidated,
-        complimentary,
-        complimentaryValidated,
-        revenue: Number(person.revenue || 0),
-        transferRecipients: person.transferRecipients || [],
-        transferSenders: person.transferSenders || [],
-        courtesyLabels: person.courtesyLabels || []
-      });
-    });
-  });
-  return [...map.values()].map((row) => ({
-    ...row,
-    transferRecipients: [...row.transferRecipients],
-    transferSenders: [...row.transferSenders],
-    courtesyContexts: [...row.courtesyContexts],
-    courtesyLabels: [...row.courtesyLabels],
-    eventCount: row.eventIds.size,
-    paidEventCount: row.paidEventIds.size,
-    courtesyEventCount: row.courtesyEventIds.size,
-    courtesyContextCount: row.courtesyContexts.size
-  }));
 }
 
 function normalizeParticipantKey(participant) {
@@ -1685,7 +1610,7 @@ function salesCodeBatchRows(row, eventRow) {
     .map((batch) => ({
       label: batch.rawLabel || batch.label || "Sem lote",
       sold: Number(batch.sold || 0),
-      soldValidated: Number(batch.soldValidated || 0),
+      soldValidated: rowSoldValidated(batch),
       complimentary: Number(batch.complimentary || 0),
       complimentaryValidated: rowComplimentaryValidated(batch),
       revenue: Number(batch.revenue || 0),
