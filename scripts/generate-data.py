@@ -229,7 +229,13 @@ def promoter_from(description, link, complimentary):
     if link:
         return link
     if complimentary and "-" in str(description):
-        return normalize(str(description).split("-")[-1])
+        parts = [part.strip() for part in str(description).split("-") if part.strip()]
+        generic_suffix = re.compile(r"^(sujeito\s+a\s+lo(?:t|c)acao|valido\s+ate\s+\d{1,2}h\d{0,2})$", re.I)
+        while parts and generic_suffix.match(normalize(parts[-1])):
+            parts.pop()
+        if not parts:
+            return ""
+        return normalize(parts[-1])
     return ""
 
 
