@@ -233,9 +233,20 @@ def promoter_from(description, link, complimentary):
         generic_suffix = re.compile(r"^(sujeito\s+a\s+lo(?:t|c)acao|valido\s+ate\s+\d{1,2}h\d{0,2})$", re.I)
         while parts and generic_suffix.match(normalize(parts[-1])):
             parts.pop()
-        if not parts:
+        generic_parts = {
+            "cortesia",
+            "pista",
+            "backstage",
+            "area vip",
+            "vip",
+            "unissex",
+            "feminino",
+            "masculino",
+        }
+        useful_parts = [part for part in parts if normalize(part) not in generic_parts and not generic_suffix.match(normalize(part))]
+        if not useful_parts:
             return ""
-        return normalize(parts[-1])
+        return normalize(useful_parts[-1])
     return ""
 
 
