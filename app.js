@@ -2777,11 +2777,20 @@ function renderRankingTable(rows) {
 function renderSalesLinkTable(rows, totalRevenue, options = {}) {
   if (!rows.length) return renderStatePanel("Nenhum link com venda registrada no recorte atual.", "", "empty");
   const compact = Boolean(options.compact);
+  const condensed = Boolean(options.condensed);
   const showConversion = compact && state.codeRankingSort === "conversion";
-  const salesHeaders = compact
+  const salesHeaders = condensed
+    ? `<th>Link/comissario</th><th>Receita</th><th>Ingressos</th><th>% faturamento</th>`
+    : compact
     ? `<th>Link/comissario</th><th>Receita</th><th>Vendidos</th><th>${showConversion ? "% conversao" : "% faturamento"}</th>`
     : "<th>Link/comissario</th><th>Receita</th><th>% faturamento</th><th>Vendidos</th><th>Val. vendas</th>";
-  const salesCols = compact
+  const salesCols = condensed
+    ? `
+          <col class="name-col" />
+          <col class="money-col" />
+          <col class="count-col" />
+          <col class="percent-col" />`
+    : compact
     ? `
           <col class="name-col" />
           <col class="money-col" />
@@ -2794,7 +2803,7 @@ function renderSalesLinkTable(rows, totalRevenue, options = {}) {
           <col class="count-col" />
           <col class="percent-col" />`;
   return `
-    <div class="table-wrap compact-table sales-link-table ${compact ? "overview-compact-table" : ""}">
+    <div class="table-wrap compact-table sales-link-table ${compact ? "overview-compact-table" : ""} ${condensed ? "condensed-sales-table" : ""}">
       <table>
         <colgroup>
           ${salesCols}
@@ -2810,7 +2819,9 @@ function renderSalesLinkTable(rows, totalRevenue, options = {}) {
                 <td data-label="Link/comissario"><strong>${esc(row.name)}</strong><span class="row-hint">${expanded ? "Detalhes abertos" : "Ver detalhes"}</span></td>
                 <td data-label="Receita"><span class="cell-value">${money(row.revenue)}</span></td>
                 ${
-                  compact
+                  condensed
+                    ? `<td data-label="Ingressos"><span class="cell-value">${int(row.sold)}</span><small>${int(row.soldValidated)} validados</small></td><td data-label="% faturamento">${shareCell(row.revenue, totalRevenue)}</td>`
+                    : compact
                     ? `<td data-label="Vendidos"><span class="cell-value">${int(row.sold)}</span></td><td data-label="${showConversion ? "% conversao" : "% faturamento"}">${showConversion ? rateCell(row.soldValidated, row.sold, true, "rate-only") : shareCell(row.revenue, totalRevenue)}</td>`
                     : `<td data-label="% faturamento">${shareCell(row.revenue, totalRevenue)}</td><td data-label="Vendidos"><span class="cell-value">${int(row.sold)}</span></td><td data-label="Val. vendas">${row.sold ? rateCell(row.soldValidated, row.sold) : `<span class="cell-value">-</span>`}</td>`
                 }
@@ -4019,7 +4030,7 @@ function renderEventPromoterSplit(event) {
       <div class="grid two promoter-split" style="--promoter-left:${state.promoterSplit}%">
         <div class="promoter-pane">
           <div class="section-title inline-section"><h3>Vendas por link</h3><p>% sobre o faturamento deste evento.</p></div>
-          ${renderSalesLinkTable(salesRows, Number(event.revenue || 0))}
+          ${renderSalesLinkTable(salesRows, Number(event.revenue || 0), { condensed: true })}
         </div>
         <button
           class="split-resizer"
