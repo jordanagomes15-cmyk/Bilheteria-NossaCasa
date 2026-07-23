@@ -271,6 +271,24 @@ def consume_cancelled_quota(quotas, person_key, batch_key):
     return True
 
 
+def source_ticket_totals(resumo, cancelamentos):
+    sold = complimentary = external = 0
+    for _, row in resumo.iterrows():
+        sold += int(as_number(get_cell(row, "Vendas")) or 0)
+        complimentary += int(as_number(get_cell(row, "Cortesias")) or 0)
+        external += int(as_number(get_cell(row, "Pagamentos externos")) or 0)
+    cancelled = 0
+    for _, row in cancelamentos.iterrows():
+        cancelled += int(as_number(get_cell(row, "Quantidade")) or 1)
+    return {
+        "sold": sold,
+        "complimentary": complimentary,
+        "external": external,
+        "total": sold + complimentary + external,
+        "cancelled": cancelled,
+    }
+
+
 def promoter_from(description, link, complimentary):
     link = canonical_promoter(str(link).replace("-", ""))
     if link:
@@ -462,6 +480,7 @@ def parse_xlsx(path):
     cancelamentos = read_sheet(path, "Cancelamentos")
     contact_by_key = build_contact_map(usuarios, envios)
     cancelled_quotas = cancellation_contexts(cancelamentos)
+    source_totals = source_ticket_totals(resumo, cancelamentos)
 
     price_by_batch = {}
     for _, row in resumo.iterrows():
@@ -580,6 +599,7 @@ def parse_xlsx(path):
         "complimentary": complimentary,
         "validated": validated,
         "revenue": round(revenue, 2),
+        "sourceTotals": {**source_totals, "active": sold + complimentary},
         "batches": sorted(batches.values(), key=lambda x: (-x["revenue"], -x["sold"], -x["validated"])),
         "promoters": promoters,
         "attendees": sorted(attendees.values(), key=lambda x: (-x["revenue"], -x["sold"], -x["complimentaryValidated"], x["name"])),

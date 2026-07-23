@@ -411,6 +411,23 @@ function eventPresenceRate(event) {
   return (Number(event.validated || 0) / Math.max(total, 1)) * 100;
 }
 
+function eventTicketAudit(event) {
+  const active = Number(event.sold || 0) + Number(event.complimentary || 0);
+  const sourceTotal = Number(event.sourceTotals?.total || 0);
+  const cancelled = Number(event.sourceTotals?.cancelled || 0);
+  const displayTotal = Math.max(sourceTotal, active);
+  const noteParts = [];
+  if (sourceTotal && sourceTotal !== active) {
+    noteParts.push(sourceTotal > active ? `${int(active)} ativos no hub` : `${int(sourceTotal)} no resumo`);
+  }
+  if (cancelled) noteParts.push(`${int(cancelled)} cancelamentos no arquivo`);
+  return {
+    active,
+    displayTotal,
+    note: noteParts.join(" · ") || "Compras + cortesias Gandaya",
+  };
+}
+
 function totals(events = filteredEvents()) {
   return events.reduce(
     (acc, event) => {
@@ -3093,19 +3110,19 @@ function renderEvents() {
         .map(
           (event) => {
             const rate = eventPresenceRate(event);
-            const totalTickets = Number(event.sold || 0) + Number(event.complimentary || 0);
+            const ticketAudit = eventTicketAudit(event);
             return `
             <article class="card event-card" data-event="${esc(event.id)}">
               <h3>${esc(event.name)}</h3>
               <p class="muted">${formatDate(event.eventDateTime || event.eventDate)} · ${esc(event.source || "Fonte da pasta de anexos")}</p>
               <div class="event-stats">
-                <div><span class="muted">Ingressos</span><strong>${int(totalTickets)}</strong></div>
+                <div><span class="muted">Ingressos</span><strong>${int(ticketAudit.displayTotal)}</strong><small>${esc(ticketAudit.note)}</small></div>
                 <div><span class="muted">Validados</span><strong>${int(event.validated)}</strong></div>
                 <div><span class="muted">Taxa</span><strong>${pct(rate)}</strong></div>
                 <div><span class="muted">Receita</span><strong>${money(event.revenue)}</strong></div>
               </div>
               <div class="event-card-bars">
-                <div><span>Validacao</span>${shareCell(event.validated, totalTickets)}</div>
+                <div><span>Validacao</span>${shareCell(event.validated, ticketAudit.active)}</div>
               </div>
               <button class="primary" data-event="${esc(event.id)}">Abrir evento</button>
             </article>
@@ -4023,13 +4040,14 @@ function renderDetail() {
   const rate = (Number(event.validated || 0) / Math.max(total, 1)) * 100;
   const split = eventSalesBreakdown(event);
   const audienceSummary = eventAudienceSummary(event);
+  const ticketAudit = eventTicketAudit(event);
   return `
     <section class="grid">
       <div class="grid cards">
         ${metric("Faturamento", money(event.revenue), "Receita total do evento")}
         ${metric("Venda geral", money(split.generalRevenue), `${int(split.generalSold)} ingressos · ${pct(safeRate(split.generalRevenue, event.revenue))} do faturamento`)}
         ${metric("Venda por link", money(split.linkRevenue), `${int(split.linkSold)} ingressos · ${pct(safeRate(split.linkRevenue, event.revenue))} do faturamento`)}
-        ${metric("Ingressos vendidos", int(event.sold), "Somente aba Compras Gandaya")}
+        ${metric("Ingressos totais", int(ticketAudit.displayTotal), ticketAudit.note)}
         ${metric("Check-ins", int(event.validated), `${pct(rate)} de presenca`)}
         ${metric("Compradores unicos", int(audienceSummary.uniqueBuyers), "Participantes finais com compra")}
         ${metric("Cortesias", int(event.complimentary), `${int(split.complimentaryValidated)} validadas (${pct(safeRate(split.complimentaryValidated, event.complimentary))})`)}
