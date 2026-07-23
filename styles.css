@@ -2241,8 +2241,7 @@ h3 {
   line-height: 1.35;
 }
 
-.sales-code-event-repasse,
-.ranking-repasse-note {
+.sales-code-event-extra {
   display: block;
   margin-top: var(--space-1);
   color: var(--muted);
