@@ -1390,6 +1390,7 @@ const SETTLEMENT_EXCLUDED_CODES = new Set(
     "lucas",
     "amigos mqtrf",
     "Cortesias Entrada Ate 00 30",
+    "Viva Sessions",
     "Gui Araújo",
     "Gudi",
     "Djpuff",
