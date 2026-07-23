@@ -55,6 +55,16 @@ def normalize(value):
     return re.sub(r"\s+", " ", value).strip()
 
 
+PROMOTER_ALIASES = {
+    "direct promo": "direct",
+}
+
+
+def canonical_promoter(value):
+    normalized = normalize(value)
+    return PROMOTER_ALIASES.get(normalized, normalized)
+
+
 def slug(value):
     return normalize(value).replace(" ", "-") or "evento"
 
@@ -225,7 +235,7 @@ def consume_cancelled_quota(quotas, person_key, batch_key):
 
 
 def promoter_from(description, link, complimentary):
-    link = normalize(str(link).replace("-", ""))
+    link = canonical_promoter(str(link).replace("-", ""))
     if link:
         return link
     if complimentary and "-" in str(description):
@@ -246,7 +256,7 @@ def promoter_from(description, link, complimentary):
         useful_parts = [part for part in parts if normalize(part) not in generic_parts and not generic_suffix.match(normalize(part))]
         if not useful_parts:
             return ""
-        return normalize(useful_parts[-1])
+        return canonical_promoter(useful_parts[-1])
     return ""
 
 
@@ -274,7 +284,7 @@ def add_promoter(
     batch_key="",
     batch_label="",
 ):
-    key = normalize(name)
+    key = canonical_promoter(name)
     if not key:
         return
     row = promoters.setdefault(key, promoter_empty())
@@ -547,7 +557,7 @@ def parse_pne_pdf(path):
     total_match = re.search(r"Total Inseridos:\s*([0-9.]+).*?Total Convertidos:\s*([0-9.]+)", text, re.S)
     inserted = int(total_match.group(1).replace(".", "")) if total_match else 0
     converted = int(total_match.group(2).replace(".", "")) if total_match else 0
-    rows = []
+    people_by_name = {}
     for line in text.splitlines():
         match = re.match(r"^(.+?)\s+(\d+)\s+(\d+)$", line.strip())
         if not match:
@@ -555,7 +565,10 @@ def parse_pne_pdf(path):
         name, ins, conv = match.groups()
         if normalize(name) in {"pne", "nossa casa", "total geral", "total"}:
             continue
-        rows.append({"name": display(name), "inserted": int(ins), "converted": int(conv)})
+        canonical = canonical_promoter(name)
+        row = people_by_name.setdefault(canonical, {"name": display(canonical), "inserted": 0, "converted": 0})
+        row["inserted"] += int(ins)
+        row["converted"] += int(conv)
     return {
         "source": path.name,
         "eventName": event_name_from_pdf(path),
@@ -563,7 +576,7 @@ def parse_pne_pdf(path):
         "eventDateTime": datetime_from_text(path.name),
         "inserted": inserted,
         "converted": converted,
-        "people": rows,
+        "people": list(people_by_name.values()),
     }
 
 
