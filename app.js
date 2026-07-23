@@ -1369,6 +1369,7 @@ const SETTLEMENT_EXCLUDED_CODES = new Set(
     "ufa",
     "rub formatura",
     "rub formaturas",
+    "maisquenosso",
     "nossa casa",
     "Midas",
     "Midas 2",
