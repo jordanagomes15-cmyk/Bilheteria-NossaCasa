@@ -56,10 +56,13 @@ def normalize(value):
 
 
 PROMOTER_ALIASES = {
+    "codesemtaxa": "code",
+    "code sem taxa": "code",
     "coderesemtaxa": "codere",
     "codere sem taxa": "codere",
     "codelissemtaxa": "codelis",
     "codelis sem taxa": "codelis",
+    "anightlife eventos": "anightlife",
     "direct promo": "direct",
     "lucas athanassopoulos": "direct",
     "danilo schwartz": "exit",
