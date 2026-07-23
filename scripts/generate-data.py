@@ -57,6 +57,27 @@ def normalize(value):
 
 PROMOTER_ALIASES = {
     "direct promo": "direct",
+    "danilo schwartz": "exit",
+    "convidadovitty": "vitty",
+    "convidado vitty": "vitty",
+    "convidadodorocky": "rocky",
+    "convidado do rocky": "rocky",
+    "convidadoromanha": "romanha",
+    "convidado romanha": "romanha",
+    "convidadomidia011": "midia011",
+    "convidado midia011": "midia011",
+    "convidadolucas": "lucas",
+    "convidado lucas": "lucas",
+    "convidado thi cenora": "convidadothicenora",
+    "agencia timelapse": "timelapse",
+    "agencia lets fun": "fun",
+    "renova agencia": "renova",
+    "agencia blondies": "blondies",
+    "everyone agencia": "everyone",
+    "ms sinisgalli": "ms",
+    "sinisgalli ms": "ms",
+    "marcello goncalves sinisgalli": "ms",
+    "marcello sinisgalli": "ms",
 }
 
 
@@ -239,7 +260,7 @@ def promoter_from(description, link, complimentary):
     if link:
         return link
     if complimentary and "-" in str(description):
-        parts = [part.strip() for part in str(description).split("-") if part.strip()]
+        parts = [part.strip() for part in re.split(r"\s*[-|]\s*", str(description)) if part.strip()]
         generic_suffix = re.compile(r"^(sujeito\s+a\s+lo(?:t|c)acao|valido\s+ate\s+\d{1,2}h\d{0,2})$", re.I)
         while parts and generic_suffix.match(normalize(parts[-1])):
             parts.pop()

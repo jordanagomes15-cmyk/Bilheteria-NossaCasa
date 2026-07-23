@@ -1363,9 +1363,13 @@ const SETTLEMENT_EXCLUDED_CODES = new Set(
     "aniversariante",
     "ufa",
     "rub formatura",
+    "rub formaturas",
     "nossa casa",
     "Midas",
-    "Midas 2"
+    "Midas 2",
+    "Allan Simon",
+    "sujeito a lotação somosbw",
+    "sujeito a lotação hands up"
   ].map(normalizeCodeName)
 );
 const SETTLEMENT_GUARANTEE_EXCLUDED_DATES = new Set(["2026-07-12", "2026-07-15", "2026-07-19"]);
