@@ -414,11 +414,15 @@ function eventPresenceRate(event) {
 function eventTicketAudit(event) {
   const active = Number(event.sold || 0) + Number(event.complimentary || 0);
   const sourceTotal = Number(event.sourceTotals?.total || 0);
+  const rawTickets = Number(event.sourceTotals?.rawTickets || 0);
   const cancelled = Number(event.sourceTotals?.cancelled || 0);
-  const displayTotal = Math.max(sourceTotal, active);
+  const displayTotal = Math.max(rawTickets, sourceTotal, active);
   const noteParts = [];
-  if (sourceTotal && sourceTotal !== active) {
+  if (rawTickets && rawTickets !== displayTotal) noteParts.push(`${int(rawTickets)} na aba Ingressos`);
+  if (sourceTotal && sourceTotal !== active && sourceTotal !== displayTotal) {
     noteParts.push(sourceTotal > active ? `${int(active)} ativos no hub` : `${int(sourceTotal)} no resumo`);
+  } else if (displayTotal !== active) {
+    noteParts.push(`${int(active)} ativos no hub`);
   }
   if (cancelled) noteParts.push(`${int(cancelled)} cancelamentos no arquivo`);
   return {
@@ -426,6 +430,32 @@ function eventTicketAudit(event) {
     displayTotal,
     note: noteParts.join(" · ") || "Compras + cortesias Gandaya",
   };
+}
+
+function eventGenderRows(event) {
+  return (event?.audienceSummary?.genderRows || [])
+    .filter((row) => row && row.label && Number(row.people || 0) > 0)
+    .slice()
+    .sort((a, b) => Number(b.people || 0) - Number(a.people || 0));
+}
+
+function renderEventAudienceStrip(event) {
+  const rows = eventGenderRows(event).filter((row) => ["feminino", "masculino"].includes(normalizeText(row.label))).slice(0, 2);
+  if (!rows.length) return "";
+  return `
+    <div class="event-audience-strip" aria-label="Perfil de publico">
+      ${rows
+        .map(
+          (row) => `
+            <div>
+              <span>${esc(row.label)}</span>
+              <strong>${pct(row.share)}</strong>
+            </div>
+          `
+        )
+        .join("")}
+    </div>
+  `;
 }
 
 function totals(events = filteredEvents()) {
@@ -2829,8 +2859,8 @@ function metric(label, value, note, actionHtml = "") {
 }
 
 function eventMini(event) {
-  const total = Number(event.sold || 0) + Number(event.complimentary || 0);
-  const rate = (Number(event.validated || 0) / Math.max(total, 1)) * 100;
+  const ticketAudit = eventTicketAudit(event);
+  const rate = (Number(event.validated || 0) / Math.max(ticketAudit.active, 1)) * 100;
   const split = eventSalesBreakdown(event);
   const linkShare = safeRate(split.linkRevenue, event.revenue);
   return `
@@ -2840,11 +2870,12 @@ function eventMini(event) {
         <p class="muted">${money(event.revenue)} em receita</p>
       </div>
       <div class="event-mini-stats">
-        <span><b>${int(event.sold)}</b> vendidos</span>
+        <span><b>${int(ticketAudit.displayTotal)}</b> ingressos</span>
         <span><b>${int(event.complimentary)}</b> cortesias</span>
         <span><b>${pct(rate)}</b> presenca</span>
         <span><b>${pct(linkShare)}</b> por link</span>
       </div>
+      ${renderEventAudienceStrip(event)}
       <div class="bar"><i style="width:${clampPercent(rate)}%"></i></div>
     </button>
   `;
@@ -3127,6 +3158,7 @@ function renderEvents() {
               <div class="event-card-bars">
                 <div><span>Validacao</span>${shareCell(event.validated, ticketAudit.active)}</div>
               </div>
+              ${renderEventAudienceStrip(event)}
               <button class="primary" data-event="${esc(event.id)}">Abrir evento</button>
             </article>
           `;
@@ -4044,6 +4076,7 @@ function renderDetail() {
   const split = eventSalesBreakdown(event);
   const audienceSummary = eventAudienceSummary(event);
   const ticketAudit = eventTicketAudit(event);
+  const genderRows = eventGenderRows(event);
   return `
     <section class="grid">
       <div class="grid cards">
@@ -4055,6 +4088,7 @@ function renderDetail() {
         ${metric("Compradores unicos", int(audienceSummary.uniqueBuyers), "Participantes finais com compra")}
         ${metric("Cortesias", int(event.complimentary), `${int(split.complimentaryValidated)} validadas (${pct(safeRate(split.complimentaryValidated, event.complimentary))})`)}
         ${metric("Convidados unicos", int(audienceSummary.uniqueCourtesy), "Participantes finais com cortesia")}
+        ${genderRows.slice(0, 2).map((row) => metric(row.label, pct(row.share), `${int(row.people)} pessoas no perfil do publico`)).join("")}
         ${metric("PNE", event.pne ? `${int(event.pne.converted)}/${int(event.pne.inserted)}` : "-", "Convertidos / inseridos")}
       </div>
       <div class="card">

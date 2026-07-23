@@ -2926,6 +2926,41 @@ tr:last-child td {
   text-transform: uppercase;
 }
 
+.event-audience-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.event-audience-strip div {
+  min-width: 0;
+  padding: var(--space-2);
+  border: 1px solid rgba(222, 208, 183, 0.72);
+  border-radius: var(--radius);
+  background: rgba(255, 253, 248, 0.58);
+}
+
+.event-audience-strip span,
+.event-audience-strip strong {
+  display: block;
+}
+
+.event-audience-strip span {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.event-audience-strip strong {
+  margin-top: var(--space-1);
+  color: var(--text);
+  font-size: var(--text-lg);
+  line-height: 1;
+}
+
 .event-highlight-grid {
   margin-top: var(--space-4);
   display: grid;

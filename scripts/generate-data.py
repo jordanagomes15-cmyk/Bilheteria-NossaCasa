@@ -165,22 +165,34 @@ def person_summary_key(entry):
 
 
 def event_audience_summary(event):
-    all_people = set()
+    all_people = {}
     buyers = set()
     courtesy = set()
     for entry in event.get("audience") or []:
         key = person_summary_key(entry)
         if not key:
             continue
-        all_people.add(key)
+        person = all_people.setdefault(key, {"gender": ""})
+        if not person["gender"] and entry.get("gender"):
+            person["gender"] = display(entry.get("gender"))
         if entry.get("type") == "purchase":
             buyers.add(key)
         if entry.get("type") == "courtesy":
             courtesy.add(key)
+    gender_counts = {}
+    for person in all_people.values():
+        gender = person.get("gender") or "Nao informado"
+        gender_counts[gender] = gender_counts.get(gender, 0) + 1
+    gender_rows = [
+        {"label": label, "people": people, "share": round((people / max(len(all_people), 1)) * 100, 2)}
+        for label, people in gender_counts.items()
+        if label != "Nao informado"
+    ]
     return {
         "uniquePeople": len(all_people),
         "uniqueBuyers": len(buyers),
         "uniqueCourtesy": len(courtesy),
+        "genderRows": sorted(gender_rows, key=lambda row: (-row["people"], row["label"])),
     }
 
 
@@ -271,12 +283,18 @@ def consume_cancelled_quota(quotas, person_key, batch_key):
     return True
 
 
-def source_ticket_totals(resumo, cancelamentos):
+def source_ticket_totals(resumo, ingressos, cancelamentos):
     sold = complimentary = external = 0
     for _, row in resumo.iterrows():
         sold += int(as_number(get_cell(row, "Vendas")) or 0)
         complimentary += int(as_number(get_cell(row, "Cortesias")) or 0)
         external += int(as_number(get_cell(row, "Pagamentos externos")) or 0)
+    raw_sold = raw_complimentary = 0
+    for _, row in ingressos.iterrows():
+        if "cortesia" in normalize(get_cell(row, "Descrição")):
+            raw_complimentary += 1
+        else:
+            raw_sold += 1
     cancelled = 0
     for _, row in cancelamentos.iterrows():
         cancelled += int(as_number(get_cell(row, "Quantidade")) or 1)
@@ -285,6 +303,9 @@ def source_ticket_totals(resumo, cancelamentos):
         "complimentary": complimentary,
         "external": external,
         "total": sold + complimentary + external,
+        "rawSold": raw_sold,
+        "rawComplimentary": raw_complimentary,
+        "rawTickets": raw_sold + raw_complimentary,
         "cancelled": cancelled,
     }
 
@@ -480,7 +501,7 @@ def parse_xlsx(path):
     cancelamentos = read_sheet(path, "Cancelamentos")
     contact_by_key = build_contact_map(usuarios, envios)
     cancelled_quotas = cancellation_contexts(cancelamentos)
-    source_totals = source_ticket_totals(resumo, cancelamentos)
+    source_totals = source_ticket_totals(resumo, ingressos, cancelamentos)
 
     price_by_batch = {}
     for _, row in resumo.iterrows():
