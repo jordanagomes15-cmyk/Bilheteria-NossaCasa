@@ -431,15 +431,18 @@ function eventTicketAudit(event) {
 function totals(events = filteredEvents()) {
   return events.reduce(
     (acc, event) => {
+      const ticketAudit = eventTicketAudit(event);
       acc.sold += Number(event.sold || 0);
       acc.complimentary += Number(event.complimentary || 0);
+      acc.ticketDisplayTotal += ticketAudit.displayTotal;
+      acc.ticketActiveTotal += ticketAudit.active;
       acc.validated += Number(event.validated || 0);
       acc.revenue += Number(event.revenue || 0);
       acc.pneInserted += Number(event.pne?.inserted || 0);
       acc.pneConverted += Number(event.pne?.converted || 0);
       return acc;
     },
-    { sold: 0, complimentary: 0, validated: 0, revenue: 0, pneInserted: 0, pneConverted: 0 }
+    { sold: 0, complimentary: 0, ticketDisplayTotal: 0, ticketActiveTotal: 0, validated: 0, revenue: 0, pneInserted: 0, pneConverted: 0 }
   );
 }
 
@@ -2706,7 +2709,7 @@ function renderOverview() {
       ${renderDashboardFilters(events)}
       <div class="grid cards overview-metrics">
         ${metric("Faturamento", money(sum.revenue), "Receita total registrada")}
-        ${metric("Ingressos vendidos", int(sum.sold), "Somente aba Compras Gandaya")}
+        ${metric("Ingressos totais", int(sum.ticketDisplayTotal), `${int(sum.sold)} vendidos · ${int(sum.complimentary)} cortesias ativas`)}
         ${metric("Venda geral", money(split.generalRevenue), `${int(split.generalSold)} ingressos · ${pct(safeRate(split.generalRevenue, sum.revenue))} do faturamento`)}
         ${metric("Venda por link", money(split.linkRevenue), `${int(split.linkSold)} ingressos · ${pct(safeRate(split.linkRevenue, sum.revenue))} do faturamento`)}
       </div>
