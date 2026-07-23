@@ -1274,12 +1274,40 @@ const SETTLEMENT_TIERS = {
 
 const SETTLEMENT_TIER_ORDER = ["gold", "silver", "bronze", "unclassified"];
 const SPECIAL_SETTLEMENT_CODES = new Set(["ra", "mare", "marianaparik"]);
+const SETTLEMENT_EXCLUDED_CODES = new Set(
+  [
+    "Hands Up",
+    "patrocinado",
+    "Ads",
+    "today",
+    "Todaycrew",
+    "somosbw",
+    "bw",
+    "soul",
+    "grupo rub",
+    "rub",
+    "pmt",
+    "pmt today",
+    "patrocinador",
+    "artístico",
+    "aniversariante",
+    "ufa",
+    "rub formatura",
+    "nossa casa",
+    "Midas",
+    "Midas 2"
+  ].map(normalizeCodeName)
+);
 const SETTLEMENT_GUARANTEE_EXCLUDED_DATES = new Set(["2026-07-12", "2026-07-15", "2026-07-19"]);
 const SETTLEMENT_COURTESY_VALIDATION_FEE = 10;
 const SETTLEMENT_MINIMUM_COMMISSION_SOLD = 10;
 
 function isSpecialSettlementCode(name) {
   return SPECIAL_SETTLEMENT_CODES.has(normalizeCodeName(name));
+}
+
+function isExcludedSettlementCode(name) {
+  return SETTLEMENT_EXCLUDED_CODES.has(normalizeCodeName(name));
 }
 
 function settlementTierForEvent(event) {
@@ -1511,7 +1539,7 @@ function buildSettlementAnalysis(events = filteredEvents()) {
     const tierKey = settlementTierForEvent(event);
     Object.entries(event.promoters || {}).forEach(([name, data]) => {
       const key = normalizeCodeName(name);
-      if (!key) return;
+      if (!key || isExcludedSettlementCode(key)) return;
       const special = isSpecialSettlementCode(key);
       if (!rows.has(key)) rows.set(key, createSettlementAccumulator(name, special ? "100k garantido" : "Padrao"));
       addSettlementData(rows.get(key), tierKey, event, data);
@@ -1521,7 +1549,7 @@ function buildSettlementAnalysis(events = filteredEvents()) {
       const key = normalizeCodeName(person.name);
       const converted = Number(person.converted || 0);
       const inserted = Number(person.inserted || 0);
-      if (!key || (!converted && !inserted)) return;
+      if (!key || isExcludedSettlementCode(key) || (!converted && !inserted)) return;
       const special = isSpecialSettlementCode(key);
       const data = {
         source: "pne",
