@@ -1376,6 +1376,7 @@ const SETTLEMENT_EXCLUDED_CODES = new Set(
     "sujeito a lotação hands up"
   ].map(normalizeCodeName)
 );
+const SETTLEMENT_EXCLUDED_CODE_PATTERNS = ["niver", "bday"].map(normalizeCodeName);
 const SETTLEMENT_GUARANTEE_EXCLUDED_DATES = new Set(["2026-07-12", "2026-07-15", "2026-07-19"]);
 const SETTLEMENT_COURTESY_VALIDATION_FEE = 10;
 const SETTLEMENT_MINIMUM_COMMISSION_SOLD = 10;
@@ -1385,7 +1386,8 @@ function isSpecialSettlementCode(name) {
 }
 
 function isExcludedSettlementCode(name) {
-  return SETTLEMENT_EXCLUDED_CODES.has(normalizeCodeName(name));
+  const key = normalizeCodeName(name);
+  return SETTLEMENT_EXCLUDED_CODES.has(key) || SETTLEMENT_EXCLUDED_CODE_PATTERNS.some((pattern) => key.includes(pattern));
 }
 
 function settlementTierForEvent(event) {
