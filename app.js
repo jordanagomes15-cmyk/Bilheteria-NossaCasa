@@ -1099,16 +1099,54 @@ function exportSettlementCsv() {
 }
 
 function rankingRowsForEvents(events = filteredEvents()) {
-  const repasseByCode = new Map(buildSettlementAnalysis(events).rows.map((row) => [normalizeCodeName(row.name), row.repasse]));
+  const settlementByCode = settlementRowsByCode(events);
   const query = normalizeText(state.query);
   return sortRankingRows(
     promoterRanking(events)
-      .map((row) => ({
-        ...row,
-        repasse: Number(repasseByCode.get(normalizeCodeName(row.name)) || 0)
-      }))
+      .map((row) => decorateRankingRowWithSettlement(row, settlementByCode.get(normalizeCodeName(row.name))))
       .filter((row) => normalizeText(row.name).includes(query))
   );
+}
+
+function settlementRowsByCode(events = filteredEvents()) {
+  return new Map(buildSettlementAnalysis(events).rows.map((row) => [normalizeCodeName(row.name), row]));
+}
+
+function decorateRankingRowWithSettlement(row, settlementRow) {
+  if (!settlementRow) {
+    return {
+      ...row,
+      repasse: 0,
+      courtesyValidationRepasse: 0,
+      gandayaCourtesyValidated: 0,
+      pneCourtesyValidated: 0
+    };
+  }
+  const settlementEvents = new Map();
+  (settlementRow.tierRows || []).forEach((tier) => {
+    (tier.eventRows || []).forEach((eventRow) => {
+      if (!eventRow?.id) return;
+      settlementEvents.set(eventRow.id, eventRow);
+    });
+  });
+  return {
+    ...row,
+    repasse: Number(settlementRow.repasse || 0),
+    courtesyValidationRepasse: Number(settlementRow.courtesyValidationRepasse || 0),
+    gandayaCourtesyValidated: Number(settlementRow.gandayaCourtesyValidated || 0),
+    pneCourtesyValidated: Number(settlementRow.pneCourtesyValidated || 0),
+    events: (row.events || []).map((eventRow) => {
+      const settlementEvent = settlementEvents.get(eventRow.id);
+      if (!settlementEvent) return eventRow;
+      return {
+        ...eventRow,
+        complimentaryValidated: Number(settlementEvent.complimentaryValidated || eventRow.complimentaryValidated || 0),
+        gandayaCourtesyValidated: Number(settlementEvent.gandayaCourtesyValidated || 0),
+        pneCourtesyValidated: Number(settlementEvent.pneCourtesyValidated || 0),
+        courtesyValidationRepasse: Number(settlementEvent.courtesyValidationRepasse || 0)
+      };
+    })
+  };
 }
 
 function sortRankingRows(rows) {
@@ -2754,6 +2792,7 @@ function renderRankingTable(rows) {
           ${rows
             .map((row, index) => {
               const key = salesCodeKey(row.name);
+              const courtesyRepasse = Number(row.courtesyValidationRepasse || 0);
               return `
                 <tr class="rank-row sales-code-row" data-sales-code="${esc(key)}" title="Clique para ver detalhes">
                   <td><strong>${index + 1}. ${esc(row.name)}</strong></td>
@@ -2763,7 +2802,10 @@ function renderRankingTable(rows) {
                   <td>${row.sold ? rateCell(row.soldValidated, row.sold) : "-"}</td>
                   <td>${int(row.complimentary)}</td>
                   <td>${row.complimentary ? rateCell(row.complimentaryValidated, row.complimentary) : "-"}</td>
-                  <td>${money(row.repasse)}</td>
+                  <td>
+                    <strong>${money(row.repasse)}</strong>
+                    ${courtesyRepasse ? `<small class="ranking-repasse-note">${money(courtesyRepasse)} por validacoes</small>` : ""}
+                  </td>
                 </tr>
               `;
             })
@@ -2881,6 +2923,10 @@ function renderSalesCodeDetail(row, totalRevenue) {
           .map((eventRow) => {
             const expanded = state.salesCodeExpandedEventId === eventRow.key;
             const validationRate = eventRow.sold ? pct(safeRate(eventRow.soldValidated, eventRow.sold)) : "-";
+            const courtesyRepasse = Number(eventRow.courtesyValidationRepasse || 0);
+            const courtesyValidated = Number(eventRow.complimentaryValidated || 0);
+            const gandayaCourtesy = Number(eventRow.gandayaCourtesyValidated || 0);
+            const pneCourtesy = Number(eventRow.pneCourtesyValidated || 0);
             return `
               <article class="sales-code-event-item ${expanded ? "is-expanded" : ""}">
                 <div class="sales-code-event-main">
@@ -2893,7 +2939,14 @@ function renderSalesCodeDetail(row, totalRevenue) {
                       : ""
                   }
                 </div>
-                <p class="sales-code-event-meta">${int(eventRow.sold)} vendidos - ${money(eventRow.revenue)} - ${validationRate} validados</p>
+                <p class="sales-code-event-meta">
+                  ${int(eventRow.sold)} vendidos - ${money(eventRow.revenue)} - ${validationRate} validados
+                  ${
+                    courtesyRepasse
+                      ? `<span class="sales-code-event-repasse">${money(courtesyRepasse)} por validacoes de cortesia · ${int(courtesyValidated)} pessoas (${int(gandayaCourtesy)} Gandaya / ${int(pneCourtesy)} PNE)</span>`
+                      : ""
+                  }
+                </p>
                 ${expanded ? `<div class="sales-code-event-lots">${renderSalesCodeBatchTable(eventRow.batchRows)}</div>` : ""}
               </article>
             `;
@@ -2910,7 +2963,12 @@ function salesCodeDrawerContext() {
   const currentEvent = selectedEvent();
   const isDetail = state.view === "detail" && currentEvent;
   const scopeEvents = isDetail ? [currentEvent] : filteredEvents();
-  const rows = isDetail ? eventPromoters(currentEvent) : promoterRanking(scopeEvents);
+  const rows =
+    state.view === "commissioners"
+      ? rankingRowsForEvents(scopeEvents)
+      : isDetail
+      ? eventPromoters(currentEvent).map((row) => decorateRankingRowWithSettlement(row, settlementRowsByCode(scopeEvents).get(normalizeCodeName(row.name))))
+      : promoterRanking(scopeEvents);
   const row = rows.find((item) => salesCodeKey(item.name) === state.salesCodeDrawerKey);
   if (!row) return null;
   const totalRevenue = isDetail
@@ -2924,6 +2982,8 @@ function renderSalesCodeDrawer() {
   const context = salesCodeDrawerContext();
   if (!context) return "";
   const { row, totalRevenue, scopeTitle } = context;
+  const repasseText = Number(row.repasse || 0) ? ` · ${money(row.repasse)} repasse` : "";
+  const courtesyRepasseText = Number(row.courtesyValidationRepasse || 0) ? ` · ${money(row.courtesyValidationRepasse)} por validacoes` : "";
   return `
     <div class="batch-drawer-backdrop" data-action="close-sales-code-drawer"></div>
     <aside class="batch-drawer" role="dialog" aria-modal="true" aria-label="Detalhes do link">
@@ -2931,7 +2991,7 @@ function renderSalesCodeDrawer() {
         <div>
           <span class="eyebrow">${esc(scopeTitle || "Recorte atual")}</span>
           <h3>${esc(row.name)}</h3>
-          <p>${int(row.sold)} vendidos · ${int(row.soldValidated)} validados · ${money(row.revenue)} · ${pct(safeRate(row.revenue, totalRevenue))}</p>
+          <p>${int(row.sold)} vendidos · ${int(row.soldValidated)} validados · ${money(row.revenue)} · ${pct(safeRate(row.revenue, totalRevenue))}${repasseText}${courtesyRepasseText}</p>
         </div>
         <button class="ghost icon-button" data-action="close-sales-code-drawer" aria-label="Fechar detalhes">×</button>
       </div>
