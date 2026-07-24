@@ -491,7 +491,8 @@ function rowComplimentaryValidated(row) {
 }
 
 function settlementLinkCourtesyCounts(row) {
-  return Object.values(row?.batches || {}).reduce(
+  const batches = row?.batches ? Object.values(row.batches) : Array.isArray(row?.batchRows) ? row.batchRows : [];
+  return batches.reduce(
     (acc, batch) => {
       const label = normalizeText(`${batch?.rawLabel || ""} ${batch?.label || ""}`);
       if (!label.includes("cortesia") || (!label.includes("feminino") && !label.includes("masculino"))) return acc;
@@ -1293,6 +1294,8 @@ function promoterRanking(events = filteredEvents()) {
         validated: 0,
         soldValidated: 0,
         complimentaryValidated: 0,
+        linkCourtesyIssued: 0,
+        linkCourtesyValidated: 0,
         revenue: 0,
         events: []
       });
@@ -1303,14 +1306,17 @@ function promoterRanking(events = filteredEvents()) {
     const validated = Number(data.validated || 0);
     const soldValidated = rowSoldValidated(data);
     const complimentaryValidated = rowComplimentaryValidated(data);
+    const linkCourtesy = settlementLinkCourtesyCounts(data);
     const revenue = Number(data.revenue || 0);
     row.sold += sold;
     row.complimentary += complimentary;
     row.validated += validated;
     row.soldValidated += soldValidated;
     row.complimentaryValidated += complimentaryValidated;
+    row.linkCourtesyIssued += linkCourtesy.issued;
+    row.linkCourtesyValidated += linkCourtesy.validated;
     row.revenue += revenue;
-    row.events.push({ id: event.id, name: event.name, ...data, sold, complimentary, validated, soldValidated, complimentaryValidated, revenue });
+    row.events.push({ id: event.id, name: event.name, ...data, sold, complimentary, validated, soldValidated, complimentaryValidated, linkCourtesyIssued: linkCourtesy.issued, linkCourtesyValidated: linkCourtesy.validated, revenue });
   };
   events.forEach((event) => {
     Object.entries(event.promoters || {}).forEach(([name, data]) => {
@@ -1360,12 +1366,11 @@ function capacityBatchDisplayName(batch, fallbackName = "") {
   const subject = parts.find((part) => normalizeText(part).includes("sujeito")) || "Sujeito a lotação";
   const usefulParts = parts.filter((part) => {
     const normalized = normalizeText(part);
-    return normalized !== "cortesia" && !normalized.includes("sujeito");
+    return normalized !== "cortesia" && normalized !== "feminino" && normalized !== "masculino" && !normalized.includes("sujeito");
   });
   const lot = usefulParts[0] || "";
   const code = usefulParts.slice(1).join(" - ");
-  if (code && lot) return `${code} - ${lot} (${subject})`;
-  if (code) return `${code} (${subject})`;
+  if (code) return code;
   if (lot) return `${lot} (${subject})`;
   return rawLabel || displayName(fallbackName);
 }
@@ -3036,16 +3041,17 @@ function renderSalesLinkTable(rows, totalRevenue, options = {}) {
             .map((row) => {
               const key = salesCodeKey(row.name);
               const expanded = state.salesCodeDrawerKey === key;
+              const linkCourtesyNote = row.linkCourtesyIssued ? `<small>Cortesia F/M: ${int(row.linkCourtesyValidated)} de ${int(row.linkCourtesyIssued)} val.</small>` : "";
               return `
               <tr class="sales-code-row ${expanded ? "is-expanded" : ""}" data-sales-code="${esc(key)}" title="Clique para ver detalhes">
                 <td data-label="Link/comissario"><strong>${esc(row.name)}</strong><span class="row-hint">${expanded ? "Detalhes abertos" : "Ver detalhes"}</span></td>
                 <td data-label="Receita"><span class="cell-value">${money(row.revenue)}</span></td>
                 ${
                   condensed
-                    ? `<td data-label="Ingressos"><span class="cell-value">${int(row.sold)}</span><small>${int(row.soldValidated)} validados</small></td><td data-label="% faturamento">${shareCell(row.revenue, totalRevenue)}</td>`
+                    ? `<td data-label="Ingressos"><span class="cell-value">${int(row.sold)}</span><small>${int(row.soldValidated)} validados</small>${linkCourtesyNote}</td><td data-label="% faturamento">${shareCell(row.revenue, totalRevenue)}</td>`
                     : compact
                     ? `<td data-label="Vendidos"><span class="cell-value">${int(row.sold)}</span></td><td data-label="${showConversion ? "% conversao" : "% faturamento"}">${showConversion ? rateCell(row.soldValidated, row.sold, true, "rate-only") : shareCell(row.revenue, totalRevenue)}</td>`
-                    : `<td data-label="% faturamento">${shareCell(row.revenue, totalRevenue)}</td><td data-label="Vendidos"><span class="cell-value">${int(row.sold)}</span></td><td data-label="Val. vendas">${row.sold ? rateCell(row.soldValidated, row.sold) : `<span class="cell-value">-</span>`}</td>`
+                    : `<td data-label="% faturamento">${shareCell(row.revenue, totalRevenue)}</td><td data-label="Vendidos"><span class="cell-value">${int(row.sold)}</span>${linkCourtesyNote}</td><td data-label="Val. vendas">${row.sold ? rateCell(row.soldValidated, row.sold) : `<span class="cell-value">-</span>`}</td>`
                 }
               </tr>
             `;
@@ -3108,6 +3114,8 @@ function renderSalesCodeDetail(row, totalRevenue) {
             const courtesyIssued = Number(eventRow.complimentary || 0);
             const courtesyValidated = Number(eventRow.complimentaryValidated || 0);
             const courtesyRate = courtesyIssued ? pct(safeRate(courtesyValidated, courtesyIssued)) : "-";
+            const linkCourtesyIssued = Number(eventRow.linkCourtesyIssued || 0);
+            const linkCourtesyValidated = Number(eventRow.linkCourtesyValidated || 0);
             return `
               <article class="sales-code-event-item ${expanded ? "is-expanded" : ""}" data-sales-event-item="${esc(eventRow.key)}">
                 <div class="sales-code-event-main">
@@ -3119,6 +3127,7 @@ function renderSalesCodeDetail(row, totalRevenue) {
                 <p class="sales-code-event-meta">
                   ${int(eventRow.sold)} vendidos - ${money(eventRow.revenue)} - ${validationRate} validados
                   <span class="sales-code-event-extra">${int(courtesyIssued)} cortesias emitidas - ${int(courtesyValidated)} validadas - ${courtesyRate} validacao</span>
+                  ${linkCourtesyIssued ? `<span class="sales-code-event-extra">Cortesia F/M por link: ${int(linkCourtesyValidated)} de ${int(linkCourtesyIssued)} validadas</span>` : ""}
                 </p>
                 ${expanded ? `<div class="sales-code-event-lots">${renderSalesCodeBatchTable(eventRow.batchRows)}</div>` : ""}
               </article>
@@ -3184,9 +3193,10 @@ function renderCourtesyLinkTable(rows, options = {}) {
           ${orderedRows
             .map((row) => {
               const rate = safeRate(row.complimentaryValidated, row.complimentary);
+              const linkCourtesyNote = row.linkCourtesyIssued ? `<small>Cortesia F/M: ${int(row.linkCourtesyValidated)} de ${int(row.linkCourtesyIssued)} val.</small>` : "";
               return `
                 <tr>
-                  <td data-label="Link/comissario"><strong>${esc(row.name)}</strong></td>
+                  <td data-label="Link/comissario"><strong>${esc(row.name)}</strong>${linkCourtesyNote}</td>
                   <td data-label="Cortesias emitidas"><span class="cell-value">${int(row.complimentary)}</span></td>
                   <td data-label="Validadas"><span class="cell-value">${int(row.complimentaryValidated)}</span></td>
                   <td data-label="% validacao">${rateCell(row.complimentaryValidated, row.complimentary, true, compact ? "rate-only" : "count-rate")}</td>
@@ -4241,8 +4251,20 @@ function eventPromoters(event) {
         validated: Number(row.data.validated || 0),
         soldValidated: rowSoldValidated(row.data),
         complimentaryValidated: rowComplimentaryValidated(row.data),
+        linkCourtesyIssued: settlementLinkCourtesyCounts(row.data).issued,
+        linkCourtesyValidated: settlementLinkCourtesyCounts(row.data).validated,
         revenue: Number(row.data.revenue || 0),
-        events: [{ id: event.id, name: event.name, ...row.data, soldValidated: rowSoldValidated(row.data), complimentaryValidated: rowComplimentaryValidated(row.data) }]
+        events: [
+          {
+            id: event.id,
+            name: event.name,
+            ...row.data,
+            soldValidated: rowSoldValidated(row.data),
+            complimentaryValidated: rowComplimentaryValidated(row.data),
+            linkCourtesyIssued: settlementLinkCourtesyCounts(row.data).issued,
+            linkCourtesyValidated: settlementLinkCourtesyCounts(row.data).validated
+          }
+        ]
       }));
     })
     .sort((a, b) => b.revenue - a.revenue || b.sold - a.sold);
