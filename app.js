@@ -490,6 +490,28 @@ function rowComplimentaryValidated(row) {
   return Math.min(complimentary, Math.max(0, validated - estimatedPaid));
 }
 
+function settlementLinkCourtesyCounts(row) {
+  return Object.values(row?.batches || {}).reduce(
+    (acc, batch) => {
+      const label = normalizeText(`${batch?.rawLabel || ""} ${batch?.label || ""}`);
+      if (!label.includes("cortesia") || (!label.includes("feminino") && !label.includes("masculino"))) return acc;
+      const issued = Number(batch.complimentary || 0);
+      const validated = rowComplimentaryValidated(batch);
+      acc.issued += issued;
+      acc.validated += validated;
+      if (label.includes("feminino")) {
+        acc.feminino += issued;
+        acc.femininoValidated += validated;
+      } else {
+        acc.masculino += issued;
+        acc.masculinoValidated += validated;
+      }
+      return acc;
+    },
+    { issued: 0, validated: 0, feminino: 0, femininoValidated: 0, masculino: 0, masculinoValidated: 0 }
+  );
+}
+
 function rowSoldValidated(row) {
   if (Number.isFinite(Number(row?.soldValidated))) return Number(row.soldValidated || 0);
   const sold = Number(row?.sold || 0);
@@ -1536,6 +1558,12 @@ function createSettlementAccumulator(name, model) {
     complimentaryValidated: 0,
     gandayaCourtesyValidated: 0,
     pneCourtesyValidated: 0,
+    linkCourtesyIssued: 0,
+    linkCourtesyValidated: 0,
+    linkCourtesyFeminino: 0,
+    linkCourtesyFemininoValidated: 0,
+    linkCourtesyMasculino: 0,
+    linkCourtesyMasculinoValidated: 0,
     courtesyValidationRepasse: 0,
     revenue: 0,
     repasse: 0,
@@ -1552,6 +1580,12 @@ function createSettlementAccumulator(name, model) {
         complimentaryValidated: 0,
         gandayaCourtesyValidated: 0,
         pneCourtesyValidated: 0,
+        linkCourtesyIssued: 0,
+        linkCourtesyValidated: 0,
+        linkCourtesyFeminino: 0,
+        linkCourtesyFemininoValidated: 0,
+        linkCourtesyMasculino: 0,
+        linkCourtesyMasculinoValidated: 0,
         courtesyValidationRepasse: 0,
         revenue: 0,
         guaranteeEligibleSold: 0,
@@ -1577,6 +1611,7 @@ function addSettlementData(row, tierKey, event, data) {
   const soldValidated = rowSoldValidated(data);
   const complimentary = Number(data.complimentary || 0);
   const complimentaryValidated = rowComplimentaryValidated(data);
+  const linkCourtesy = source === "gandaya" ? settlementLinkCourtesyCounts(data) : settlementLinkCourtesyCounts(null);
   const revenue = Number(data.revenue || 0);
   const courtesyValidationRepasse = complimentaryValidated * SETTLEMENT_COURTESY_VALIDATION_FEE;
   row.sold += sold;
@@ -1585,6 +1620,12 @@ function addSettlementData(row, tierKey, event, data) {
   row.complimentaryValidated += complimentaryValidated;
   row.gandayaCourtesyValidated += source === "gandaya" ? complimentaryValidated : 0;
   row.pneCourtesyValidated += source === "pne" ? complimentaryValidated : 0;
+  row.linkCourtesyIssued += linkCourtesy.issued;
+  row.linkCourtesyValidated += linkCourtesy.validated;
+  row.linkCourtesyFeminino += linkCourtesy.feminino;
+  row.linkCourtesyFemininoValidated += linkCourtesy.femininoValidated;
+  row.linkCourtesyMasculino += linkCourtesy.masculino;
+  row.linkCourtesyMasculinoValidated += linkCourtesy.masculinoValidated;
   row.courtesyValidationRepasse += courtesyValidationRepasse;
   row.revenue += revenue;
   row.events.add(event.id);
@@ -1594,6 +1635,12 @@ function addSettlementData(row, tierKey, event, data) {
   tier.complimentaryValidated += complimentaryValidated;
   tier.gandayaCourtesyValidated += source === "gandaya" ? complimentaryValidated : 0;
   tier.pneCourtesyValidated += source === "pne" ? complimentaryValidated : 0;
+  tier.linkCourtesyIssued += linkCourtesy.issued;
+  tier.linkCourtesyValidated += linkCourtesy.validated;
+  tier.linkCourtesyFeminino += linkCourtesy.feminino;
+  tier.linkCourtesyFemininoValidated += linkCourtesy.femininoValidated;
+  tier.linkCourtesyMasculino += linkCourtesy.masculino;
+  tier.linkCourtesyMasculinoValidated += linkCourtesy.masculinoValidated;
   tier.courtesyValidationRepasse += courtesyValidationRepasse;
   tier.revenue += revenue;
   if (guaranteeEligible) {
@@ -1611,6 +1658,12 @@ function addSettlementData(row, tierKey, event, data) {
       complimentaryValidated: 0,
       gandayaCourtesyValidated: 0,
       pneCourtesyValidated: 0,
+      linkCourtesyIssued: 0,
+      linkCourtesyValidated: 0,
+      linkCourtesyFeminino: 0,
+      linkCourtesyFemininoValidated: 0,
+      linkCourtesyMasculino: 0,
+      linkCourtesyMasculinoValidated: 0,
       courtesyValidationRepasse: 0,
       validated: 0,
       revenue: 0,
@@ -1624,6 +1677,12 @@ function addSettlementData(row, tierKey, event, data) {
   eventRow.complimentaryValidated += complimentaryValidated;
   eventRow.gandayaCourtesyValidated += source === "gandaya" ? complimentaryValidated : 0;
   eventRow.pneCourtesyValidated += source === "pne" ? complimentaryValidated : 0;
+  eventRow.linkCourtesyIssued += linkCourtesy.issued;
+  eventRow.linkCourtesyValidated += linkCourtesy.validated;
+  eventRow.linkCourtesyFeminino += linkCourtesy.feminino;
+  eventRow.linkCourtesyFemininoValidated += linkCourtesy.femininoValidated;
+  eventRow.linkCourtesyMasculino += linkCourtesy.masculino;
+  eventRow.linkCourtesyMasculinoValidated += linkCourtesy.masculinoValidated;
   eventRow.courtesyValidationRepasse += courtesyValidationRepasse;
   eventRow.validated += soldValidated + complimentaryValidated;
   eventRow.revenue += revenue;
@@ -1683,6 +1742,12 @@ function syncSpecialSettlementPool(specialPool, specialRows) {
   specialPool.courtesyValidationRepasse = specialRows.reduce((acc, row) => acc + Number(row.courtesyValidationRepasse || 0), 0);
   specialPool.gandayaCourtesyValidated = specialRows.reduce((acc, row) => acc + Number(row.gandayaCourtesyValidated || 0), 0);
   specialPool.pneCourtesyValidated = specialRows.reduce((acc, row) => acc + Number(row.pneCourtesyValidated || 0), 0);
+  specialPool.linkCourtesyIssued = specialRows.reduce((acc, row) => acc + Number(row.linkCourtesyIssued || 0), 0);
+  specialPool.linkCourtesyValidated = specialRows.reduce((acc, row) => acc + Number(row.linkCourtesyValidated || 0), 0);
+  specialPool.linkCourtesyFeminino = specialRows.reduce((acc, row) => acc + Number(row.linkCourtesyFeminino || 0), 0);
+  specialPool.linkCourtesyFemininoValidated = specialRows.reduce((acc, row) => acc + Number(row.linkCourtesyFemininoValidated || 0), 0);
+  specialPool.linkCourtesyMasculino = specialRows.reduce((acc, row) => acc + Number(row.linkCourtesyMasculino || 0), 0);
+  specialPool.linkCourtesyMasculinoValidated = specialRows.reduce((acc, row) => acc + Number(row.linkCourtesyMasculinoValidated || 0), 0);
   SETTLEMENT_TIER_ORDER.forEach((tierKey) => {
     const poolTier = specialPool.tiers[tierKey];
     poolTier.repasse = specialRows.reduce((acc, row) => acc + Number(row.tiers[tierKey]?.repasse || 0), 0);
@@ -1695,6 +1760,12 @@ function syncSpecialSettlementPool(specialPool, specialRows) {
     poolTier.courtesyValidationRepasse = specialRows.reduce((acc, row) => acc + Number(row.tiers[tierKey]?.courtesyValidationRepasse || 0), 0);
     poolTier.gandayaCourtesyValidated = specialRows.reduce((acc, row) => acc + Number(row.tiers[tierKey]?.gandayaCourtesyValidated || 0), 0);
     poolTier.pneCourtesyValidated = specialRows.reduce((acc, row) => acc + Number(row.tiers[tierKey]?.pneCourtesyValidated || 0), 0);
+    poolTier.linkCourtesyIssued = specialRows.reduce((acc, row) => acc + Number(row.tiers[tierKey]?.linkCourtesyIssued || 0), 0);
+    poolTier.linkCourtesyValidated = specialRows.reduce((acc, row) => acc + Number(row.tiers[tierKey]?.linkCourtesyValidated || 0), 0);
+    poolTier.linkCourtesyFeminino = specialRows.reduce((acc, row) => acc + Number(row.tiers[tierKey]?.linkCourtesyFeminino || 0), 0);
+    poolTier.linkCourtesyFemininoValidated = specialRows.reduce((acc, row) => acc + Number(row.tiers[tierKey]?.linkCourtesyFemininoValidated || 0), 0);
+    poolTier.linkCourtesyMasculino = specialRows.reduce((acc, row) => acc + Number(row.tiers[tierKey]?.linkCourtesyMasculino || 0), 0);
+    poolTier.linkCourtesyMasculinoValidated = specialRows.reduce((acc, row) => acc + Number(row.tiers[tierKey]?.linkCourtesyMasculinoValidated || 0), 0);
   });
   specialPool.tierRows = SETTLEMENT_TIER_ORDER.map((tierKey) => specialPool.tiers[tierKey]).filter((tier) => tier.revenue || tier.sold || tier.complimentary || tier.guaranteedBase);
   return specialPool;
@@ -1749,6 +1820,8 @@ function buildSettlementAnalysis(events = filteredEvents()) {
       acc.courtesyValidationRepasse += row.courtesyValidationRepasse;
       acc.gandayaCourtesyValidated += row.gandayaCourtesyValidated;
       acc.pneCourtesyValidated += row.pneCourtesyValidated;
+      acc.linkCourtesyIssued += Number(row.linkCourtesyIssued || 0);
+      acc.linkCourtesyValidated += Number(row.linkCourtesyValidated || 0);
       const salesCommissionRepasse = Math.max(0, Number(row.repasse || 0) - Number(row.courtesyValidationRepasse || 0));
       acc.minimumSalesRepasse += Number(row.courtesyValidationRepasse || 0);
       if (Number(row.sold || 0) >= SETTLEMENT_MINIMUM_COMMISSION_SOLD) {
@@ -1782,6 +1855,8 @@ function buildSettlementAnalysis(events = filteredEvents()) {
       courtesyValidationRepasse: 0,
       gandayaCourtesyValidated: 0,
       pneCourtesyValidated: 0,
+      linkCourtesyIssued: 0,
+      linkCourtesyValidated: 0,
       minimumSalesRepasse: 0,
       minimumSalesEligibleCodes: 0,
       minimumSalesBlockedCodes: 0,
@@ -3240,6 +3315,7 @@ function settlementTierSummary(tier, model, options = {}) {
         <span><b>${int(tier.sold)}</b><small>vendidos</small></span>
         <span><b>${int(tier.soldValidated)}</b><small>validados</small></span>
         ${tier.courtesyValidationRepasse ? `<span><b>${money(tier.courtesyValidationRepasse)}</b><small>cortesia validada</small></span>` : ""}
+        ${tier.linkCourtesyValidated ? `<span><b>${int(tier.linkCourtesyValidated)}</b><small>link F/M val.</small></span>` : ""}
         <span><b>${money(tier.repasse)}</b><small>repasse${hasGuarantee ? " com garantia" : ""}</small></span>
       </div>
       ${expanded ? `<div class="settlement-tier-event-breakdown">${renderSettlementTierEventBreakdown(eventRows)}</div>` : ""}
@@ -3376,7 +3452,15 @@ function renderSettlementTierEventBreakdown(events) {
                   <td data-label="Receita">${money(event.revenue)}</td>
                   <td data-label="Validados">${int(event.soldValidated)} (${pct(safeRate(event.soldValidated, event.sold))})</td>
                   <td data-label="Cortesias">${int(event.complimentary)} (${pct(safeRate(event.complimentaryValidated, event.complimentary))} val.)</td>
-                  <td data-label="Rep. cortesia">${event.courtesyValidationRepasse ? `${money(event.courtesyValidationRepasse)}<small>Gandaya ${int(event.gandayaCourtesyValidated)} · PNE ${int(event.pneCourtesyValidated)}</small>` : "-"}</td>
+                  <td data-label="Rep. cortesia">${
+                    event.courtesyValidationRepasse
+                      ? `${money(event.courtesyValidationRepasse)}<small>Gandaya ${int(event.gandayaCourtesyValidated)} · PNE ${int(event.pneCourtesyValidated)}</small>${
+                          event.linkCourtesyValidated
+                            ? `<small>Link F/M ${int(event.linkCourtesyValidated)} de ${int(event.linkCourtesyIssued)}</small>`
+                            : ""
+                        }`
+                      : "-"
+                  }</td>
                 </tr>
               `
             )
@@ -3398,7 +3482,7 @@ function renderSettlementDrawer() {
         <div>
           <span class="eyebrow">Fechamento</span>
           <h3>${esc(row.name)}</h3>
-          <p>${int(row.sold)} vendidos · ${int(row.soldValidated)} validados · ${money(row.revenue)} · ${money(row.repasse)} repasse${row.courtesyValidationRepasse ? ` · ${int(row.complimentaryValidated)} cortesias val. (${money(row.courtesyValidationRepasse)})` : ""}</p>
+          <p>${int(row.sold)} vendidos · ${int(row.soldValidated)} validados · ${money(row.revenue)} · ${money(row.repasse)} repasse${row.courtesyValidationRepasse ? ` · ${int(row.complimentaryValidated)} cortesias val. (${money(row.courtesyValidationRepasse)})` : ""}${row.linkCourtesyValidated ? ` · Link F/M ${int(row.linkCourtesyValidated)} de ${int(row.linkCourtesyIssued)}` : ""}</p>
         </div>
         <button class="ghost icon-button" data-action="close-settlement-drawer" aria-label="Fechar detalhes">×</button>
       </div>
@@ -3441,7 +3525,7 @@ function renderSettlementRows(rows) {
                   <td data-label="Codigo"><button class="ghost settlement-code-link" data-settlement-code="${esc(key)}"><strong>${esc(row.name)}</strong></button><small>${int(row.eventCount)} eventos com ocorrencia</small></td>
                   <td data-label="Modelo"><span class="pill ${row.model === "100k garantido" ? "warn" : "soft"}">${esc(settlementModelLabel(row.model))}</span></td>
                   <td data-label="Receita" class="money-col">${money(row.revenue)}</td>
-                  <td data-label="Vendas">${int(row.sold)}<small>${int(row.soldValidated)} vendas val.</small>${row.complimentaryValidated ? `<small>${int(row.complimentaryValidated)} cortesias val.</small>` : ""}</td>
+                  <td data-label="Vendas">${int(row.sold)}<small>${int(row.soldValidated)} vendas val.</small>${row.complimentaryValidated ? `<small>${int(row.complimentaryValidated)} cortesias val.</small>` : ""}${row.linkCourtesyValidated ? `<small>Link F/M ${int(row.linkCourtesyValidated)} de ${int(row.linkCourtesyIssued)}</small>` : ""}</td>
                   <td data-label="Repasse" class="money-col"><strong>${money(row.repasse)}</strong>${row.guaranteeApplied ? `<small>${money(row.guaranteeApplied)} garantia</small>` : ""}${row.courtesyValidationRepasse ? `<small>${money(row.courtesyValidationRepasse)} cortesia validada</small>` : ""}</td>
                   <td data-label="Resumo dos tiers" class="settlement-tier-summary-cell"><span class="tier-summary-text">${esc(settlementTierCompactSummary(row))}</span><button class="secondary compact-action" data-settlement-code="${esc(key)}">Ver detalhamento</button></td>
                 </tr>
@@ -3496,7 +3580,7 @@ function renderSettlement() {
       ${renderDashboardFilters(events)}
       <div class="grid cards overview-metrics settlement-metrics">
         ${metric("Comissao vendas padrao", money(analysis.summary.standardSalesRepasse), `${pct(SETTLEMENT_STANDARD_COMMISSION_RATE * 100)} da receita vendida · ${int(analysis.summary.standardSold)} ingressos`)}
-        ${metric("Repasse por cortesias", money(analysis.summary.courtesyValidationRepasse), `${int(analysis.summary.gandayaCourtesyValidated)} Gandaya / ${int(analysis.summary.pneCourtesyValidated)} PNE · R$ ${int(SETTLEMENT_COURTESY_VALIDATION_FEE)} por pessoa`)}
+        ${metric("Repasse por cortesias", money(analysis.summary.courtesyValidationRepasse), `${int(analysis.summary.gandayaCourtesyValidated)} Gandaya / ${int(analysis.summary.pneCourtesyValidated)} PNE · Link F/M ${int(analysis.summary.linkCourtesyValidated)} de ${int(analysis.summary.linkCourtesyIssued)}`)}
         ${metric("Padrao + cortesias", money(analysis.summary.standardSalesRepasse + analysis.summary.courtesyValidationRepasse), "Comissao de vendas padrao somada ao repasse por cortesias")}
         ${metric("Repasse total", money(analysis.summary.repasse), "Comissao vendas padrao + cortesias validadas + 100k")}
         ${metric(`Repasse com minimo ${int(SETTLEMENT_MINIMUM_COMMISSION_SOLD)} vendas`, money(analysis.summary.minimumSalesRepasse), `${int(analysis.summary.minimumSalesEligibleCodes)} codigos com comissao de venda · ${money(analysis.summary.minimumSalesBlockedRepasse)} bloqueados`)}
