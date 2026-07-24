@@ -158,6 +158,7 @@ const state = {
   events: loadEvents(),
   selectedEventId: null,
   salesCodeDrawerKey: "",
+  salesCodeDrawerMode: "sales",
   salesCodeExpandedEventId: "",
   batchDrawerGroupKey: "",
   settlementDrawerKey: "",
@@ -2282,6 +2283,7 @@ function setLoginError(message) {
 function setView(view) {
   state.view = view;
   state.salesCodeDrawerKey = "";
+  state.salesCodeDrawerMode = "sales";
   state.salesCodeExpandedEventId = "";
   state.batchDrawerGroupKey = "";
   state.settlementDrawerKey = "";
@@ -2296,6 +2298,7 @@ function openEvent(id) {
   state.selectedEventId = id;
   state.view = "detail";
   state.salesCodeDrawerKey = "";
+  state.salesCodeDrawerMode = "sales";
   state.salesCodeExpandedEventId = "";
   state.batchDrawerGroupKey = "";
   state.settlementDrawerKey = "";
@@ -2399,6 +2402,7 @@ function closeActiveDrawer() {
   if (!hasOpenDrawer()) return;
   const returnSelector = state.drawerReturnSelector;
   state.salesCodeDrawerKey = "";
+  state.salesCodeDrawerMode = "sales";
   state.salesCodeExpandedEventId = "";
   state.batchDrawerGroupKey = "";
   state.settlementDrawerKey = "";
@@ -2985,7 +2989,7 @@ function renderRankingTable(rows) {
             .map((row, index) => {
               const key = salesCodeKey(row.name);
               return `
-                <tr class="rank-row sales-code-row" data-sales-code="${esc(key)}" title="Clique para ver detalhes">
+                <tr class="rank-row sales-code-row" data-sales-code="${esc(key)}" data-code-mode="sales" title="Clique para ver detalhes">
                   <td><strong>${index + 1}. ${esc(row.name)}</strong></td>
                   <td>${int(row.sold)}</td>
                   <td>${row.sold ? rateCell(row.soldValidated, row.sold) : "-"}</td>
@@ -3043,7 +3047,7 @@ function renderSalesLinkTable(rows, totalRevenue, options = {}) {
               const expanded = state.salesCodeDrawerKey === key;
               const linkCourtesyNote = row.linkCourtesyIssued ? `<small>Cortesia F/M: ${int(row.linkCourtesyValidated)} de ${int(row.linkCourtesyIssued)} val.</small>` : "";
               return `
-              <tr class="sales-code-row ${expanded ? "is-expanded" : ""}" data-sales-code="${esc(key)}" title="Clique para ver detalhes">
+              <tr class="sales-code-row ${expanded ? "is-expanded" : ""}" data-sales-code="${esc(key)}" data-code-mode="sales" title="Clique para ver detalhes">
                 <td data-label="Link/comissario"><strong>${esc(row.name)}</strong><span class="row-hint">${expanded ? "Detalhes abertos" : "Ver detalhes"}</span></td>
                 <td data-label="Receita"><span class="cell-value">${money(row.revenue)}</span></td>
                 ${
@@ -3063,7 +3067,30 @@ function renderSalesLinkTable(rows, totalRevenue, options = {}) {
   `;
 }
 
-function renderSalesCodeBatchTable(batchRows) {
+function renderSalesCodeBatchTable(batchRows, mode = "sales") {
+  if (mode === "courtesy") {
+    return `
+      <div class="table-wrap nested-detail-table" tabindex="0">
+        <table class="sales-detail-table">
+          <thead><tr><th>Lote</th><th>Emitidas</th><th>Validadas</th><th>% validacao</th></tr></thead>
+          <tbody>
+            ${batchRows
+              .map(
+                (batch) => `
+                  <tr class="detail-batch-row">
+                    <td class="detail-lot-cell" data-label="Lote">${esc(batch.label)}</td>
+                    <td class="detail-count-cell" data-label="Emitidas">${int(batch.complimentary)}</td>
+                    <td class="detail-count-cell" data-label="Validadas">${int(batch.complimentaryValidated)}</td>
+                    <td class="detail-count-cell" data-label="% validacao">${batch.complimentary ? pct(safeRate(batch.complimentaryValidated, batch.complimentary)) : "-"}</td>
+                  </tr>
+                `
+              )
+              .join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
   return `
     <div class="table-wrap nested-detail-table" tabindex="0">
       <table class="sales-detail-table">
@@ -3089,7 +3116,8 @@ function renderSalesCodeBatchTable(batchRows) {
   `;
 }
 
-function renderSalesCodeDetail(row, totalRevenue) {
+function renderSalesCodeDetail(row, totalRevenue, mode = "sales") {
+  const courtesyMode = mode === "courtesy";
   const events = row.events
     .slice()
     .sort((a, b) => Number(b.revenue || 0) - Number(a.revenue || 0) || Number(b.sold || 0) - Number(a.sold || 0));
@@ -3101,9 +3129,11 @@ function renderSalesCodeDetail(row, totalRevenue) {
       batchRows,
       sold: batchRows.reduce((sum, batch) => sum + Number(batch.sold || 0), 0),
       soldValidated: batchRows.reduce((sum, batch) => sum + Number(batch.soldValidated || 0), 0),
+      complimentary: batchRows.reduce((sum, batch) => sum + Number(batch.complimentary || 0), 0),
+      complimentaryValidated: batchRows.reduce((sum, batch) => sum + Number(batch.complimentaryValidated || 0), 0),
       revenue: batchRows.reduce((sum, batch) => sum + Number(batch.revenue || 0), 0)
     };
-  });
+  }).filter((eventRow) => !courtesyMode || Number(eventRow.complimentary || 0) > 0 || Number(eventRow.complimentaryValidated || 0) > 0);
   return `
     <div class="sales-code-detail">
       <div class="sales-code-event-list">
@@ -3116,6 +3146,11 @@ function renderSalesCodeDetail(row, totalRevenue) {
             const courtesyRate = courtesyIssued ? pct(safeRate(courtesyValidated, courtesyIssued)) : "-";
             const linkCourtesyIssued = Number(eventRow.linkCourtesyIssued || 0);
             const linkCourtesyValidated = Number(eventRow.linkCourtesyValidated || 0);
+            const metaHtml = courtesyMode
+              ? `${int(courtesyIssued)} emitidas - ${int(courtesyValidated)} validadas - ${courtesyRate} validacao`
+              : `${int(eventRow.sold)} vendidos - ${money(eventRow.revenue)} - ${validationRate} validados
+                  <span class="sales-code-event-extra">${int(courtesyIssued)} cortesias emitidas - ${int(courtesyValidated)} validadas - ${courtesyRate} validacao</span>
+                  ${linkCourtesyIssued ? `<span class="sales-code-event-extra">Cortesia F/M por link: ${int(linkCourtesyValidated)} de ${int(linkCourtesyIssued)} validadas</span>` : ""}`;
             return `
               <article class="sales-code-event-item ${expanded ? "is-expanded" : ""}" data-sales-event-item="${esc(eventRow.key)}">
                 <div class="sales-code-event-main">
@@ -3125,11 +3160,9 @@ function renderSalesCodeDetail(row, totalRevenue) {
                   <button type="button" class="ghost sales-code-lot-toggle" data-action="toggle-sales-event-detail" data-sales-event="${esc(eventRow.key)}" aria-label="${expanded ? "Ocultar lotes de " : "Ver lotes de "}${esc(eventRow.name)}" aria-expanded="${expanded ? "true" : "false"}">${expanded ? "Ocultar lotes" : "Ver lotes"}</button>
                 </div>
                 <p class="sales-code-event-meta">
-                  ${int(eventRow.sold)} vendidos - ${money(eventRow.revenue)} - ${validationRate} validados
-                  <span class="sales-code-event-extra">${int(courtesyIssued)} cortesias emitidas - ${int(courtesyValidated)} validadas - ${courtesyRate} validacao</span>
-                  ${linkCourtesyIssued ? `<span class="sales-code-event-extra">Cortesia F/M por link: ${int(linkCourtesyValidated)} de ${int(linkCourtesyIssued)} validadas</span>` : ""}
+                  ${metaHtml}
                 </p>
-                ${expanded ? `<div class="sales-code-event-lots">${renderSalesCodeBatchTable(eventRow.batchRows)}</div>` : ""}
+                ${expanded ? `<div class="sales-code-event-lots">${renderSalesCodeBatchTable(eventRow.batchRows, mode)}</div>` : ""}
               </article>
             `;
           })
@@ -3159,6 +3192,11 @@ function renderSalesCodeDrawer() {
   const context = salesCodeDrawerContext();
   if (!context) return "";
   const { row, totalRevenue, scopeTitle } = context;
+  const mode = state.salesCodeDrawerMode === "courtesy" ? "courtesy" : "sales";
+  const headerMeta =
+    mode === "courtesy"
+      ? `${int(row.complimentary)} cortesias emitidas · ${int(row.complimentaryValidated)} validadas · ${pct(safeRate(row.complimentaryValidated, row.complimentary))} validacao`
+      : `${int(row.sold)} vendidos · ${int(row.soldValidated)} validados · ${money(row.revenue)} · ${pct(safeRate(row.revenue, totalRevenue))}`;
   return `
     <div class="batch-drawer-backdrop" data-action="close-sales-code-drawer"></div>
     <aside class="batch-drawer" role="dialog" aria-modal="true" aria-label="Detalhes do link">
@@ -3166,11 +3204,11 @@ function renderSalesCodeDrawer() {
         <div>
           <span class="eyebrow">${esc(scopeTitle || "Recorte atual")}</span>
           <h3>${esc(row.name)}</h3>
-          <p>${int(row.sold)} vendidos · ${int(row.soldValidated)} validados · ${money(row.revenue)} · ${pct(safeRate(row.revenue, totalRevenue))}</p>
+          <p>${headerMeta}</p>
         </div>
         <button class="ghost icon-button" data-action="close-sales-code-drawer" aria-label="Fechar detalhes">×</button>
       </div>
-      ${renderSalesCodeDetail(row, totalRevenue)}
+      ${renderSalesCodeDetail(row, totalRevenue, mode)}
     </aside>
   `;
 }
@@ -3197,7 +3235,7 @@ function renderCourtesyLinkTable(rows, options = {}) {
               const rate = safeRate(row.complimentaryValidated, row.complimentary);
               const linkCourtesyNote = row.linkCourtesyIssued ? `<small>Cortesia F/M: ${int(row.linkCourtesyValidated)} de ${int(row.linkCourtesyIssued)} val.</small>` : "";
               return `
-                <tr class="sales-code-row ${expanded ? "is-expanded" : ""}" data-sales-code="${esc(key)}" title="Clique para ver detalhes">
+                <tr class="sales-code-row ${expanded ? "is-expanded" : ""}" data-sales-code="${esc(key)}" data-code-mode="courtesy" title="Clique para ver detalhes">
                   <td data-label="Link/comissario"><strong>${esc(row.name)}</strong><span class="row-hint">${expanded ? "Detalhes abertos" : "Ver detalhes"}</span>${linkCourtesyNote}</td>
                   <td data-label="Cortesias emitidas"><span class="cell-value">${int(row.complimentary)}</span></td>
                   <td data-label="Validadas"><span class="cell-value">${int(row.complimentaryValidated)}</span></td>
@@ -4529,7 +4567,9 @@ function bindActions() {
   document.querySelectorAll("[data-sales-code]").forEach((row) => {
     row.addEventListener("click", () => {
       const key = row.dataset.salesCode;
+      const mode = row.dataset.codeMode === "courtesy" ? "courtesy" : "sales";
       state.salesCodeDrawerKey = key;
+      state.salesCodeDrawerMode = mode;
       state.salesCodeExpandedEventId = "";
       state.batchDrawerGroupKey = "";
       state.settlementDrawerKey = "";
@@ -4556,6 +4596,7 @@ function bindActions() {
     row.addEventListener("click", () => {
       const key = row.dataset.batchGroup;
       state.salesCodeDrawerKey = "";
+      state.salesCodeDrawerMode = "sales";
       state.salesCodeExpandedEventId = "";
       state.batchDrawerGroupKey = key;
       state.settlementDrawerKey = "";
@@ -4737,6 +4778,7 @@ function bindActions() {
       event.stopPropagation();
       const key = button.dataset.settlementCode;
       state.salesCodeDrawerKey = "";
+      state.salesCodeDrawerMode = "sales";
       state.salesCodeExpandedEventId = "";
       state.batchDrawerGroupKey = "";
       state.settlementDrawerKey = key;
