@@ -416,7 +416,7 @@ function eventTicketAudit(event) {
   const sourceTotal = Number(event.sourceTotals?.total || 0);
   const rawTickets = Number(event.sourceTotals?.rawTickets || 0);
   const cancelled = Number(event.sourceTotals?.cancelled || 0);
-  const displayTotal = Math.max(rawTickets, sourceTotal, active);
+  const displayTotal = rawTickets || sourceTotal || active;
   const noteParts = [];
   if (rawTickets && rawTickets !== displayTotal) noteParts.push(`${int(rawTickets)} na aba Ingressos`);
   if (sourceTotal && sourceTotal !== active && sourceTotal !== displayTotal) {
@@ -3150,7 +3150,7 @@ function renderEvents() {
               <h3>${esc(event.name)}</h3>
               <p class="muted">${formatDate(event.eventDateTime || event.eventDate)} · ${esc(event.source || "Fonte da pasta de anexos")}</p>
               <div class="event-stats">
-                <div><span class="muted">Ingressos</span><strong>${int(ticketAudit.displayTotal)}</strong><small>${esc(ticketAudit.note)}</small></div>
+                <div><span class="muted">Ingressos</span><strong>${int(ticketAudit.displayTotal)}</strong></div>
                 <div><span class="muted">Validados</span><strong>${int(event.validated)}</strong></div>
                 <div><span class="muted">Taxa</span><strong>${pct(rate)}</strong></div>
                 <div><span class="muted">Receita</span><strong>${money(event.revenue)}</strong></div>
