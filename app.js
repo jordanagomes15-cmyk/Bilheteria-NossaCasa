@@ -3192,11 +3192,13 @@ function renderCourtesyLinkTable(rows, options = {}) {
         <tbody>
           ${orderedRows
             .map((row) => {
+              const key = salesCodeKey(row.name);
+              const expanded = state.salesCodeDrawerKey === key;
               const rate = safeRate(row.complimentaryValidated, row.complimentary);
               const linkCourtesyNote = row.linkCourtesyIssued ? `<small>Cortesia F/M: ${int(row.linkCourtesyValidated)} de ${int(row.linkCourtesyIssued)} val.</small>` : "";
               return `
-                <tr>
-                  <td data-label="Link/comissario"><strong>${esc(row.name)}</strong>${linkCourtesyNote}</td>
+                <tr class="sales-code-row ${expanded ? "is-expanded" : ""}" data-sales-code="${esc(key)}" title="Clique para ver detalhes">
+                  <td data-label="Link/comissario"><strong>${esc(row.name)}</strong><span class="row-hint">${expanded ? "Detalhes abertos" : "Ver detalhes"}</span>${linkCourtesyNote}</td>
                   <td data-label="Cortesias emitidas"><span class="cell-value">${int(row.complimentary)}</span></td>
                   <td data-label="Validadas"><span class="cell-value">${int(row.complimentaryValidated)}</span></td>
                   <td data-label="% validacao">${rateCell(row.complimentaryValidated, row.complimentary, true, compact ? "rate-only" : "count-rate")}</td>
