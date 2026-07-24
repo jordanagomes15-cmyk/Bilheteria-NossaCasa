@@ -270,6 +270,40 @@ def get_cell(row, name):
     return row[name] if name in row else ""
 
 
+def free_link_map(links):
+    free_links = {}
+    for _, row in links.iterrows():
+        link = str(get_cell(row, "Link") or "").strip()
+        if not link:
+            continue
+        label = normalize(f"{get_cell(row, 'Tipo')} {link}")
+        if "liberacao" in label:
+            free_links[canonical_promoter(link.replace("-", ""))] = True
+    return free_links
+
+
+def batch_price_lookup(price_by_batch, batch_key, family_key):
+    if batch_key in price_by_batch:
+        return True, as_number(price_by_batch[batch_key])
+    if family_key in price_by_batch:
+        return True, as_number(price_by_batch[family_key])
+    return False, 0
+
+
+def is_complimentary_ticket(description, link, price_found=False, price=0, total=None, free_links=None):
+    label = normalize(f"{description} {link}")
+    link_key = canonical_promoter(str(link or "").replace("-", ""))
+    if "cortesia" in label or "liberacao" in label:
+        return True
+    if free_links and link_key in free_links:
+        return True
+    if price_found and as_number(price) == 0:
+        return True
+    if total is not None and as_number(total) == 0:
+        return True
+    return False
+
+
 def cancellation_contexts(cancelamentos):
     quotas = {}
     for _, row in cancelamentos.iterrows():
@@ -279,6 +313,29 @@ def cancellation_contexts(cancelamentos):
         if person_key and batch_key:
             quotas[(person_key, batch_key)] = quotas.get((person_key, batch_key), 0) + max(quantity, 1)
     return quotas
+
+
+def paid_purchase_contexts(compras):
+    quotas = {}
+    for _, row in compras.iterrows():
+        total = as_number(get_cell(row, "Total"))
+        quantity = int(as_number(get_cell(row, "Quantidade")) or 0)
+        if total <= 0 or quantity <= 0:
+            continue
+        person_key = anonymous_person_key(get_cell(row, "Identificador do usuário"), get_cell(row, "E-mail"), get_cell(row, "Nome"))
+        batch_key = normalize(get_cell(row, "Descrição")) or "sem lote"
+        if person_key and batch_key:
+            quotas[(person_key, batch_key)] = quotas.get((person_key, batch_key), 0) + quantity
+    return quotas
+
+
+def consume_paid_purchase_quota(quotas, person_key, batch_key):
+    key = (person_key, batch_key)
+    remaining = quotas.get(key, 0)
+    if remaining <= 0:
+        return False
+    quotas[key] = remaining - 1
+    return True
 
 
 def consume_cancelled_quota(quotas, person_key, batch_key):
@@ -503,12 +560,15 @@ def parse_xlsx(path):
     ingressos = read_sheet(path, "Ingressos")
     resumo = read_sheet(path, "Resumo de ingressos")
     compras = read_sheet(path, "Compras")
+    links = read_sheet(path, "Links")
     usuarios = read_sheet(path, "Usuários")
     envios = read_sheet(path, "Envios")
     cancelamentos = read_sheet(path, "Cancelamentos")
     contact_by_key = build_contact_map(usuarios, envios)
     cancelled_quotas = cancellation_contexts(cancelamentos)
+    paid_purchase_quotas = paid_purchase_contexts(compras)
     source_totals = source_ticket_totals(resumo, ingressos, cancelamentos)
+    free_links = free_link_map(links)
 
     price_by_batch = {}
     for _, row in resumo.iterrows():
@@ -531,7 +591,8 @@ def parse_xlsx(path):
         batch_key = normalize(description) or "sem lote"
         quantity = int(as_number(get_cell(row, "Quantidade")) or 0)
         total = as_number(get_cell(row, "Total"))
-        promoter = promoter_from(description, get_cell(row, "Link"), False)
+        complimentary_purchase = total == 0
+        promoter = promoter_from(description, get_cell(row, "Link"), complimentary_purchase)
         if quantity <= 0 and total <= 0:
             continue
         batch = batches.setdefault(
@@ -547,25 +608,32 @@ def parse_xlsx(path):
                 "revenue": 0,
             },
         )
-        sold += quantity
         revenue += total
-        batch["sold"] += quantity
         batch["revenue"] += total
-        add_promoter(promoters, promoter, sold=quantity, revenue=total, batch_key=batch_key, batch_label=batch_label)
+        if complimentary_purchase:
+            complimentary += quantity
+            batch["complimentary"] += quantity
+            add_promoter(promoters, promoter, complimentary=quantity, revenue=total, batch_key=batch_key, batch_label=batch_label)
+        else:
+            sold += quantity
+            batch["sold"] += quantity
+            add_promoter(promoters, promoter, sold=quantity, revenue=total, batch_key=batch_key, batch_label=batch_label)
         if quantity or total:
-            add_attendee(attendees, row, event_id, name, sold=quantity, revenue=total)
+            add_attendee(attendees, row, event_id, name, complimentary=quantity if complimentary_purchase else 0, sold=0 if complimentary_purchase else quantity, revenue=total)
 
     for _, row in ingressos.iterrows():
         description = get_cell(row, "Descrição")
         batch_label = excel_label(description)
         batch_key = normalize(description) or "sem lote"
         family_key = normalize_batch(description)
-        complimentary_ticket = "cortesia" in normalize(description)
+        price_found, matched_price = batch_price_lookup(price_by_batch, batch_key, family_key)
         validated_ticket = normalize(get_cell(row, "Validado")).startswith("sim")
         participant_key = anonymous_person_key(get_cell(row, "Identificador do usuário"), get_cell(row, "E-mail"), get_cell(row, "Nome"))
         if consume_cancelled_quota(cancelled_quotas, participant_key, batch_key):
             continue
-        price = 0 if complimentary_ticket else price_by_batch.get(batch_key, price_by_batch.get(family_key, 0))
+        paid_purchase_ticket = consume_paid_purchase_quota(paid_purchase_quotas, participant_key, batch_key)
+        complimentary_ticket = False if paid_purchase_ticket else is_complimentary_ticket(description, get_cell(row, "Link"), price_found=price_found, price=matched_price, free_links=free_links)
+        price = 0 if complimentary_ticket else matched_price
         batch = batches.setdefault(
             batch_key,
             {
