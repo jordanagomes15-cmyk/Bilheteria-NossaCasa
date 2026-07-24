@@ -3068,13 +3068,16 @@ function renderSalesLinkTable(rows, totalRevenue, options = {}) {
 }
 
 function renderSalesCodeBatchTable(batchRows, mode = "sales") {
+  const visibleRows = batchRows.filter((batch) =>
+    mode === "courtesy" ? Number(batch.complimentary || 0) > 0 : Number(batch.sold || 0) > 0
+  );
   if (mode === "courtesy") {
     return `
       <div class="table-wrap nested-detail-table" tabindex="0">
         <table class="sales-detail-table">
           <thead><tr><th>Lote</th><th>Emitidas</th><th>Validadas</th><th>% validacao</th></tr></thead>
           <tbody>
-            ${batchRows
+            ${visibleRows
               .map(
                 (batch) => `
                   <tr class="detail-batch-row">
@@ -3094,17 +3097,15 @@ function renderSalesCodeBatchTable(batchRows, mode = "sales") {
   return `
     <div class="table-wrap nested-detail-table" tabindex="0">
       <table class="sales-detail-table">
-        <thead><tr><th>Lote</th><th>Vendidos</th><th>Val. vendas</th><th>Cortesias</th><th>Val. cortesias</th><th>Receita</th></tr></thead>
+        <thead><tr><th>Lote</th><th>Vendidos</th><th>Val. vendas</th><th>Receita</th></tr></thead>
         <tbody>
-          ${batchRows
+          ${visibleRows
             .map(
               (batch) => `
                 <tr class="detail-batch-row">
                   <td class="detail-lot-cell" data-label="Lote">${esc(batch.label)}</td>
                   <td class="detail-count-cell" data-label="Vendidos">${int(batch.sold)}</td>
                   <td class="detail-count-cell" data-label="Val. vendas">${int(batch.soldValidated)}</td>
-                  <td class="detail-count-cell" data-label="Cortesias">${int(batch.complimentary)}</td>
-                  <td class="detail-count-cell" data-label="Val. cortesias">${int(batch.complimentaryValidated)}</td>
                   <td class="detail-count-cell" data-label="Receita">${money(batch.revenue)}${batch.revenueEstimated ? ` <small title="Receita estimada proporcionalmente aos vendidos do lote.">estimado</small>` : ""}</td>
                 </tr>
               `
