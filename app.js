@@ -4274,27 +4274,31 @@ function renderPne(event) {
     return renderStatePanel("Nao encontrei PDF PNE correspondente para este evento na pasta PNE.", "", "empty");
   }
   const rate = (Number(event.pne.converted || 0) / Math.max(Number(event.pne.inserted || 0), 1)) * 100;
+  const pneRepasse = Number(event.pne.converted || 0) * SETTLEMENT_COURTESY_VALIDATION_FEE;
   return `
     <div class="grid">
       <div class="grid cards">
         ${metric("PNE inseridos", int(event.pne.inserted), "Total do PDF")}
         ${metric("PNE convertidos", int(event.pne.converted), `${pct(rate)} de conversao`)}
+        ${metric("Repasse PNE", money(pneRepasse), `${int(event.pne.converted)} validacoes · ${money(SETTLEMENT_COURTESY_VALIDATION_FEE)} por pessoa`)}
         ${metric("Fonte PNE", event.pne.source, "Documents/Nossa Casa/PNE")}
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Usuario</th><th>Inseridos</th><th>Convertidos</th><th>Taxa</th></tr></thead>
+          <thead><tr><th>Usuario</th><th>Inseridos</th><th>Convertidos</th><th>Taxa</th><th>Repasse</th></tr></thead>
           <tbody>
             ${(event.pne.people || [])
               .sort((a, b) => b.converted - a.converted || b.inserted - a.inserted)
               .map((person) => {
                 const personRate = (Number(person.converted || 0) / Math.max(Number(person.inserted || 0), 1)) * 100;
+                const personRepasse = Number(person.converted || 0) * SETTLEMENT_COURTESY_VALIDATION_FEE;
                 return `
                   <tr>
                     <td><strong>${esc(person.name)}</strong></td>
                     <td>${int(person.inserted)}</td>
                     <td>${int(person.converted)}</td>
                     <td><span class="pill ${personRate >= 35 ? "good" : "warn"}">${pct(personRate)}</span></td>
+                    <td>${money(personRepasse)}</td>
                   </tr>
                 `;
               })
