@@ -84,6 +84,7 @@ PROMOTER_ALIASES = {
     "rocky kanaan": "rocky",
     "convidadoromanha": "romanha",
     "convidado romanha": "romanha",
+    "gabriel romanha": "romanha",
     "convidadomidia011": "midia011",
     "convidado midia011": "midia011",
     "midia11": "midia011",
