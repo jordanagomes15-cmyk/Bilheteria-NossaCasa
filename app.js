@@ -292,14 +292,14 @@ function applyGeneratedData(data) {
     state.selectedEventId = null;
     state.view = "overview";
   }
-  render();
+  renderPreservingActiveFocus();
 }
 
 function setSyncStatus(status, options = {}) {
   const shouldRender = options.render !== false;
   if (state.syncStatus === status) return;
   state.syncStatus = status;
-  if (shouldRender) render();
+  if (shouldRender) renderPreservingActiveFocus();
 }
 
 async function refreshGeneratedData() {
@@ -2463,15 +2463,37 @@ function renderPreservingElement(selector) {
   [40, 120, 260].forEach((delay) => setTimeout(restore, delay));
 }
 
-function renderKeepingFocus(id) {
+function activeEditableElement() {
+  const element = document.activeElement;
+  if (!(element instanceof HTMLElement)) return null;
+  if (!element.id) return null;
+  if (element.matches("input, select, textarea, [contenteditable='true']")) return element;
+  return null;
+}
+
+function renderPreservingActiveFocus() {
+  const active = activeEditableElement();
+  if (!active) {
+    render();
+    return;
+  }
+  renderKeepingFocus(active.id, {
+    selectionStart: typeof active.selectionStart === "number" ? active.selectionStart : null,
+    selectionEnd: typeof active.selectionEnd === "number" ? active.selectionEnd : null
+  });
+}
+
+function renderKeepingFocus(id, options = {}) {
   render();
   const element = document.getElementById(id);
   if (!element) return;
   element.focus();
   if (typeof element.setSelectionRange === "function") {
-    const end = String(element.value || "").length;
+    const valueLength = String(element.value || "").length;
+    const start = Number.isFinite(options.selectionStart) ? Math.min(options.selectionStart, valueLength) : valueLength;
+    const end = Number.isFinite(options.selectionEnd) ? Math.min(options.selectionEnd, valueLength) : start;
     try {
-      element.setSelectionRange(end, end);
+      element.setSelectionRange(start, end);
     } catch {
       // Alguns inputs numericos nao aceitam selecao de texto programatica.
     }
