@@ -99,6 +99,8 @@ PROMOTER_ALIASES = {
     "agencia blondies": "blondies",
     "jhonny upgless": "jhonny",
     "everyone agencia": "everyone",
+    "joao vitor petersen": "pet",
+    "joaovitorpetersen": "pet",
     "ms sinisgalli": "ms",
     "sinisgalli ms": "ms",
     "marcelo goncalves sinisgalli": "ms",

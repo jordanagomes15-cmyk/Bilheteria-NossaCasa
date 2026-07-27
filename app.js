@@ -1426,7 +1426,8 @@ const SETTLEMENT_STANDARD_COMMISSION_RATE = 0.1;
 const CODE_ALIASES = new Map([
   ["gabrielromanha", "romanha"],
   ["fabricioannunciato", "fun"],
-  ["fabriccioannunciato", "fun"]
+  ["fabriccioannunciato", "fun"],
+  ["joaovitorpetersen", "pet"]
 ]);
 const SETTLEMENT_EXCLUDED_CODES = new Set(
   [
