@@ -3611,7 +3611,7 @@ function renderSettlementRows(rows) {
                   <td data-label="Codigo"><button class="ghost settlement-code-link" data-settlement-code="${esc(key)}"><strong>${esc(row.name)}</strong></button><small>${int(row.eventCount)} eventos com ocorrencia</small></td>
                   <td data-label="Modelo"><span class="pill ${row.model === "100k garantido" ? "warn" : "soft"}">${esc(settlementModelLabel(row.model))}</span></td>
                   <td data-label="Receita" class="money-col">${money(row.revenue)}</td>
-                  <td data-label="Vendas">${int(row.sold)}<small>${int(row.soldValidated)} vendas val.</small>${row.complimentaryValidated ? `<small>${int(row.complimentaryValidated)} cortesias val.</small>` : ""}${row.linkCourtesyValidated ? `<small>Link F/M ${int(row.linkCourtesyValidated)} de ${int(row.linkCourtesyIssued)}</small>` : ""}</td>
+                  <td data-label="Vendas">${int(row.sold)}<small>${int(row.soldValidated)} vendas val.</small></td>
                   <td data-label="Repasse" class="money-col"><strong>${money(row.repasse)}</strong>${row.guaranteeApplied ? `<small>${money(row.guaranteeApplied)} garantia</small>` : ""}${row.courtesyValidationRepasse ? `<small>${money(row.courtesyValidationRepasse)} cortesia validada</small>` : ""}</td>
                   <td data-label="Resumo dos tiers" class="settlement-tier-summary-cell"><span class="tier-summary-text">${esc(settlementTierCompactSummary(row))}</span><button class="secondary compact-action" data-settlement-code="${esc(key)}">Ver detalhamento</button></td>
                 </tr>
