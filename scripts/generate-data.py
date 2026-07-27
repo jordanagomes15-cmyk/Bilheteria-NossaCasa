@@ -93,6 +93,8 @@ PROMOTER_ALIASES = {
     "convidado thi cenora": "convidadothicenora",
     "agencia timelapse": "timelapse",
     "agencia lets fun": "fun",
+    "fabricio annunciato": "fun",
+    "fabriccio annunciato": "fun",
     "renova agencia": "renova",
     "agencia blondies": "blondies",
     "jhonny upgless": "jhonny",

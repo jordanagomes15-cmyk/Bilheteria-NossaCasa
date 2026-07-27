@@ -1424,7 +1424,9 @@ const SETTLEMENT_TIER_ORDER = ["gold", "silver", "bronze", "unclassified"];
 const SPECIAL_SETTLEMENT_CODES = new Set(["ra", "mare", "marianaparik"]);
 const SETTLEMENT_STANDARD_COMMISSION_RATE = 0.1;
 const CODE_ALIASES = new Map([
-  ["gabrielromanha", "romanha"]
+  ["gabrielromanha", "romanha"],
+  ["fabricioannunciato", "fun"],
+  ["fabriccioannunciato", "fun"]
 ]);
 const SETTLEMENT_EXCLUDED_CODES = new Set(
   [
