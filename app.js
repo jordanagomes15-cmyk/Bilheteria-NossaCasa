@@ -986,7 +986,7 @@ function exportSettlementWorkbook() {
   const analysis = buildSettlementAnalysis(filteredEvents());
   const rows = currentSettlementRows(analysis);
   const workbook = XLSX.utils.book_new();
-  const summaryHeaders = ["Codigo", "Modelo", "Receita", "Vendidos", "Validados", "% validacao", "Repasse", "Comissao real", "Garantia aplicada", "Repasse cortesia", "Val. cortesia Gandaya", "Val. cortesia PNE", "Eventos"];
+  const summaryHeaders = ["Codigo", "Modelo", "Receita", "Vendidos", "Validados", "% validacao", "Repasse", "Comissao sobre vendas", "Meta de vendas", "Repasse cortesia", "Val. cortesia Gandaya", "Val. cortesia PNE", "Eventos"];
   const summaryRows = rows.map((row) => [
     row.name,
     settlementModelLabel(row.model),
@@ -996,7 +996,7 @@ function exportSettlementWorkbook() {
     safeRate(row.soldValidated, row.sold) / 100,
     Number(row.repasse || 0),
     Number(row.actualCommission || 0),
-    Number(row.guaranteeApplied || 0),
+    Number(row.tierRows?.reduce((sum, tier) => sum + Number(tier.guaranteedBase || 0), 0) || 0),
     Number(row.courtesyValidationRepasse || 0),
     Number(row.gandayaCourtesyValidated || 0),
     Number(row.pneCourtesyValidated || 0),
@@ -1019,12 +1019,12 @@ function exportSettlementWorkbook() {
     "% validacao",
     "% comissao",
     "% desconto",
-    "Base garantida",
-    "Comissao garantida",
-    "Comissao real",
+    "Meta de vendas",
+    "Receita elegivel para meta",
+    "Comissao sobre vendas",
     "Repasse cortesia",
     "Repasse",
-    "Garantia aplicada"
+    "Saldo para meta"
   ];
   const tierRows = rows.flatMap((row) =>
     row.tierRows.map((tier) => [
@@ -1039,11 +1039,11 @@ function exportSettlementWorkbook() {
       Number(tier.commissionRate || 0),
       Number(tier.discountRate || 0),
       Number(tier.guaranteedBase || 0),
-      Number(tier.guaranteedCommission || 0),
+      Number(tier.guaranteeEligibleRevenue || 0),
       Number(tier.actualCommission || 0),
       Number(tier.courtesyValidationRepasse || 0),
       Number(tier.repasse || 0),
-      Number(tier.guaranteeApplied || 0)
+      Number(tier.guaranteeGap || 0)
     ])
   );
   XLSX.utils.book_append_sheet(
@@ -1416,7 +1416,7 @@ function splitCapacityGenericPromoter(name, data) {
 const SETTLEMENT_TIERS = {
   gold: { label: "Ouro", commissionRate: 0.05, discountRate: 0, guaranteedBase: 20000, guaranteedCommissionRate: 0.1, guaranteedDiscountRate: 0.1 },
   silver: { label: "Prata", commissionRate: 0.1, discountRate: 0.05, guaranteedBase: 50000, guaranteedCommissionRate: 0.1, guaranteedDiscountRate: 0.1 },
-  bronze: { label: "Bronze", commissionRate: 0.2, discountRate: 0.1, guaranteedBase: 30000, guaranteedCommissionRate: 0.2, guaranteedDiscountRate: 0.2 },
+  bronze: { label: "Bronze", commissionRate: 0.2, discountRate: 0.1, guaranteedBase: 30000, guaranteedCommissionRate: 0.1, guaranteedDiscountRate: 0.2 },
   unclassified: { label: "Sem tier", commissionRate: 0, discountRate: 0, guaranteedBase: 0, guaranteedCommissionRate: 0, guaranteedDiscountRate: 0 }
 };
 
@@ -1724,9 +1724,12 @@ function finalizeSettlementRow(row, options = {}) {
     if (row.model === "100k garantido" && !specialPool) {
       const hasTierActivity = Number(tier.guaranteeEligibleRevenue || 0) > 0 || Number(tier.guaranteeEligibleSold || 0) > 0;
       tier.guaranteedBase = hasTierActivity ? rule.guaranteedBase : 0;
-      tier.guaranteedCommission = tier.guaranteedBase * commissionRate;
-      tier.repasse = Math.max(tier.actualCommission, tier.guaranteedCommission);
-      tier.guaranteeApplied = Math.max(0, tier.repasse - tier.actualCommission);
+      tier.guaranteedCommission = 0;
+      tier.guaranteeGap = Math.max(0, tier.guaranteedBase - tier.guaranteeEligibleRevenue);
+      tier.guaranteeSurplus = Math.max(0, tier.guaranteeEligibleRevenue - tier.guaranteedBase);
+      tier.guaranteeMet = Boolean(tier.guaranteedBase && tier.guaranteeEligibleRevenue >= tier.guaranteedBase);
+      tier.repasse = tier.actualCommission;
+      tier.guaranteeApplied = 0;
     } else if (row.model === "100k garantido" && specialPool) {
       const poolTier = specialPool.tiers[tierKey];
       const poolRevenue = Number(poolTier.guaranteeEligibleRevenue || 0);
@@ -1735,9 +1738,12 @@ function finalizeSettlementRow(row, options = {}) {
       const soldWeight = !poolRevenue && poolSold ? tier.guaranteeEligibleSold / poolSold : 0;
       const weight = revenueWeight || soldWeight || 0;
       tier.guaranteedBase = poolTier.guaranteedBase * weight;
-      tier.guaranteedCommission = poolTier.guaranteedCommission * weight;
-      tier.repasse = poolTier.repasse * weight;
-      tier.guaranteeApplied = Math.max(0, tier.repasse - tier.actualCommission);
+      tier.guaranteedCommission = 0;
+      tier.guaranteeGap = Math.max(0, tier.guaranteedBase - tier.guaranteeEligibleRevenue);
+      tier.guaranteeSurplus = Math.max(0, tier.guaranteeEligibleRevenue - tier.guaranteedBase);
+      tier.guaranteeMet = Boolean(tier.guaranteedBase && tier.guaranteeEligibleRevenue >= tier.guaranteedBase);
+      tier.repasse = tier.actualCommission;
+      tier.guaranteeApplied = 0;
     } else {
       tier.repasse = tier.actualCommission;
     }
@@ -1775,9 +1781,12 @@ function syncSpecialSettlementPool(specialPool, specialRows) {
     poolTier.actualCommission = specialRows.reduce((acc, row) => acc + Number(row.tiers[tierKey]?.actualCommission || 0), 0);
     poolTier.guaranteeApplied = specialRows.reduce((acc, row) => acc + Number(row.tiers[tierKey]?.guaranteeApplied || 0), 0);
     poolTier.guaranteedBase = specialRows.reduce((acc, row) => acc + Number(row.tiers[tierKey]?.guaranteedBase || 0), 0);
-    poolTier.guaranteedCommission = specialRows.reduce((acc, row) => acc + Number(row.tiers[tierKey]?.guaranteedCommission || 0), 0);
+    poolTier.guaranteedCommission = 0;
     poolTier.guaranteeEligibleRevenue = specialRows.reduce((acc, row) => acc + Number(row.tiers[tierKey]?.guaranteeEligibleRevenue || 0), 0);
     poolTier.guaranteeEligibleSold = specialRows.reduce((acc, row) => acc + Number(row.tiers[tierKey]?.guaranteeEligibleSold || 0), 0);
+    poolTier.guaranteeGap = Math.max(0, poolTier.guaranteedBase - poolTier.guaranteeEligibleRevenue);
+    poolTier.guaranteeSurplus = Math.max(0, poolTier.guaranteeEligibleRevenue - poolTier.guaranteedBase);
+    poolTier.guaranteeMet = Boolean(poolTier.guaranteedBase && poolTier.guaranteeEligibleRevenue >= poolTier.guaranteedBase);
     poolTier.courtesyValidationRepasse = specialRows.reduce((acc, row) => acc + Number(row.tiers[tierKey]?.courtesyValidationRepasse || 0), 0);
     poolTier.gandayaCourtesyValidated = specialRows.reduce((acc, row) => acc + Number(row.tiers[tierKey]?.gandayaCourtesyValidated || 0), 0);
     poolTier.pneCourtesyValidated = specialRows.reduce((acc, row) => acc + Number(row.tiers[tierKey]?.pneCourtesyValidated || 0), 0);
@@ -1825,7 +1834,9 @@ function buildSettlementAnalysis(events = filteredEvents()) {
     });
   });
   finalizeSettlementRow(specialPool);
-  const finalizedRows = [...rows.values()].map((row) => finalizeSettlementRow(row));
+  const finalizedRows = [...rows.values()].map((row) =>
+    finalizeSettlementRow(row, row.model === "100k garantido" ? { specialPool } : {})
+  );
   syncSpecialSettlementPool(
     specialPool,
     finalizedRows.filter((row) => row.model === "100k garantido")
@@ -2796,7 +2807,7 @@ function renderTopbar() {
     overview: ["Visao geral", "Resumo consolidado de todos os eventos"],
     events: ["Eventos", "Compare resultados e abra o detalhe de cada evento"],
     commissioners: ["Comissarios/RPs", "Ranking geral com parcial por evento"],
-    settlement: ["Fechamento", "Repasse por tier, modelo padrao e 100k garantido"],
+    settlement: ["Fechamento", "Repasse por tier, modelo padrao e meta de R$ 100 mil em vendas"],
     audienceProfile: ["Perfil do publico", "Mapeamento demografico por evento e consolidado"],
     mailing: ["Mailing", "Contatos finais deduplicados por evento ou consolidado"],
     audienceRecurrence: ["Recorrencia de Compradores", "Clientes com compra paga em mais de um evento"],
@@ -3355,7 +3366,7 @@ function renderCommissioners() {
 }
 
 function settlementModelLabel(model) {
-  return model === "100k garantido" ? "100k garantido" : "Modelo padrao";
+  return model === "100k garantido" ? "Meta 100k em vendas" : "Modelo padrao";
 }
 
 function renderSettlementEventNames(events) {
@@ -3373,7 +3384,7 @@ function renderSettlementEventNote(events) {
 }
 
 function settlementTierSummary(tier, model, options = {}) {
-  const hasGuarantee = model === "100k garantido" && Number(tier.guaranteedBase || 0) > 0;
+  const hasSalesTarget = model === "100k garantido" && Number(tier.guaranteedBase || 0) > 0;
   const eventRows = Array.isArray(tier.eventRows) ? tier.eventRows : [];
   const tierKey = options.rowKey ? `${options.rowKey}:${tier.key}` : tier.key;
   const expanded = options.interactiveEvents && state.settlementExpandedTierKey === tierKey;
@@ -3401,11 +3412,17 @@ function settlementTierSummary(tier, model, options = {}) {
       </div>
       <div class="settlement-tier-numbers">
         <span><b>${money(tier.revenue)}</b><small>receita</small></span>
+        ${hasSalesTarget ? `<span><b>${money(tier.guaranteedBase)}</b><small>meta de vendas</small></span>` : ""}
+        ${
+          hasSalesTarget
+            ? `<span><b>${tier.guaranteeMet ? "Meta atingida" : money(tier.guaranteeGap)}</b><small>${tier.guaranteeMet ? `${money(tier.guaranteeSurplus)} acima da meta` : "para atingir a meta"}</small></span>`
+            : ""
+        }
         <span><b>${int(tier.sold)}</b><small>vendidos</small></span>
         <span><b>${int(tier.soldValidated)}</b><small>validados</small></span>
         ${tier.courtesyValidationRepasse ? `<span><b>${money(tier.courtesyValidationRepasse)}</b><small>cortesia validada</small></span>` : ""}
         ${tier.linkCourtesyValidated ? `<span><b>${int(tier.linkCourtesyValidated)}</b><small>link F/M val.</small></span>` : ""}
-        <span><b>${money(tier.repasse)}</b><small>repasse${hasGuarantee ? " com garantia" : ""}</small></span>
+        <span><b>${money(tier.repasse)}</b><small>repasse sobre vendas</small></span>
       </div>
       ${expanded ? `<div class="settlement-tier-event-breakdown">${renderSettlementTierEventBreakdown(eventRows)}</div>` : ""}
     </div>
@@ -3456,11 +3473,11 @@ function settlementRulesTable(events = filteredEvents()) {
         `
       },
       {
-        label: "100k garantido",
+        label: "Meta de vendas 100k",
         render: (row) => `
           <div class="settlement-rule-value">
-            <strong>${money(row.guaranteedBase)} base</strong>
-            <small>${pct(row.guaranteedCommissionRate * 100)} comissao · ${pct(row.guaranteedDiscountRate * 100)} desconto</small>
+            <strong>${money(row.guaranteedBase)} em vendas</strong>
+            <small>${pct(row.guaranteedCommissionRate * 100)} de comissao sobre o faturamento realizado</small>
           </div>
         `
       }
@@ -3615,7 +3632,7 @@ function renderSettlementRows(rows) {
                   <td data-label="Modelo"><span class="pill ${row.model === "100k garantido" ? "warn" : "soft"}">${esc(settlementModelLabel(row.model))}</span></td>
                   <td data-label="Receita" class="money-col">${money(row.revenue)}</td>
                   <td data-label="Vendas">${int(row.sold)}<small>${int(row.soldValidated)} vendas val.</small></td>
-                  <td data-label="Repasse" class="money-col"><strong>${money(row.repasse)}</strong>${row.guaranteeApplied ? `<small>${money(row.guaranteeApplied)} garantia</small>` : ""}${row.courtesyValidationRepasse ? `<small>${money(row.courtesyValidationRepasse)} cortesia validada</small>` : ""}</td>
+                  <td data-label="Repasse" class="money-col"><strong>${money(row.repasse)}</strong>${row.model === "100k garantido" ? `<small>${money(row.actualCommission)} sobre vendas</small>` : ""}${row.courtesyValidationRepasse ? `<small>${money(row.courtesyValidationRepasse)} cortesia validada</small>` : ""}</td>
                   <td data-label="Resumo dos tiers" class="settlement-tier-summary-cell"><span class="tier-summary-text">${esc(settlementTierCompactSummary(row))}</span><button class="secondary compact-action" data-settlement-code="${esc(key)}">Ver detalhamento</button></td>
                 </tr>
               `;
@@ -3664,6 +3681,9 @@ function renderSettlement() {
   const rows = currentSettlementRows(analysis);
   const visibleRows = state.settlementShowAll ? rows : rows.slice(0, 50);
   const specialRows = analysis.rows.filter((row) => row.model === "100k garantido");
+  const specialSalesTarget = analysis.specialPool.tierRows.reduce((sum, tier) => sum + Number(tier.guaranteedBase || 0), 0);
+  const specialEligibleRevenue = analysis.specialPool.tierRows.reduce((sum, tier) => sum + Number(tier.guaranteeEligibleRevenue || 0), 0);
+  const specialSalesTargetGap = Math.max(0, specialSalesTarget - specialEligibleRevenue);
   return `
     <section class="grid settlement-page">
       ${renderDashboardFilters(events)}
@@ -3671,9 +3691,9 @@ function renderSettlement() {
         ${metric("Comissao vendas padrao", money(analysis.summary.standardSalesRepasse), `${pct(SETTLEMENT_STANDARD_COMMISSION_RATE * 100)} da receita vendida · ${int(analysis.summary.standardSold)} ingressos`)}
         ${metric("Repasse por cortesias", money(analysis.summary.courtesyValidationRepasse), `${int(analysis.summary.gandayaCourtesyValidated)} Gandaya / ${int(analysis.summary.pneCourtesyValidated)} PNE · Link F/M ${int(analysis.summary.linkCourtesyValidated)} de ${int(analysis.summary.linkCourtesyIssued)}`)}
         ${metric("Padrao + cortesias", money(analysis.summary.standardSalesRepasse + analysis.summary.courtesyValidationRepasse), "Comissao de vendas padrao somada ao repasse por cortesias")}
-        ${metric("Repasse total", money(analysis.summary.repasse), "Comissao vendas padrao + cortesias validadas + 100k")}
+        ${metric("Repasse total", money(analysis.summary.repasse), "Comissao sobre vendas + cortesias validadas")}
         ${metric(`Repasse com minimo ${int(SETTLEMENT_MINIMUM_COMMISSION_SOLD)} vendas`, money(analysis.summary.minimumSalesRepasse), `${int(analysis.summary.minimumSalesEligibleCodes)} codigos com comissao de venda · ${money(analysis.summary.minimumSalesBlockedRepasse)} bloqueados`)}
-        ${metric("100k garantido", money(analysis.summary.specialSalesRepasse), "RA, Mare e Mariana Parik sem cortesias", `<button class="metric-link" data-action="scroll-special-settlement">Ver regra especial</button>`)}
+        ${metric("Comissao modelo 100k", money(analysis.summary.specialSalesRepasse), `${pct(10)} sobre as vendas de RA, Mare e Mariana Parik`, `<button class="metric-link" data-action="scroll-special-settlement">Ver regra especial</button>`)}
         ${metric("Receita dos codigos", money(analysis.summary.revenue), `${int(analysis.summary.sold)} vendas por link`)}
       </div>
       ${renderSettlementPendingCard(analysis)}
@@ -3689,12 +3709,14 @@ function renderSettlement() {
         <div class="section-title">
           <span class="special-rule-badge">Regra especial</span>
           <h2>Negociacao especial RA / MARE / Mariana Parik</h2>
-          <p>Modelo 100k garantido: Ouro R$ 20 mil, Prata R$ 50 mil e Bronze R$ 30 mil. Dias 12/07, 15/07 e 19/07 nao acionam a base garantida. Cortesias validadas entram como adicional fixo.</p>
+          <p>Meta de R$ 100 mil em vendas: Ouro R$ 20 mil, Prata R$ 50 mil e Bronze R$ 30 mil. O repasse corresponde a 10% do faturamento realizado; a meta nao complementa o repasse. Dias 12/07, 15/07 e 19/07 nao entram no atingimento da meta.</p>
         </div>
         <div class="settlement-special-summary">
-          ${metric("Repasse consolidado", money(analysis.specialPool.repasse), `${money(analysis.specialPool.guaranteeApplied)} de garantia aplicada`)}
+          ${metric("Comissao sobre vendas", money(analysis.specialPool.actualCommission), `${pct(10)} do faturamento realizado`)}
+          ${metric("Meta de vendas", money(specialSalesTarget), specialSalesTargetGap ? `${money(specialSalesTargetGap)} para atingir` : "Meta atingida")}
           ${metric("Cortesia validada", money(analysis.specialPool.courtesyValidationRepasse), `${int(analysis.specialPool.gandayaCourtesyValidated)} Gandaya / ${int(analysis.specialPool.pneCourtesyValidated)} PNE`)}
-          ${metric("Receita apurada", money(analysis.specialPool.revenue), `${int(analysis.specialPool.sold)} vendidos / ${int(analysis.specialPool.soldValidated)} validados`)}
+          ${metric("Vendas consideradas na meta", money(specialEligibleRevenue), `${int(analysis.specialPool.sold)} vendidos no total`)}
+          ${metric("Receita total dos codigos", money(analysis.specialPool.revenue), `${int(analysis.specialPool.soldValidated)} vendas validadas`)}
           ${metric("Codigos especiais", int(specialRows.length), specialRows.map((row) => row.name).join(", ") || "Sem vendas no recorte")}
         </div>
         <details class="settlement-details-toggle">
@@ -3720,7 +3742,7 @@ function renderSettlement() {
             <select id="settlementModel">
               <option value="all" ${modelFilter === "all" ? "selected" : ""}>Todos</option>
               <option value="Padrao" ${modelFilter === "Padrao" ? "selected" : ""}>Modelo padrao</option>
-              <option value="100k garantido" ${modelFilter === "100k garantido" ? "selected" : ""}>100k garantido</option>
+              <option value="100k garantido" ${modelFilter === "100k garantido" ? "selected" : ""}>Meta 100k em vendas</option>
             </select>
           </label>
           <label class="filter-field">
