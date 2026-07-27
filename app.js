@@ -4704,7 +4704,7 @@ function bindActions() {
   });
   document.getElementById("promoterLinkSearch")?.addEventListener("input", (event) => {
     state.promoterLinkSearch = event.target.value;
-    render();
+    renderKeepingFocus("promoterLinkSearch");
   });
   document.getElementById("settlementSearch")?.addEventListener("input", (event) => {
     state.settlementFilters.search = event.target.value;
