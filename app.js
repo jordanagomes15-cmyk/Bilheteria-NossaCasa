@@ -1427,7 +1427,13 @@ const CODE_ALIASES = new Map([
   ["gabrielromanha", "romanha"],
   ["fabricioannunciato", "fun"],
   ["fabriccioannunciato", "fun"],
-  ["joaovitorpetersen", "pet"]
+  ["joaovitorpetersen", "pet"],
+  ["renatomurakami", "murakami"],
+  ["renatowilliglamha", "will"],
+  ["yasminfares", "fares"],
+  ["mdaccula", "mdaculla"],
+  ["mdeventos", "mdaculla"],
+  ["mdadcula", "mdaculla"]
 ]);
 const SETTLEMENT_EXCLUDED_CODES = new Set(
   [
