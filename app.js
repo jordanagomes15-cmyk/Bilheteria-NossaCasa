@@ -1433,7 +1433,11 @@ const CODE_ALIASES = new Map([
   ["yasminfares", "fares"],
   ["mdaccula", "mdaculla"],
   ["mdeventos", "mdaculla"],
-  ["mdadcula", "mdaculla"]
+  ["mdadcula", "mdaculla"],
+  ["cortesiasentradaate0030", "liberacao"],
+  ["cortesiaentradaate0030", "liberacao"],
+  ["cortesiaentradaate00", "liberacao"],
+  ["cortesiasentradaate00", "liberacao"]
 ]);
 const SETTLEMENT_EXCLUDED_CODES = new Set(
   [
@@ -1488,7 +1492,6 @@ const SETTLEMENT_EXCLUDED_CODES = new Set(
     "Jordana Hands",
     "lucas",
     "amigos mqtrf",
-    "Cortesias Entrada Ate 00 30",
     "Viva Sessions",
     "Gui Araújo",
     "Gudi",
