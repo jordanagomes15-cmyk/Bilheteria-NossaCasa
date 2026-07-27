@@ -350,15 +350,26 @@ def consume_cancelled_quota(quotas, person_key, batch_key):
     return True
 
 
-def source_ticket_totals(resumo, ingressos, cancelamentos):
+def source_ticket_totals(resumo, ingressos, cancelamentos, free_links=None):
     sold = complimentary = external = 0
+    price_by_batch = {}
     for _, row in resumo.iterrows():
         sold += int(as_number(get_cell(row, "Vendas")) or 0)
         complimentary += int(as_number(get_cell(row, "Cortesias")) or 0)
         external += int(as_number(get_cell(row, "Pagamentos externos")) or 0)
+        description = get_cell(row, "Descrição")
+        price = as_number(get_cell(row, "Preço médio")) or as_number(get_cell(row, "Preço"))
+        exact_key = normalize(description) or "sem lote"
+        family_key = normalize_batch(description)
+        price_by_batch[exact_key] = price
+        price_by_batch.setdefault(family_key, price)
     raw_sold = raw_complimentary = 0
     for _, row in ingressos.iterrows():
-        if "cortesia" in normalize(get_cell(row, "Descrição")):
+        description = get_cell(row, "Descrição")
+        batch_key = normalize(description) or "sem lote"
+        family_key = normalize_batch(description)
+        price_found, matched_price = batch_price_lookup(price_by_batch, batch_key, family_key)
+        if is_complimentary_ticket(description, get_cell(row, "Link"), price_found=price_found, price=matched_price, free_links=free_links):
             raw_complimentary += 1
         else:
             raw_sold += 1
@@ -570,8 +581,8 @@ def parse_xlsx(path):
     contact_by_key = build_contact_map(usuarios, envios)
     cancelled_quotas = cancellation_contexts(cancelamentos)
     paid_purchase_quotas = paid_purchase_contexts(compras)
-    source_totals = source_ticket_totals(resumo, ingressos, cancelamentos)
     free_links = free_link_map(links)
+    source_totals = source_ticket_totals(resumo, ingressos, cancelamentos, free_links=free_links)
 
     price_by_batch = {}
     for _, row in resumo.iterrows():
