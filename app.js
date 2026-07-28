@@ -4629,9 +4629,7 @@ function renderDetail() {
   const total = Number(event.sold || 0) + Number(event.complimentary || 0);
   const rate = (Number(event.validated || 0) / Math.max(total, 1)) * 100;
   const split = eventSalesBreakdown(event);
-  const audienceSummary = eventAudienceSummary(event);
   const ticketAudit = eventTicketAudit(event);
-  const genderRows = eventGenderRows(event);
   const soldValidated = Number(split.soldValidated || 0);
   const pneInserted = Number(event.pne?.inserted || 0);
   const pneConverted = Number(event.pne?.converted || 0);
@@ -4646,6 +4644,24 @@ function renderDetail() {
   const pneRepasse = rpRows.reduce((sum, row) => sum + eventValidationRepasse(row, "pneConverted"), 0);
   return `
     <section class="grid">
+      <div class="toolbar event-overview-heading">
+        <div class="section-title">
+          <h2>Resumo geral</h2>
+          <p>Indicadores financeiros, ingressos e presenca do evento.</p>
+        </div>
+        <button class="secondary compact-action" data-view="audienceProfile" data-profile-event="${esc(event.id)}">Ver perfil do publico</button>
+      </div>
+      <div class="grid cards event-overview-metrics">
+        ${metric("Faturamento", money(event.revenue), "Receita total do evento")}
+        ${metric("Ingressos totais", int(ticketAudit.displayTotal), ticketAudit.note)}
+        ${metric("Venda geral", money(split.generalRevenue), `${int(split.generalSold)} ingressos · ${pct(safeRate(split.generalRevenue, event.revenue))} do faturamento`)}
+        ${metric("Venda por link", money(split.linkRevenue), `${int(split.linkSold)} ingressos · ${pct(safeRate(split.linkRevenue, event.revenue))} do faturamento`)}
+        ${metric("Check-ins", int(event.validated), `${pct(rate)} de presenca`)}
+      </div>
+      <div class="section-title event-origin-heading">
+        <h2>Origens e repasses</h2>
+        <p>Distribuicao operacional dos ingressos por categoria.</p>
+      </div>
       <div class="event-category-summary" aria-label="Resumo por origem dos ingressos">
         ${metric("Ingressos vendidos", int(event.sold), `${int(soldValidated)} validados · ${money(linkSalesRepasse)} repasse de RPs`)}
         ${metric("Cortesias", int(split.courtesy), `${int(split.courtesyValidated)} validadas · ${money(courtesyRepasse)} repasse de RPs`)}
@@ -4653,16 +4669,6 @@ function renderDetail() {
         ${metric("PNE", int(pneInserted), `${int(pneConverted)} convertidos · ${money(pneRepasse)} repasse de RPs`)}
         ${metric("RPs", money(rpTotals.repasse), `${int(rpTotals.issued)} ingressos · ${int(rpTotals.validated)} validados`)}
         ${metric("Socios", int(sociosTotals.issued), `${int(sociosTotals.validated)} validados · ${money(0)} repasse`)}
-      </div>
-      <div class="grid cards">
-        ${metric("Faturamento", money(event.revenue), "Receita total do evento")}
-        ${metric("Venda geral", money(split.generalRevenue), `${int(split.generalSold)} ingressos · ${pct(safeRate(split.generalRevenue, event.revenue))} do faturamento`)}
-        ${metric("Venda por link", money(split.linkRevenue), `${int(split.linkSold)} ingressos · ${pct(safeRate(split.linkRevenue, event.revenue))} do faturamento`)}
-        ${metric("Ingressos totais", int(ticketAudit.displayTotal), ticketAudit.note)}
-        ${metric("Check-ins", int(event.validated), `${pct(rate)} de presenca`)}
-        ${metric("Compradores unicos", int(audienceSummary.uniqueBuyers), "Participantes finais com compra")}
-        ${metric("Convidados unicos", int(audienceSummary.uniqueCourtesy), "Participantes finais com cortesia")}
-        ${genderRows.slice(0, 2).map((row) => metric(row.label, pct(row.share), `${int(row.people)} pessoas no perfil do publico`)).join("")}
       </div>
       <div class="card">
         <div class="toolbar">
@@ -5131,7 +5137,10 @@ function toggleAudienceRow(row) {
 
 function bindActions() {
   document.querySelectorAll("[data-view]").forEach((button) => {
-    button.addEventListener("click", () => setView(button.dataset.view));
+    button.addEventListener("click", () => {
+      if (button.dataset.profileEvent) state.profileEventId = button.dataset.profileEvent;
+      setView(button.dataset.view);
+    });
   });
   document.querySelectorAll("[data-event]").forEach((button) => {
     button.addEventListener("click", () => openEvent(button.dataset.event));
