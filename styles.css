@@ -983,7 +983,7 @@ h3 {
 
 .event-category-summary {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-3);
 }
 
@@ -997,7 +997,7 @@ h3 {
 }
 
 .overview-metrics {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: stretch;
 }
 
@@ -1078,6 +1078,11 @@ h3 {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.settlement-metrics > .metric:first-child,
+.settlement-special-summary > .metric:first-child {
+  grid-column: span 2;
+}
+
 .settlement-special-card,
 .settlement-filter-card,
 .settlement-rule-card {
@@ -1115,7 +1120,7 @@ h3 {
 
 .settlement-special-summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-3);
 }
 
@@ -3544,6 +3549,11 @@ tr:last-child td {
   .settlement-metrics,
   .settlement-special-summary {
     grid-template-columns: 1fr;
+  }
+
+  .settlement-metrics > .metric:first-child,
+  .settlement-special-summary > .metric:first-child {
+    grid-column: span 1;
   }
 
   .settlement-table table,
