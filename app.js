@@ -1005,7 +1005,7 @@ function exportSettlementWorkbook() {
     Number(row.repasse || 0),
     Number(row.actualCommission || 0),
     Number(row.tierRows?.reduce((sum, tier) => sum + Number(tier.guaranteedBase || 0), 0) || 0),
-    Number(row.courtesyValidationRepasse || 0),
+    row.model === "100k garantido" ? 0 : Number(row.courtesyValidationRepasse || 0),
     Number(row.gandayaCourtesyValidated || 0),
     Number(row.pneCourtesyValidated || 0),
     Number(row.eventCount || 0)
@@ -1049,7 +1049,7 @@ function exportSettlementWorkbook() {
       Number(tier.guaranteedBase || 0),
       Number(tier.guaranteeEligibleRevenue || 0),
       Number(tier.actualCommission || 0),
-      Number(tier.courtesyValidationRepasse || 0),
+      row.model === "100k garantido" ? 0 : Number(tier.courtesyValidationRepasse || 0),
       Number(tier.repasse || 0),
       Number(tier.guaranteeBalance || 0)
     ])
@@ -1060,7 +1060,7 @@ function exportSettlementWorkbook() {
     "Tiers"
   );
 
-  const eventHeaders = ["Codigo", "Modelo", "Tier", "Evento", "Garantia elegivel", "Receita", "Vendidos", "Validados", "% validacao", "Cortesias", "Val. cortesias", "Repasse cortesia", "Val. cortesia Gandaya", "Val. cortesia PNE"];
+  const eventHeaders = ["Codigo", "Modelo", "Tier", "Evento", "Garantia elegivel", "Receita", "Vendidos", "Validados", "% validacao", "Repasse vendas", "Cortesias", "Val. cortesias", "Repasse cortesia", "Repasse total", "Val. cortesia Gandaya", "Val. cortesia PNE"];
   const eventRows = rows.flatMap((row) =>
     row.tierRows.flatMap((tier) =>
       (tier.eventRows || []).map((eventRow) => [
@@ -1073,9 +1073,11 @@ function exportSettlementWorkbook() {
         Number(eventRow.sold || 0),
         Number(eventRow.soldValidated || 0),
         safeRate(eventRow.soldValidated, eventRow.sold) / 100,
+        Number(eventRow.revenue || 0) * Number(tier.commissionRate || 0),
         Number(eventRow.complimentary || 0),
         Number(eventRow.complimentaryValidated || 0),
-        Number(eventRow.courtesyValidationRepasse || 0),
+        row.model === "100k garantido" ? 0 : Number(eventRow.courtesyValidationRepasse || 0),
+        Number(eventRow.revenue || 0) * Number(tier.commissionRate || 0) + (row.model === "100k garantido" ? 0 : Number(eventRow.courtesyValidationRepasse || 0)),
         Number(eventRow.gandayaCourtesyValidated || 0),
         Number(eventRow.pneCourtesyValidated || 0)
       ])
@@ -1083,7 +1085,7 @@ function exportSettlementWorkbook() {
   );
   XLSX.utils.book_append_sheet(
     workbook,
-    workbookSheetFromRows(eventHeaders, eventRows, { currencyColumns: [5, 11], percentColumns: [8], integerColumns: [6, 7, 9, 10, 12, 13] }),
+    workbookSheetFromRows(eventHeaders, eventRows, { currencyColumns: [5, 9, 12, 13], percentColumns: [8], integerColumns: [6, 7, 10, 11, 14, 15] }),
     "Eventos por tier"
   );
 
@@ -1097,7 +1099,7 @@ function exportSettlementCsv() {
   const lines = [
     headers.map(csvValue).join(";"),
     ...rows.map((row) =>
-      [row.name, settlementModelLabel(row.model), money(row.revenue), row.sold, row.soldValidated, money(row.repasse), money(row.guaranteeApplied), money(row.courtesyValidationRepasse), row.gandayaCourtesyValidated, row.pneCourtesyValidated]
+      [row.name, settlementModelLabel(row.model), money(row.revenue), row.sold, row.soldValidated, money(row.repasse), money(row.guaranteeApplied), money(row.model === "100k garantido" ? 0 : row.courtesyValidationRepasse), row.gandayaCourtesyValidated, row.pneCourtesyValidated]
         .map(csvValue)
         .join(";")
     )
@@ -3724,12 +3726,13 @@ function settlementTierSummary(tier, model, options = {}) {
             : ""
         }
         <span><b>${int(tier.sold)}</b><small>vendidos</small></span>
-        ${salesOnly ? "" : `<span><b>${int(tier.soldValidated)}</b><small>validados</small></span>`}
-        ${!salesOnly && tier.courtesyValidationRepasse ? `<span><b>${money(tier.courtesyValidationRepasse)}</b><small>cortesia validada</small></span>` : ""}
+        ${salesOnly ? "" : `<span><b>${int(tier.soldValidated)}</b><small>vendas validadas</small></span>`}
+        ${salesOnly ? "" : `<span><b>${money(tier.actualCommission)}</b><small>repasse vendas</small></span>`}
+        ${!salesOnly ? `<span><b>${money(tier.courtesyValidationRepasse)}</b><small>${int(tier.complimentaryValidated)} cortesias val. × ${money(SETTLEMENT_COURTESY_VALIDATION_FEE)}</small></span>` : ""}
         ${!salesOnly && tier.linkCourtesyValidated ? `<span><b>${int(tier.linkCourtesyValidated)}</b><small>link F/M val.</small></span>` : ""}
-        <span><b>${money(tier.repasse)}</b><small>repasse sobre vendas</small></span>
+        <span><b>${money(tier.repasse)}</b><small>${salesOnly ? "repasse sobre vendas" : "repasse total"}</small></span>
       </div>
-      ${expanded ? `<div class="settlement-tier-event-breakdown">${renderSettlementTierEventBreakdown(eventRows, { salesOnly })}</div>` : ""}
+      ${expanded ? `<div class="settlement-tier-event-breakdown">${renderSettlementTierEventBreakdown(eventRows, { salesOnly, commissionRate: tier.commissionRate })}</div>` : ""}
     </div>
   `;
 }
@@ -3850,14 +3853,17 @@ function settlementDrawerContext() {
 function renderSettlementTierEventBreakdown(events, options = {}) {
   if (!events.length) return renderStatePanel("Nenhum evento neste tier.", "", "empty");
   const salesOnly = Boolean(options.salesOnly);
+  const commissionRate = Number(options.commissionRate || SETTLEMENT_STANDARD_COMMISSION_RATE);
   return `
     <div class="table-wrap nested-detail-table settlement-tier-event-table" tabindex="0">
-      <table>
-        <thead><tr><th>Evento</th><th>Vendidos</th><th>Receita</th>${salesOnly ? "" : "<th>Validados</th><th>Cortesias</th><th>Rep. cortesia</th>"}</tr></thead>
+      <table class="${salesOnly ? "" : "settlement-standard-event-table"}">
+        <thead><tr><th>Evento</th><th>Vendidos</th><th>Receita</th>${salesOnly ? "" : "<th>Val. vendas</th><th>Rep. vendas</th><th>Cortesias</th><th>Rep. cortesia</th><th>Repasse total</th>"}</tr></thead>
         <tbody>
           ${events
-            .map(
-              (event) => `
+            .map((event) => {
+              const salesRepasse = Number(event.revenue || 0) * commissionRate;
+              const courtesyRepasse = Number(event.courtesyValidationRepasse || 0);
+              return `
                 <tr>
                   <td data-label="Evento"><button class="ghost detail-event-link" data-event="${esc(event.id)}"><span>${esc(event.name)}</span></button></td>
                   <td data-label="Vendidos">${int(event.sold)}</td>
@@ -3866,22 +3872,24 @@ function renderSettlementTierEventBreakdown(events, options = {}) {
                     salesOnly
                       ? ""
                       : `
-                        <td data-label="Validados">${int(event.soldValidated)} (${pct(safeRate(event.soldValidated, event.sold))})</td>
+                        <td data-label="Val. vendas">${int(event.soldValidated)} (${pct(safeRate(event.soldValidated, event.sold))})</td>
+                        <td data-label="Rep. vendas">${money(salesRepasse)}<small>${pct(commissionRate * 100)} da receita</small></td>
                         <td data-label="Cortesias">${int(event.complimentary)} (${pct(safeRate(event.complimentaryValidated, event.complimentary))} val.)</td>
                         <td data-label="Rep. cortesia">${
-                          event.courtesyValidationRepasse
-                            ? `${money(event.courtesyValidationRepasse)}<small>Gandaya ${int(event.gandayaCourtesyValidated)} · PNE ${int(event.pneCourtesyValidated)}</small>${
+                          courtesyRepasse
+                            ? `${money(courtesyRepasse)}<small>${int(event.complimentaryValidated)} val. × ${money(SETTLEMENT_COURTESY_VALIDATION_FEE)}</small><small>Gandaya ${int(event.gandayaCourtesyValidated)} · PNE ${int(event.pneCourtesyValidated)}</small>${
                                 event.linkCourtesyValidated
                                   ? `<small>Link F/M ${int(event.linkCourtesyValidated)} de ${int(event.linkCourtesyIssued)}</small>`
                                   : ""
                               }`
                             : "-"
                         }</td>
+                        <td data-label="Repasse total"><strong>${money(salesRepasse + courtesyRepasse)}</strong></td>
                       `
                   }
                 </tr>
-              `
-            )
+              `;
+            })
             .join("")}
         </tbody>
       </table>
@@ -3901,7 +3909,7 @@ function renderSettlementDrawer() {
         <div>
           <span class="eyebrow">Fechamento</span>
           <h3>${esc(row.name)}</h3>
-          <p>${int(row.sold)} vendidos${salesOnly ? "" : ` · ${int(row.soldValidated)} validados`} · ${money(row.revenue)} · ${money(row.repasse)} repasse${!salesOnly && row.courtesyValidationRepasse ? ` · ${int(row.complimentaryValidated)} cortesias val. (${money(row.courtesyValidationRepasse)})` : ""}${!salesOnly && row.linkCourtesyValidated ? ` · Link F/M ${int(row.linkCourtesyValidated)} de ${int(row.linkCourtesyIssued)}` : ""}</p>
+          <p>${int(row.sold)} vendidos · ${money(row.revenue)}${salesOnly ? ` · ${money(row.actualCommission)} repasse sobre vendas` : ` · ${int(row.soldValidated)} vendas validadas · ${money(row.actualCommission)} repasse vendas · ${int(row.complimentaryValidated)} cortesias validadas · ${money(row.courtesyValidationRepasse)} repasse cortesias · ${money(row.repasse)} total`}${!salesOnly && row.linkCourtesyValidated ? ` · Link F/M ${int(row.linkCourtesyValidated)} de ${int(row.linkCourtesyIssued)}` : ""}</p>
         </div>
         <button class="ghost icon-button" data-action="close-settlement-drawer" aria-label="Fechar detalhes">×</button>
       </div>
@@ -3945,7 +3953,19 @@ function renderSettlementRows(rows) {
                   <td data-label="Modelo"><span class="pill ${row.model === "100k garantido" ? "warn" : "soft"}">${esc(settlementModelLabel(row.model))}</span></td>
                   <td data-label="Receita" class="money-col">${money(row.revenue)}</td>
                   <td data-label="Vendas">${int(row.sold)}${row.model === "100k garantido" ? "" : `<small>${int(row.soldValidated)} vendas val.</small>`}</td>
-                  <td data-label="Repasse" class="money-col"><strong>${money(row.repasse)}</strong>${row.model === "100k garantido" ? `<small>${pct(10)} sobre vendas</small>` : ""}${row.model !== "100k garantido" && row.courtesyValidationRepasse ? `<small>${money(row.courtesyValidationRepasse)} cortesia validada</small>` : ""}</td>
+                  <td data-label="Repasse" class="money-col">
+                    <div class="settlement-repasse-breakdown">
+                      <strong>${money(row.repasse)}</strong>
+                      ${
+                        row.model === "100k garantido"
+                          ? `<small>Vendas: ${money(row.actualCommission)} · ${pct(10)} da receita</small>`
+                          : `
+                            <small>Vendas: ${money(row.actualCommission)} · ${int(row.soldValidated)} validadas</small>
+                            <small>Cortesias: ${money(row.courtesyValidationRepasse)} · ${int(row.complimentaryValidated)} val. × ${money(SETTLEMENT_COURTESY_VALIDATION_FEE)}</small>
+                          `
+                      }
+                    </div>
+                  </td>
                   <td data-label="Resumo dos tiers" class="settlement-tier-summary-cell"><span class="tier-summary-text">${esc(settlementTierCompactSummary(row))}</span><button class="secondary compact-action" data-settlement-code="${esc(key)}">Ver detalhamento</button></td>
                 </tr>
               `;

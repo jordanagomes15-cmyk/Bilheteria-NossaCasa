@@ -1241,6 +1241,18 @@ h3 {
   line-height: 1.25;
 }
 
+.settlement-repasse-breakdown {
+  display: grid;
+  justify-items: end;
+  gap: var(--space-1);
+  min-width: 190px;
+}
+
+.settlement-repasse-breakdown small {
+  margin-top: 0;
+  white-space: normal;
+}
+
 .settlement-code-link {
   display: inline-flex;
   min-height: auto;
@@ -1361,6 +1373,10 @@ h3 {
 
 .settlement-tier-event-table table {
   min-width: min(760px, 100%);
+}
+
+.settlement-tier-event-table .settlement-standard-event-table {
+  min-width: 1180px;
 }
 
 .settlement-tier-event-table td:first-child,
@@ -3533,6 +3549,11 @@ tr:last-child td {
 @media (max-width: 640px) {
   .event-category-summary {
     grid-template-columns: 1fr;
+  }
+
+  .settlement-repasse-breakdown {
+    justify-items: start;
+    min-width: 0;
   }
 
   .nonpayable-code-item {
