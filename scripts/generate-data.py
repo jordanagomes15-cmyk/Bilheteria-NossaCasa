@@ -1,4 +1,5 @@
 import copy
+from difflib import SequenceMatcher
 import json
 import hashlib
 import os
@@ -17,7 +18,8 @@ OUT = Path("generated-data.js")
 PRIVATE_DIR = Path(os.environ.get("NOSSA_CASA_PRIVATE_DATA_DIR", "private-data"))
 PRIVATE_AUDIENCE_OUT = PRIVATE_DIR / "audience.json"
 WATCH_EXTENSIONS = {".xlsx", ".pdf"}
-DATA_SCHEMA_VERSION = "public-private-split-v2"
+DATA_SCHEMA_VERSION = "promoter-normalization-v2"
+PROMOTER_REVIEW_OUT = Path("reports/promoter-name-review.json")
 
 
 def date_from_text(value):
@@ -53,6 +55,27 @@ def normalize(value):
     value = unicodedata.normalize("NFD", value).encode("ascii", "ignore").decode("ascii")
     value = re.sub(r"[^a-z0-9]+", " ", value)
     return re.sub(r"\s+", " ", value).strip()
+
+
+def normalize_promoter_name(value):
+    normalized = normalize(value)
+    if not normalized:
+        return ""
+    generic = r"(?:convidad[oa]|agencia|cortesia)"
+    previous = None
+    while normalized and normalized != previous:
+        previous = normalized
+        normalized = re.sub(rf"^{generic}(?:\s+(?:do|da|de))?\s+", "", normalized).strip()
+        normalized = re.sub(rf"\s+{generic}$", "", normalized).strip()
+    compact = normalized.replace(" ", "")
+    attached_prefix = re.match(r"^(convidad[oa]|agencia|cortesia)([a-z0-9]{3,})$", compact)
+    if attached_prefix:
+        compact = attached_prefix.group(2)
+        normalized = compact
+    media_match = re.fullmatch(r"midia0*(\d+)", compact)
+    if media_match:
+        return f"midia{int(media_match.group(1)):03d}"
+    return normalized
 
 
 PROMOTER_ALIASES = {
@@ -119,12 +142,118 @@ PROMOTER_ALIASES = {
     "marcelo goncalves sinisgalli": "ms",
     "marcello goncalves sinisgalli": "ms",
     "marcello sinisgalli": "ms",
+    "patrocinadores": "patrocinador",
 }
 
+PROMOTER_ALIAS_LOOKUP = {
+    normalize_promoter_name(alias): normalize_promoter_name(canonical)
+    for alias, canonical in PROMOTER_ALIASES.items()
+}
+PROMOTER_SIMILARITY_IGNORED_PAIRS = {
+    frozenset(("patrocinado", "patrocinador")),
+    frozenset(("patrocinado", "patrocinadores")),
+}
+PROMOTER_NAME_OBSERVATIONS = {}
 
-def canonical_promoter(value):
-    normalized = normalize(value)
-    return PROMOTER_ALIASES.get(normalized, normalized)
+
+def canonical_promoter(value, source="unknown"):
+    base = normalize(value)
+    normalized = normalize_promoter_name(value)
+    if not normalized:
+        return ""
+    canonical = PROMOTER_ALIAS_LOOKUP.get(normalized, normalized)
+    method = "manual" if canonical != normalized else "normalized" if normalized != base else "direct"
+    observation = PROMOTER_NAME_OBSERVATIONS.setdefault(
+        base,
+        {
+            "raw": str(value or "").strip(),
+            "normalized": normalized,
+            "canonical": canonical,
+            "method": method,
+            "sources": set(),
+            "occurrences": 0,
+        },
+    )
+    observation["sources"].add(source)
+    observation["occurrences"] += 1
+    return canonical
+
+
+def promoter_similarity_review():
+    by_canonical = {}
+    for observation in PROMOTER_NAME_OBSERVATIONS.values():
+        row = by_canonical.setdefault(
+            observation["canonical"],
+            {"occurrences": 0, "samples": set(), "sources": set(), "methods": set()},
+        )
+        row["occurrences"] += observation["occurrences"]
+        row["samples"].add(observation["raw"])
+        row["sources"].update(observation["sources"])
+        row["methods"].add(observation["method"])
+    known_codes = sorted(set(by_canonical) | set(PROMOTER_ALIAS_LOOKUP.values()))
+    pair_suggestions = {}
+    for name, details in by_canonical.items():
+        if len(name.replace(" ", "")) < 4 or "manual" in details["methods"]:
+            continue
+        candidates = [candidate for candidate in known_codes if candidate != name and len(candidate.replace(" ", "")) >= 4]
+        candidates = [
+            candidate
+            for candidate in candidates
+            if frozenset((name, candidate)) not in PROMOTER_SIMILARITY_IGNORED_PAIRS
+        ]
+        if not candidates:
+            continue
+        candidate = max(candidates, key=lambda item: SequenceMatcher(None, name.replace(" ", ""), item.replace(" ", "")).ratio())
+        similarity = SequenceMatcher(None, name.replace(" ", ""), candidate.replace(" ", "")).ratio()
+        if similarity < 0.85:
+            continue
+        candidate_details = by_canonical.get(candidate, {"occurrences": 0})
+        if details["occurrences"] > candidate_details.get("occurrences", 0):
+            new_name, suggested = candidate, name
+        else:
+            new_name, suggested = name, candidate
+        pair_key = tuple(sorted((name, candidate)))
+        pair_suggestions[pair_key] = {
+            "name": new_name,
+            "candidate": suggested,
+            "similarity": round(similarity, 4),
+            "similarityPercent": round(similarity * 100, 1),
+            "occurrences": by_canonical.get(new_name, {}).get("occurrences", 0),
+            "samples": sorted(by_canonical.get(new_name, {}).get("samples", [])),
+            "sources": sorted(by_canonical.get(new_name, {}).get("sources", [])),
+        }
+    return sorted(pair_suggestions.values(), key=lambda item: (-item["similarity"], item["name"]))
+
+
+def write_promoter_normalization_report():
+    suggestions = promoter_similarity_review()
+    observations = list(PROMOTER_NAME_OBSERVATIONS.values())
+    normalized_names = sorted({row["raw"] for row in observations if row["method"] == "normalized"})
+    manual_names = sorted({row["raw"] for row in observations if row["method"] == "manual"})
+    direct_names = sorted({row["raw"] for row in observations if row["method"] == "direct"})
+    report = {
+        "generatedAt": datetime.now().isoformat(timespec="seconds"),
+        "summary": {
+            "resolvedByExpandedNormalization": len(normalized_names),
+            "resolvedByManualAliases": len(manual_names),
+            "directCanonicalNames": len(direct_names),
+            "similarityReviewSuggestions": len(suggestions),
+        },
+        "resolvedByExpandedNormalization": normalized_names,
+        "resolvedByManualAliases": manual_names,
+        "similarityReview": suggestions,
+        "note": "Sugestoes por similaridade nao alteram nem fundem dados automaticamente.",
+    }
+    PROMOTER_REVIEW_OUT.parent.mkdir(parents=True, exist_ok=True)
+    PROMOTER_REVIEW_OUT.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    summary = report["summary"]
+    print(
+        "Normalizacao de comissarios: "
+        f"{summary['resolvedByExpandedNormalization']} por normalizacao ampliada; "
+        f"{summary['resolvedByManualAliases']} por aliases manuais; "
+        f"{summary['similarityReviewSuggestions']} sugestoes para revisao."
+    )
+    print(f"Relatorio de revisao: {PROMOTER_REVIEW_OUT}")
 
 
 def slug(value):
@@ -296,7 +425,7 @@ def free_link_map(links):
             continue
         label = normalize(f"{get_cell(row, 'Tipo')} {link}")
         if "liberacao" in label:
-            free_links[canonical_promoter(link.replace("-", ""))] = True
+            free_links[canonical_promoter(link.replace("-", ""), source="gandaya")] = True
     return free_links
 
 
@@ -310,7 +439,7 @@ def batch_price_lookup(price_by_batch, batch_key, family_key):
 
 def is_complimentary_ticket(description, link, price_found=False, price=0, total=None, free_links=None):
     label = normalize(f"{description} {link}")
-    link_key = canonical_promoter(str(link or "").replace("-", ""))
+    link_key = canonical_promoter(str(link or "").replace("-", ""), source="gandaya")
     if "cortesia" in label or "liberacao" in label:
         return True
     if free_links and link_key in free_links:
@@ -404,7 +533,7 @@ def source_ticket_totals(resumo, ingressos, cancelamentos, free_links=None):
 
 
 def promoter_from(description, link, complimentary):
-    link = canonical_promoter(str(link).replace("-", ""))
+    link = canonical_promoter(str(link).replace("-", ""), source="gandaya")
     if link:
         return link
     if complimentary and "-" in str(description):
@@ -425,7 +554,7 @@ def promoter_from(description, link, complimentary):
         useful_parts = [part for part in parts if normalize(part) not in generic_parts and not generic_suffix.match(normalize(part))]
         if not useful_parts:
             return ""
-        return canonical_promoter(useful_parts[-1])
+        return canonical_promoter(useful_parts[-1], source="gandaya")
     return ""
 
 
@@ -453,7 +582,7 @@ def add_promoter(
     batch_key="",
     batch_label="",
 ):
-    key = canonical_promoter(name)
+    key = canonical_promoter(name, source="gandaya")
     if not key:
         return
     row = promoters.setdefault(key, promoter_empty())
@@ -747,7 +876,7 @@ def parse_pne_pdf(path):
         name, ins, conv = match.groups()
         if normalize(name) in {"pne", "nossa casa", "total geral", "total"}:
             continue
-        canonical = canonical_promoter(name)
+        canonical = canonical_promoter(name, source="pne")
         row = people_by_name.setdefault(canonical, {"name": display(canonical), "inserted": 0, "converted": 0})
         row["inserted"] += int(ins)
         row["converted"] += int(conv)
@@ -813,6 +942,7 @@ def source_signature():
 
 
 def main():
+    PROMOTER_NAME_OBSERVATIONS.clear()
     events = [parse_xlsx(path) for path in sorted(GANDAYA_DIR.glob("*.xlsx")) if not path.name.startswith("~$")]
     pnes = [parse_pne_pdf(path) for path in sorted(PNE_DIR.glob("*.pdf"))]
     data_version, source_files = source_signature()
@@ -837,6 +967,10 @@ def main():
     payload = {
         "generatedAt": datetime.now().isoformat(timespec="seconds"),
         "dataVersion": data_version,
+        "promoterAliases": [
+            {"alias": alias, "canonical": canonical}
+            for alias, canonical in sorted(PROMOTER_ALIASES.items())
+        ],
         "sourceFolders": {
             "gandaya": "Gandaya",
             "pne": "PNE",
@@ -851,6 +985,7 @@ def main():
         + ";\n",
         encoding="utf-8",
     )
+    write_promoter_normalization_report()
 
 
 if __name__ == "__main__":

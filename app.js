@@ -174,6 +174,7 @@ const state = {
   privateDataLoading: false,
   privateDataError: "",
   detailTab: "batches",
+  pneSearch: "",
   promoterSplit: loadPromoterSplit(),
   query: "",
   expandedAudienceKey: "",
@@ -1043,7 +1044,7 @@ function exportSettlementWorkbook() {
       Number(tier.actualCommission || 0),
       Number(tier.courtesyValidationRepasse || 0),
       Number(tier.repasse || 0),
-      Number(tier.guaranteeGap || 0)
+      Number(tier.guaranteeBalance || 0)
     ])
   );
   XLSX.utils.book_append_sheet(
@@ -1725,6 +1726,7 @@ function finalizeSettlementRow(row, options = {}) {
       const hasTierActivity = Number(tier.guaranteeEligibleRevenue || 0) > 0 || Number(tier.guaranteeEligibleSold || 0) > 0;
       tier.guaranteedBase = hasTierActivity ? rule.guaranteedBase : 0;
       tier.guaranteedCommission = 0;
+      tier.guaranteeBalance = tier.guaranteeEligibleRevenue - tier.guaranteedBase;
       tier.guaranteeGap = Math.max(0, tier.guaranteedBase - tier.guaranteeEligibleRevenue);
       tier.guaranteeSurplus = Math.max(0, tier.guaranteeEligibleRevenue - tier.guaranteedBase);
       tier.guaranteeMet = Boolean(tier.guaranteedBase && tier.guaranteeEligibleRevenue >= tier.guaranteedBase);
@@ -1739,6 +1741,7 @@ function finalizeSettlementRow(row, options = {}) {
       const weight = revenueWeight || soldWeight || 0;
       tier.guaranteedBase = poolTier.guaranteedBase * weight;
       tier.guaranteedCommission = 0;
+      tier.guaranteeBalance = tier.guaranteeEligibleRevenue - tier.guaranteedBase;
       tier.guaranteeGap = Math.max(0, tier.guaranteedBase - tier.guaranteeEligibleRevenue);
       tier.guaranteeSurplus = Math.max(0, tier.guaranteeEligibleRevenue - tier.guaranteedBase);
       tier.guaranteeMet = Boolean(tier.guaranteedBase && tier.guaranteeEligibleRevenue >= tier.guaranteedBase);
@@ -1784,6 +1787,7 @@ function syncSpecialSettlementPool(specialPool, specialRows) {
     poolTier.guaranteedCommission = 0;
     poolTier.guaranteeEligibleRevenue = specialRows.reduce((acc, row) => acc + Number(row.tiers[tierKey]?.guaranteeEligibleRevenue || 0), 0);
     poolTier.guaranteeEligibleSold = specialRows.reduce((acc, row) => acc + Number(row.tiers[tierKey]?.guaranteeEligibleSold || 0), 0);
+    poolTier.guaranteeBalance = poolTier.guaranteeEligibleRevenue - poolTier.guaranteedBase;
     poolTier.guaranteeGap = Math.max(0, poolTier.guaranteedBase - poolTier.guaranteeEligibleRevenue);
     poolTier.guaranteeSurplus = Math.max(0, poolTier.guaranteeEligibleRevenue - poolTier.guaranteedBase);
     poolTier.guaranteeMet = Boolean(poolTier.guaranteedBase && poolTier.guaranteeEligibleRevenue >= poolTier.guaranteedBase);
@@ -1913,6 +1917,19 @@ function buildSettlementAnalysis(events = filteredEvents()) {
 
 function salesCodeKey(name) {
   return normalizeCodeName(name || "sem codigo");
+}
+
+function promoterSearchText(row) {
+  const canonical = salesCodeKey(row.name);
+  const aliases = (embeddedData?.promoterAliases || [])
+    .filter((item) => salesCodeKey(item.canonical) === canonical)
+    .map((item) => item.alias);
+  return normalizeText([row.name, canonical, ...aliases].join(" "));
+}
+
+function promoterMatchesSearch(row, query) {
+  const normalizedQuery = normalizeText(query);
+  return !normalizedQuery || promoterSearchText(row).includes(normalizedQuery);
 }
 
 function normalizeCodeName(name) {
@@ -2324,6 +2341,7 @@ function setView(view) {
 function openEvent(id) {
   state.selectedEventId = id;
   state.view = "detail";
+  state.pneSearch = "";
   state.salesCodeDrawerKey = "";
   state.salesCodeDrawerMode = "sales";
   state.salesCodeExpandedEventId = "";
@@ -3228,7 +3246,7 @@ function salesCodeDrawerContext() {
   const currentEvent = selectedEvent();
   const isDetail = state.view === "detail" && currentEvent;
   const scopeEvents = isDetail ? [currentEvent] : filteredEvents();
-  const rows = state.view === "commissioners" ? rankingRowsForEvents(scopeEvents) : isDetail ? eventPromoters(currentEvent) : promoterRanking(scopeEvents);
+  const rows = state.view === "commissioners" ? promoterRanking(scopeEvents) : isDetail ? eventPromoters(currentEvent) : promoterRanking(scopeEvents);
   const row = rows.find((item) => salesCodeKey(item.name) === state.salesCodeDrawerKey);
   if (!row) return null;
   const totalRevenue = isDetail
@@ -3351,6 +3369,7 @@ function renderCommissioners() {
   return `
     <section class="grid">
       ${renderDashboardFilters(events)}
+      ${renderGlobalPromoterSplit(events)}
       <div class="card">
         <div class="toolbar">
           <div class="section-title"><h2>Ranking completo</h2><p>Receita, vendidos, cortesias e check-ins por RP.</p></div>
@@ -3415,7 +3434,7 @@ function settlementTierSummary(tier, model, options = {}) {
         ${hasSalesTarget ? `<span><b>${money(tier.guaranteedBase)}</b><small>meta de vendas</small></span>` : ""}
         ${
           hasSalesTarget
-            ? `<span><b>${tier.guaranteeMet ? "Meta atingida" : money(tier.guaranteeGap)}</b><small>${tier.guaranteeMet ? `${money(tier.guaranteeSurplus)} acima da meta` : "para atingir a meta"}</small></span>`
+            ? `<span class="${tier.guaranteeBalance < 0 ? "settlement-negative-balance" : ""}"><b>${money(tier.guaranteeBalance)}</b><small>saldo da meta</small></span>`
             : ""
         }
         <span><b>${int(tier.sold)}</b><small>vendidos</small></span>
@@ -3684,6 +3703,8 @@ function renderSettlement() {
   const specialSalesTarget = analysis.specialPool.tierRows.reduce((sum, tier) => sum + Number(tier.guaranteedBase || 0), 0);
   const specialEligibleRevenue = analysis.specialPool.tierRows.reduce((sum, tier) => sum + Number(tier.guaranteeEligibleRevenue || 0), 0);
   const specialSalesTargetGap = Math.max(0, specialSalesTarget - specialEligibleRevenue);
+  const specialMissedTiers = analysis.specialPool.tierRows.filter((tier) => Number(tier.guaranteedBase || 0) > 0 && Number(tier.guaranteeBalance || 0) < 0);
+  const specialNegativeBalance = -specialMissedTiers.reduce((sum, tier) => sum + Number(tier.guaranteeGap || 0), 0);
   return `
     <section class="grid settlement-page">
       ${renderDashboardFilters(events)}
@@ -3714,6 +3735,7 @@ function renderSettlement() {
         <div class="settlement-special-summary">
           ${metric("Comissao sobre vendas", money(analysis.specialPool.actualCommission), `${pct(10)} do faturamento realizado`)}
           ${metric("Meta de vendas", money(specialSalesTarget), specialSalesTargetGap ? `${money(specialSalesTargetGap)} para atingir` : "Meta atingida")}
+          ${metric("Saldo das metas por tier", money(specialNegativeBalance), specialMissedTiers.length ? specialMissedTiers.map((tier) => `${tier.label}: ${money(tier.guaranteeBalance)}`).join(" · ") : "Todas as metas por tier foram atingidas")}
           ${metric("Cortesia validada", money(analysis.specialPool.courtesyValidationRepasse), `${int(analysis.specialPool.gandayaCourtesyValidated)} Gandaya / ${int(analysis.specialPool.pneCourtesyValidated)} PNE`)}
           ${metric("Vendas consideradas na meta", money(specialEligibleRevenue), `${int(analysis.specialPool.sold)} vendidos no total`)}
           ${metric("Receita total dos codigos", money(analysis.specialPool.revenue), `${int(analysis.specialPool.soldValidated)} vendas validadas`)}
@@ -3721,7 +3743,7 @@ function renderSettlement() {
         </div>
         <details class="settlement-details-toggle">
           <summary>Ver distribuicao por tier</summary>
-          ${renderSettlementTierList(analysis.specialPool, { simpleEvents: true })}
+          ${renderSettlementTierList(analysis.specialPool, { interactiveEvents: true, rowKey: "special-pool" })}
         </details>
       </div>
       <div class="card settlement-filter-card">
@@ -4309,6 +4331,10 @@ function renderPne(event) {
   }
   const rate = (Number(event.pne.converted || 0) / Math.max(Number(event.pne.inserted || 0), 1)) * 100;
   const pneRepasse = Number(event.pne.converted || 0) * SETTLEMENT_COURTESY_VALIDATION_FEE;
+  const query = normalizeText(state.pneSearch);
+  const people = [...(event.pne.people || [])]
+    .filter((person) => !query || normalizeText(person.name).includes(query))
+    .sort((a, b) => b.converted - a.converted || b.inserted - a.inserted);
   return `
     <div class="grid">
       <div class="grid cards">
@@ -4317,28 +4343,39 @@ function renderPne(event) {
         ${metric("Repasse PNE", money(pneRepasse), `${int(event.pne.converted)} validacoes · ${money(SETTLEMENT_COURTESY_VALIDATION_FEE)} por pessoa`)}
         ${metric("Fonte PNE", event.pne.source, "Documents/Nossa Casa/PNE")}
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Usuario</th><th>Inseridos</th><th>Convertidos</th><th>Taxa</th><th>Repasse</th></tr></thead>
-          <tbody>
-            ${(event.pne.people || [])
-              .sort((a, b) => b.converted - a.converted || b.inserted - a.inserted)
-              .map((person) => {
-                const personRate = (Number(person.converted || 0) / Math.max(Number(person.inserted || 0), 1)) * 100;
-                const personRepasse = Number(person.converted || 0) * SETTLEMENT_COURTESY_VALIDATION_FEE;
-                return `
-                  <tr>
-                    <td><strong>${esc(person.name)}</strong></td>
-                    <td>${int(person.inserted)}</td>
-                    <td>${int(person.converted)}</td>
-                    <td><span class="pill ${personRate >= 35 ? "good" : "warn"}">${pct(personRate)}</span></td>
-                    <td>${money(personRepasse)}</td>
-                  </tr>
-                `;
-              })
-              .join("")}
-          </tbody>
-        </table>
+      <div class="grid">
+        <label class="filter-field">
+          <span>Buscar no PNE</span>
+          <input class="search" id="pneSearch" type="search" value="${esc(state.pneSearch)}" placeholder="Digite um usuario ou codigo" autocomplete="off" />
+        </label>
+        ${
+          people.length
+            ? `
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Usuario</th><th>Inseridos</th><th>Convertidos</th><th>Taxa</th><th>Repasse</th></tr></thead>
+                  <tbody>
+                    ${people
+                      .map((person) => {
+                        const personRate = (Number(person.converted || 0) / Math.max(Number(person.inserted || 0), 1)) * 100;
+                        const personRepasse = Number(person.converted || 0) * SETTLEMENT_COURTESY_VALIDATION_FEE;
+                        return `
+                          <tr>
+                            <td><strong>${esc(person.name)}</strong></td>
+                            <td>${int(person.inserted)}</td>
+                            <td>${int(person.converted)}</td>
+                            <td><span class="pill ${personRate >= 35 ? "good" : "warn"}">${pct(personRate)}</span></td>
+                            <td>${money(personRepasse)}</td>
+                          </tr>
+                        `;
+                      })
+                      .join("")}
+                  </tbody>
+                </table>
+              </div>
+            `
+            : renderStatePanel("Nenhum usuario PNE encontrado.", "Tente buscar por outro nome ou codigo.", "empty")
+        }
       </div>
     </div>
   `;
@@ -4377,7 +4414,7 @@ function eventPromoters(event) {
 
 function renderEventPromoterSplit(event) {
   const query = normalizeText(state.promoterLinkSearch);
-  const rows = eventPromoters(event).filter((row) => !query || normalizeText(row.name).includes(query));
+  const rows = eventPromoters(event).filter((row) => promoterMatchesSearch(row, query));
   const salesRows = rows.filter((row) => row.revenue > 0 || row.sold > 0);
   const courtesyRows = rows.filter((row) => row.complimentary > 0);
   return `
@@ -4412,6 +4449,50 @@ function renderEventPromoterSplit(event) {
         ></button>
         <div class="promoter-pane">
           <div class="section-title inline-section"><h3>Cortesias por link</h3><p>Validadas em quantidade e percentual.</p></div>
+          ${renderCourtesyLinkTable(courtesyRows)}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderGlobalPromoterSplit(events) {
+  const rows = promoterRanking(events).filter((row) => promoterMatchesSearch(row, state.promoterLinkSearch));
+  const salesRows = rows.filter((row) => row.revenue > 0 || row.sold > 0);
+  const courtesyRows = rows.filter((row) => row.complimentary > 0);
+  const totalRevenue = events.reduce((sum, event) => sum + Number(event.revenue || 0), 0);
+  return `
+    <div class="grid promoter-compare-panel">
+      <div class="card filter-panel promoter-link-filter">
+        <div class="section-title">
+          <h2>Comparativo global por comissario</h2>
+          <p>Vendas e cortesias consolidadas de todos os eventos do recorte atual.</p>
+        </div>
+        <div class="filter-grid promoter-link-filter-grid">
+          <label class="filter-field">
+            <span>Buscar comissario</span>
+            <input class="search" id="promoterLinkSearch" value="${esc(state.promoterLinkSearch)}" placeholder="Digite o nome, apelido ou codigo" autocomplete="off" />
+          </label>
+          <div class="detail-metrics promoter-link-summary">
+            <span><b>${int(salesRows.length)}</b><small>Comissarios com venda</small></span>
+            <span><b>${int(courtesyRows.length)}</b><small>Comissarios com cortesia</small></span>
+          </div>
+        </div>
+      </div>
+      <div class="grid two promoter-split" style="--promoter-left:${state.promoterSplit}%">
+        <div class="promoter-pane">
+          <div class="section-title inline-section"><h3>Vendas por comissario</h3><p>Faturamento e ingressos somados no recorte.</p></div>
+          ${renderSalesLinkTable(salesRows, totalRevenue, { condensed: true })}
+        </div>
+        <button
+          class="split-resizer"
+          type="button"
+          data-action="resize-promoter-split"
+          aria-label="Redimensionar colunas"
+          title="Arraste para redimensionar"
+        ></button>
+        <div class="promoter-pane">
+          <div class="section-title inline-section"><h3>Cortesias por comissario</h3><p>Emitidas e validadas somadas no recorte.</p></div>
           ${renderCourtesyLinkTable(courtesyRows)}
         </div>
       </div>
@@ -4769,6 +4850,13 @@ function bindActions() {
   document.getElementById("promoterLinkSearch")?.addEventListener("input", (event) => {
     state.promoterLinkSearch = event.target.value;
     renderKeepingFocus("promoterLinkSearch");
+  });
+  document.getElementById("pneSearch")?.addEventListener("input", (event) => {
+    state.pneSearch = event.target.value;
+    renderKeepingFocus("pneSearch", {
+      selectionStart: event.target.selectionStart,
+      selectionEnd: event.target.selectionEnd
+    });
   });
   document.getElementById("settlementSearch")?.addEventListener("input", (event) => {
     state.settlementFilters.search = event.target.value;

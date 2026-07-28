@@ -1281,6 +1281,11 @@ h3 {
   line-height: 1.15;
 }
 
+.settlement-tier-numbers .settlement-negative-balance b,
+.settlement-tier-numbers .settlement-negative-balance small {
+  color: var(--danger);
+}
+
 .settlement-tier-card-simple {
   grid-template-columns: minmax(120px, 0.22fr) minmax(0, 1fr);
   align-items: start;
