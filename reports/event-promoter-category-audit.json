@@ -1,0 +1,4632 @@
+{
+  "generatedAt": "2026-07-28T15:20:39.462Z",
+  "counts": {
+    "socios": 8,
+    "special": 3,
+    "generic": 49,
+    "rp": 184
+  },
+  "checks": {
+    "missingExpectedSocios": [],
+    "sociosLeakedIntoRps": [],
+    "specials": [
+      "Mare",
+      "Marianaparik",
+      "Ra"
+    ],
+    "krushDirect": {
+      "courtesy": 28,
+      "courtesyValidated": 6,
+      "liberation": 257,
+      "liberationValidated": 89,
+      "repasse": 95,
+      "sourceKinds": [
+        "Cortesia",
+        "Liberacao"
+      ],
+      "sourceNames": [
+        "direct_",
+        "direct"
+      ],
+      "badgePresent": true
+    }
+  },
+  "groups": {
+    "socios": [
+      {
+        "name": "Allan",
+        "sourceNames": [
+          "Allan"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 4,
+        "issued": 177,
+        "validated": 69,
+        "repasse": 0,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 177,
+        "revenue": 0
+      },
+      {
+        "name": "Artistico",
+        "sourceNames": [
+          "artistico"
+        ],
+        "sourceKinds": [
+          "Cortesia"
+        ],
+        "events": 7,
+        "issued": 266,
+        "validated": 171,
+        "repasse": 0,
+        "sold": 0,
+        "courtesy": 266,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Hands",
+        "sourceNames": [
+          "hands",
+          "handsup-",
+          "handsup"
+        ],
+        "sourceKinds": [
+          "Cortesia",
+          "Liberacao",
+          "Venda"
+        ],
+        "events": 16,
+        "issued": 598,
+        "validated": 346,
+        "repasse": 0,
+        "sold": 75,
+        "courtesy": 498,
+        "liberation": 25,
+        "pne": 0,
+        "revenue": 9106
+      },
+      {
+        "name": "Jordana",
+        "sourceNames": [
+          "Jordana"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 3,
+        "issued": 96,
+        "validated": 26,
+        "repasse": 0,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 96,
+        "revenue": 0
+      },
+      {
+        "name": "Patrocinador",
+        "sourceNames": [
+          "patrocinador"
+        ],
+        "sourceKinds": [
+          "Cortesia"
+        ],
+        "events": 15,
+        "issued": 936,
+        "validated": 178,
+        "repasse": 0,
+        "sold": 0,
+        "courtesy": 936,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Somosbw",
+        "sourceNames": [
+          "somosbw",
+          "somosbw-",
+          "somosbw_"
+        ],
+        "sourceKinds": [
+          "Cortesia",
+          "Liberacao",
+          "Venda"
+        ],
+        "events": 15,
+        "issued": 1807,
+        "validated": 889,
+        "repasse": 0,
+        "sold": 61,
+        "courtesy": 1408,
+        "liberation": 338,
+        "pne": 0,
+        "revenue": 8577.5
+      },
+      {
+        "name": "Soul",
+        "sourceNames": [
+          "soul",
+          "soul_"
+        ],
+        "sourceKinds": [
+          "Cortesia",
+          "Liberacao"
+        ],
+        "events": 10,
+        "issued": 80,
+        "validated": 37,
+        "repasse": 0,
+        "sold": 0,
+        "courtesy": 79,
+        "liberation": 1,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Today",
+        "sourceNames": [
+          "today",
+          "todaycrew",
+          "today_"
+        ],
+        "sourceKinds": [
+          "Cortesia",
+          "Liberacao",
+          "Venda"
+        ],
+        "events": 17,
+        "issued": 1436,
+        "validated": 815,
+        "repasse": 0,
+        "sold": 9,
+        "courtesy": 1396,
+        "liberation": 31,
+        "pne": 0,
+        "revenue": 1437.5
+      }
+    ],
+    "special": [
+      {
+        "name": "Mare",
+        "sourceNames": [
+          "mare"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 6,
+        "issued": 355,
+        "validated": 347,
+        "repasse": 0,
+        "sold": 355,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 98565.3
+      },
+      {
+        "name": "Marianaparik",
+        "sourceNames": [
+          "marianaparik",
+          "Mariana Parik",
+          "marianaparik-",
+          "marianaparik_"
+        ],
+        "sourceKinds": [
+          "Venda",
+          "PNE",
+          "Liberacao"
+        ],
+        "events": 16,
+        "issued": 522,
+        "validated": 441,
+        "repasse": 0,
+        "sold": 438,
+        "courtesy": 0,
+        "liberation": 51,
+        "pne": 33,
+        "revenue": 68953.8
+      },
+      {
+        "name": "Ra",
+        "sourceNames": [
+          "ra",
+          "ra-"
+        ],
+        "sourceKinds": [
+          "Venda",
+          "Cortesia"
+        ],
+        "events": 17,
+        "issued": 361,
+        "validated": 337,
+        "repasse": 0,
+        "sold": 360,
+        "courtesy": 1,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 54339
+      }
+    ],
+    "generic": [
+      {
+        "name": "Aniveralepereira",
+        "sourceNames": [
+          "aniveralepereira"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 5,
+        "validated": 5,
+        "repasse": 0,
+        "sold": 5,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 1519.2
+      },
+      {
+        "name": "Aniveramandagomes",
+        "sourceNames": [
+          "aniveramandagomes"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 7,
+        "validated": 6,
+        "repasse": 0,
+        "sold": 7,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 2154.6
+      },
+      {
+        "name": "Aniverarthurtonini",
+        "sourceNames": [
+          "aniverarthurtonini"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 3,
+        "validated": 3,
+        "repasse": 0,
+        "sold": 3,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 1026
+      },
+      {
+        "name": "Anivercybele",
+        "sourceNames": [
+          "anivercybele"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 2,
+        "validated": 2,
+        "repasse": 0,
+        "sold": 2,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 630
+      },
+      {
+        "name": "Aniverdanielepel",
+        "sourceNames": [
+          "aniverdanielepel"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 7,
+        "validated": 7,
+        "repasse": 0,
+        "sold": 7,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 2250
+      },
+      {
+        "name": "Aniverdayane",
+        "sourceNames": [
+          "aniverdayane"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 3,
+        "validated": 3,
+        "repasse": 0,
+        "sold": 3,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 936
+      },
+      {
+        "name": "Aniverelisparmezani",
+        "sourceNames": [
+          "aniverelisparmezani"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 15,
+        "validated": 13,
+        "repasse": 0,
+        "sold": 15,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 4851
+      },
+      {
+        "name": "Aniverfernandamestre",
+        "sourceNames": [
+          "aniverfernandamestre"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 23,
+        "validated": 23,
+        "repasse": 0,
+        "sold": 23,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 7290
+      },
+      {
+        "name": "Aniverfeuzanagem",
+        "sourceNames": [
+          "aniverfeuzanagem"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 29,
+        "validated": 29,
+        "repasse": 0,
+        "sold": 29,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 9729
+      },
+      {
+        "name": "Anivergabigarcia",
+        "sourceNames": [
+          "anivergabigarcia"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 7,
+        "validated": 7,
+        "repasse": 0,
+        "sold": 7,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 2223
+      },
+      {
+        "name": "Anivergilabellla",
+        "sourceNames": [
+          "anivergilabellla"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 16,
+        "validated": 16,
+        "repasse": 0,
+        "sold": 16,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 4770
+      },
+      {
+        "name": "Aniverhenriquematsu",
+        "sourceNames": [
+          "aniverhenriquematsu"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 1,
+        "validated": 1,
+        "repasse": 0,
+        "sold": 1,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 324
+      },
+      {
+        "name": "Aniverjoaomahnic",
+        "sourceNames": [
+          "aniverjoaomahnic"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 7,
+        "validated": 7,
+        "repasse": 0,
+        "sold": 7,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 2160
+      },
+      {
+        "name": "Aniverjulianaruic",
+        "sourceNames": [
+          "aniverjulianaruic"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 5,
+        "validated": 5,
+        "repasse": 0,
+        "sold": 5,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 1512
+      },
+      {
+        "name": "Aniverkauanfernandes",
+        "sourceNames": [
+          "aniverkauanfernandes"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 8,
+        "validated": 8,
+        "repasse": 0,
+        "sold": 8,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 2700
+      },
+      {
+        "name": "Aniverlais",
+        "sourceNames": [
+          "aniverlais"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 5,
+        "validated": 4,
+        "repasse": 0,
+        "sold": 5,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 1503
+      },
+      {
+        "name": "Aniverlaisbuono",
+        "sourceNames": [
+          "aniverlaisbuono"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 25,
+        "validated": 24,
+        "repasse": 0,
+        "sold": 25,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 7731
+      },
+      {
+        "name": "Anivermarianatoyonaga",
+        "sourceNames": [
+          "anivermarianatoyonaga"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 11,
+        "validated": 11,
+        "repasse": 0,
+        "sold": 11,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 3897
+      },
+      {
+        "name": "Aniverpaula",
+        "sourceNames": [
+          "aniverpaula"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 5,
+        "validated": 5,
+        "repasse": 0,
+        "sold": 5,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 1422
+      },
+      {
+        "name": "Aniverrafaelmanzano",
+        "sourceNames": [
+          "aniverrafaelmanzano-"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 4,
+        "validated": 4,
+        "repasse": 0,
+        "sold": 4,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 1062
+      },
+      {
+        "name": "Aniversariante",
+        "sourceNames": [
+          "aniversariante"
+        ],
+        "sourceKinds": [
+          "Cortesia"
+        ],
+        "events": 2,
+        "issued": 34,
+        "validated": 33,
+        "repasse": 0,
+        "sold": 0,
+        "courtesy": 34,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Anivertalita",
+        "sourceNames": [
+          "anivertalita"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 1,
+        "validated": 1,
+        "repasse": 0,
+        "sold": 1,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 378
+      },
+      {
+        "name": "Bdaybella",
+        "sourceNames": [
+          "bdaybella"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 12,
+        "validated": 12,
+        "repasse": 0,
+        "sold": 12,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 1558
+      },
+      {
+        "name": "Bdaybruno",
+        "sourceNames": [
+          "bdaybruno"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 6,
+        "validated": 5,
+        "repasse": 0,
+        "sold": 6,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 648
+      },
+      {
+        "name": "Bdaybrureis",
+        "sourceNames": [
+          "bdaybrureis"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 5,
+        "validated": 5,
+        "repasse": 0,
+        "sold": 5,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 558
+      },
+      {
+        "name": "Bdayfernanda",
+        "sourceNames": [
+          "bdayfernanda"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 3,
+        "validated": 3,
+        "repasse": 0,
+        "sold": 3,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 333
+      },
+      {
+        "name": "Bdaygustavomatos",
+        "sourceNames": [
+          "bdaygustavomatos"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 1,
+        "validated": 1,
+        "repasse": 0,
+        "sold": 1,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 209
+      },
+      {
+        "name": "Bdayigao",
+        "sourceNames": [
+          "bdayigao"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 25,
+        "validated": 22,
+        "repasse": 0,
+        "sold": 25,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 2727
+      },
+      {
+        "name": "Bdayisapreto",
+        "sourceNames": [
+          "bdayisapreto"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 13,
+        "validated": 12,
+        "repasse": 0,
+        "sold": 13,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 4320
+      },
+      {
+        "name": "Bdayjulia",
+        "sourceNames": [
+          "bdayjulia"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 1,
+        "validated": 0,
+        "repasse": 0,
+        "sold": 1,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 99
+      },
+      {
+        "name": "Bdaylaura",
+        "sourceNames": [
+          "bdaylaura"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 3,
+        "validated": 1,
+        "repasse": 0,
+        "sold": 3,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 495
+      },
+      {
+        "name": "Bdaymarinabraga",
+        "sourceNames": [
+          "bdaymarinabraga"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 1,
+        "validated": 1,
+        "repasse": 0,
+        "sold": 1,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 117
+      },
+      {
+        "name": "Bdayveronicacolares",
+        "sourceNames": [
+          "bdayveronicacolares"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 4,
+        "validated": 4,
+        "repasse": 0,
+        "sold": 4,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 441
+      },
+      {
+        "name": "Bdayviniciushidalgo",
+        "sourceNames": [
+          "bdayviniciushidalgo"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 13,
+        "validated": 9,
+        "repasse": 0,
+        "sold": 13,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 1854
+      },
+      {
+        "name": "Erickaniversario",
+        "sourceNames": [
+          "erickaniversario"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 23,
+        "validated": 23,
+        "repasse": 0,
+        "sold": 23,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 7806.6
+      },
+      {
+        "name": "Nivererick",
+        "sourceNames": [
+          "nivererick"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 98,
+        "validated": 92,
+        "repasse": 0,
+        "sold": 98,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 11547
+      },
+      {
+        "name": "Niverfelipe",
+        "sourceNames": [
+          "niverfelipe"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 33,
+        "validated": 30,
+        "repasse": 0,
+        "sold": 33,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 3303
+      },
+      {
+        "name": "Nivergabriel",
+        "sourceNames": [
+          "nivergabriel"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 7,
+        "validated": 6,
+        "repasse": 0,
+        "sold": 7,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 798
+      },
+      {
+        "name": "Nivergordo",
+        "sourceNames": [
+          "nivergordo"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 26,
+        "validated": 24,
+        "repasse": 0,
+        "sold": 26,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 2952
+      },
+      {
+        "name": "Nivergustavo",
+        "sourceNames": [
+          "nivergustavo"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 2,
+        "validated": 2,
+        "repasse": 0,
+        "sold": 2,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 351
+      },
+      {
+        "name": "Niverisabellab2p",
+        "sourceNames": [
+          "niverisabellab2p"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 5,
+        "validated": 5,
+        "repasse": 0,
+        "sold": 5,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 1548
+      },
+      {
+        "name": "Niverisaravelli",
+        "sourceNames": [
+          "niverisaravelli"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 13,
+        "validated": 13,
+        "repasse": 0,
+        "sold": 13,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 1926
+      },
+      {
+        "name": "Niverlauracampeiz",
+        "sourceNames": [
+          "niverlauracampeiz"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 2,
+        "validated": 0,
+        "repasse": 0,
+        "sold": 2,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 288
+      },
+      {
+        "name": "Niverlaurawatada",
+        "sourceNames": [
+          "niverlaurawatada"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 1,
+        "validated": 1,
+        "repasse": 0,
+        "sold": 1,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 144
+      },
+      {
+        "name": "Niverlorenzob2p",
+        "sourceNames": [
+          "niverlorenzob2p"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 10,
+        "validated": 10,
+        "repasse": 0,
+        "sold": 10,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 3186
+      },
+      {
+        "name": "Nivermanub2p",
+        "sourceNames": [
+          "nivermanub2p"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 12,
+        "validated": 12,
+        "repasse": 0,
+        "sold": 12,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 2043
+      },
+      {
+        "name": "Niverrafacaldeira",
+        "sourceNames": [
+          "niverrafacaldeira"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 1,
+        "validated": 1,
+        "repasse": 0,
+        "sold": 1,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 144
+      },
+      {
+        "name": "Niverraquelb2p",
+        "sourceNames": [
+          "niverraquelb2p"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 12,
+        "validated": 12,
+        "repasse": 0,
+        "sold": 12,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 3906
+      },
+      {
+        "name": "Nivervictoria",
+        "sourceNames": [
+          "nivervictoria"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 14,
+        "validated": 13,
+        "repasse": 0,
+        "sold": 14,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 4165
+      }
+    ],
+    "rp": [
+      {
+        "name": "Ads",
+        "sourceNames": [
+          "ads"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 1,
+        "validated": 1,
+        "repasse": 20,
+        "sold": 1,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 200
+      },
+      {
+        "name": "Affestas",
+        "sourceNames": [
+          "affestas_",
+          "affestas"
+        ],
+        "sourceKinds": [
+          "Liberacao",
+          "Venda"
+        ],
+        "events": 3,
+        "issued": 60,
+        "validated": 16,
+        "repasse": 42,
+        "sold": 2,
+        "courtesy": 0,
+        "liberation": 58,
+        "pne": 0,
+        "revenue": 280
+      },
+      {
+        "name": "Alemao",
+        "sourceNames": [
+          "alemao"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 8,
+        "validated": 8,
+        "repasse": 81,
+        "sold": 8,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 810
+      },
+      {
+        "name": "Alice Bravo",
+        "sourceNames": [
+          "Alice Bravo",
+          "alicebravo-",
+          "alicebravo",
+          "alicebravo_"
+        ],
+        "sourceKinds": [
+          "PNE",
+          "Venda",
+          "Liberacao"
+        ],
+        "events": 9,
+        "issued": 79,
+        "validated": 36,
+        "repasse": 325.625,
+        "sold": 23,
+        "courtesy": 0,
+        "liberation": 45,
+        "pne": 11,
+        "revenue": 3106.25
+      },
+      {
+        "name": "Aline Fernandes",
+        "sourceNames": [
+          "Aline Fernandes"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 5,
+        "issued": 123,
+        "validated": 48,
+        "repasse": 48,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 123,
+        "revenue": 0
+      },
+      {
+        "name": "Aline Rabelo",
+        "sourceNames": [
+          "Aline Rabelo"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 1,
+        "issued": 6,
+        "validated": 0,
+        "repasse": 0,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 6,
+        "revenue": 0
+      },
+      {
+        "name": "Amigos Mqtrf",
+        "sourceNames": [
+          "amigos_mqtrf"
+        ],
+        "sourceKinds": [
+          "Venda",
+          "Liberacao"
+        ],
+        "events": 1,
+        "issued": 110,
+        "validated": 91,
+        "repasse": 774,
+        "sold": 95,
+        "courtesy": 0,
+        "liberation": 15,
+        "pne": 0,
+        "revenue": 7600
+      },
+      {
+        "name": "Analep",
+        "sourceNames": [
+          "analep"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 3,
+        "validated": 3,
+        "repasse": 49.5,
+        "sold": 3,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 495
+      },
+      {
+        "name": "Anas",
+        "sourceNames": [
+          "anas-"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 8,
+        "validated": 8,
+        "repasse": 226.8,
+        "sold": 8,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 2268
+      },
+      {
+        "name": "Anightlife",
+        "sourceNames": [
+          "Anightlife",
+          "anightlife",
+          "anightlife-",
+          "anightlife_"
+        ],
+        "sourceKinds": [
+          "PNE",
+          "Venda",
+          "Liberacao"
+        ],
+        "events": 7,
+        "issued": 92,
+        "validated": 31,
+        "repasse": 247.20000000000002,
+        "sold": 11,
+        "courtesy": 0,
+        "liberation": 16,
+        "pne": 65,
+        "revenue": 2272
+      },
+      {
+        "name": "Annaa",
+        "sourceNames": [
+          "annaa"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 15,
+        "validated": 15,
+        "repasse": 222.3,
+        "sold": 15,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 2223
+      },
+      {
+        "name": "Argentina",
+        "sourceNames": [
+          "argentina"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 19,
+        "validated": 17,
+        "repasse": 194.65,
+        "sold": 19,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 1946.5
+      },
+      {
+        "name": "B2p",
+        "sourceNames": [
+          "b2p",
+          "b2p__"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 5,
+        "issued": 63,
+        "validated": 57,
+        "repasse": 1406.45,
+        "sold": 63,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 14064.5
+      },
+      {
+        "name": "Bab",
+        "sourceNames": [
+          "bab_"
+        ],
+        "sourceKinds": [
+          "Liberacao"
+        ],
+        "events": 1,
+        "issued": 2,
+        "validated": 0,
+        "repasse": 0,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 2,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Babi",
+        "sourceNames": [
+          "babi"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 2,
+        "issued": 9,
+        "validated": 9,
+        "repasse": 97.85000000000001,
+        "sold": 9,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 978.5
+      },
+      {
+        "name": "Barbara Fagnani",
+        "sourceNames": [
+          "Barbara Fagnani"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 1,
+        "issued": 3,
+        "validated": 0,
+        "repasse": 0,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 3,
+        "revenue": 0
+      },
+      {
+        "name": "Bella",
+        "sourceNames": [
+          "bella-"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 4,
+        "validated": 4,
+        "repasse": 122.4,
+        "sold": 4,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 1224
+      },
+      {
+        "name": "Bff",
+        "sourceNames": [
+          "bff"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 20,
+        "validated": 19,
+        "repasse": 275.8,
+        "sold": 20,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 2758
+      },
+      {
+        "name": "Biaoliveira",
+        "sourceNames": [
+          "biaoliveira"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 12,
+        "validated": 8,
+        "repasse": 127.80000000000001,
+        "sold": 12,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 1278
+      },
+      {
+        "name": "Bifaralli",
+        "sourceNames": [
+          "bifaralli"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 6,
+        "validated": 6,
+        "repasse": 99.9,
+        "sold": 6,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 999
+      },
+      {
+        "name": "Blondies",
+        "sourceNames": [
+          "Blondies",
+          "blondies",
+          "blondies-",
+          "blondies_"
+        ],
+        "sourceKinds": [
+          "PNE",
+          "Venda",
+          "Cortesia",
+          "Liberacao"
+        ],
+        "events": 6,
+        "issued": 79,
+        "validated": 19,
+        "repasse": 80.85000000000001,
+        "sold": 7,
+        "courtesy": 42,
+        "liberation": 25,
+        "pne": 5,
+        "revenue": 688.5
+      },
+      {
+        "name": "Bora",
+        "sourceNames": [
+          "bora-",
+          "bora"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 2,
+        "issued": 12,
+        "validated": 12,
+        "repasse": 198.5,
+        "sold": 12,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 1985
+      },
+      {
+        "name": "Brasilxescocia",
+        "sourceNames": [
+          "brasilxescocia"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 12,
+        "validated": 12,
+        "repasse": 372.6,
+        "sold": 12,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 3726
+      },
+      {
+        "name": "Bresh",
+        "sourceNames": [
+          "bresh"
+        ],
+        "sourceKinds": [
+          "Cortesia"
+        ],
+        "events": 1,
+        "issued": 19,
+        "validated": 18,
+        "repasse": 18,
+        "sold": 0,
+        "courtesy": 19,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Brioso",
+        "sourceNames": [
+          "Brioso",
+          "brioso",
+          "brioso_"
+        ],
+        "sourceKinds": [
+          "PNE",
+          "Cortesia",
+          "Liberacao"
+        ],
+        "events": 9,
+        "issued": 213,
+        "validated": 47,
+        "repasse": 47,
+        "sold": 0,
+        "courtesy": 110,
+        "liberation": 20,
+        "pne": 83,
+        "revenue": 0
+      },
+      {
+        "name": "Bruno Nazarian",
+        "sourceNames": [
+          "Bruno Nazarian"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 4,
+        "issued": 25,
+        "validated": 2,
+        "repasse": 2,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 25,
+        "revenue": 0
+      },
+      {
+        "name": "Brunornunes",
+        "sourceNames": [
+          "brunornunes"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 34,
+        "validated": 32,
+        "repasse": 370.8,
+        "sold": 34,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 3708
+      },
+      {
+        "name": "Caiomelchiori",
+        "sourceNames": [
+          "caiomelchiori"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 1,
+        "validated": 0,
+        "repasse": 16,
+        "sold": 1,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 160
+      },
+      {
+        "name": "Caldi",
+        "sourceNames": [
+          "caldi"
+        ],
+        "sourceKinds": [
+          "Cortesia"
+        ],
+        "events": 1,
+        "issued": 39,
+        "validated": 21,
+        "repasse": 21,
+        "sold": 0,
+        "courtesy": 39,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Carol Bueno",
+        "sourceNames": [
+          "Carol Bueno"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 1,
+        "issued": 3,
+        "validated": 3,
+        "repasse": 3,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 3,
+        "revenue": 0
+      },
+      {
+        "name": "Catarina",
+        "sourceNames": [
+          "catarina"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 5,
+        "validated": 5,
+        "repasse": 73.8,
+        "sold": 5,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 738
+      },
+      {
+        "name": "Cayazeira",
+        "sourceNames": [
+          "cayazeira-"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 15,
+        "validated": 15,
+        "repasse": 431.1,
+        "sold": 15,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 4311
+      },
+      {
+        "name": "Cg",
+        "sourceNames": [
+          "cg-"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 1,
+        "validated": 1,
+        "repasse": 31.5,
+        "sold": 1,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 315
+      },
+      {
+        "name": "Clubelikeolds",
+        "sourceNames": [
+          "clubelikeolds"
+        ],
+        "sourceKinds": [
+          "Venda",
+          "Liberacao"
+        ],
+        "events": 1,
+        "issued": 109,
+        "validated": 92,
+        "repasse": 2589,
+        "sold": 92,
+        "courtesy": 0,
+        "liberation": 17,
+        "pne": 0,
+        "revenue": 25720
+      },
+      {
+        "name": "Code",
+        "sourceNames": [
+          "code-",
+          "code",
+          "codesemtaxa",
+          "code_"
+        ],
+        "sourceKinds": [
+          "Venda",
+          "Liberacao"
+        ],
+        "events": 5,
+        "issued": 44,
+        "validated": 39,
+        "repasse": 948.85,
+        "sold": 40,
+        "courtesy": 0,
+        "liberation": 4,
+        "pne": 0,
+        "revenue": 9458.5
+      },
+      {
+        "name": "Codeju",
+        "sourceNames": [
+          "codeju",
+          "codeju_"
+        ],
+        "sourceKinds": [
+          "Venda",
+          "Liberacao"
+        ],
+        "events": 2,
+        "issued": 31,
+        "validated": 12,
+        "repasse": 33.75,
+        "sold": 2,
+        "courtesy": 0,
+        "liberation": 29,
+        "pne": 0,
+        "revenue": 237.5
+      },
+      {
+        "name": "Codelis",
+        "sourceNames": [
+          "Codelis",
+          "codelis_",
+          "codelissemtaxa",
+          "codelis-",
+          "codelis"
+        ],
+        "sourceKinds": [
+          "PNE",
+          "Liberacao",
+          "Venda"
+        ],
+        "events": 7,
+        "issued": 181,
+        "validated": 82,
+        "repasse": 1102.8,
+        "sold": 53,
+        "courtesy": 0,
+        "liberation": 118,
+        "pne": 10,
+        "revenue": 10638
+      },
+      {
+        "name": "Codemidori",
+        "sourceNames": [
+          "monicamidori",
+          "codemidori_"
+        ],
+        "sourceKinds": [
+          "Liberacao"
+        ],
+        "events": 2,
+        "issued": 56,
+        "validated": 18,
+        "repasse": 18,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 56,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Codere",
+        "sourceNames": [
+          "codere-",
+          "codere_",
+          "coderesemtaxa",
+          "codere"
+        ],
+        "sourceKinds": [
+          "Venda",
+          "Liberacao"
+        ],
+        "events": 10,
+        "issued": 163,
+        "validated": 76,
+        "repasse": 875.25,
+        "sold": 54,
+        "courtesy": 0,
+        "liberation": 109,
+        "pne": 0,
+        "revenue": 8442.5
+      },
+      {
+        "name": "Codesasso",
+        "sourceNames": [
+          "codesasso"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 1,
+        "validated": 1,
+        "repasse": 36,
+        "sold": 1,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 360
+      },
+      {
+        "name": "Daniela Ardito",
+        "sourceNames": [
+          "Daniela Ardito"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 2,
+        "issued": 42,
+        "validated": 8,
+        "repasse": 8,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 42,
+        "revenue": 0
+      },
+      {
+        "name": "Ddp",
+        "sourceNames": [
+          "ddp"
+        ],
+        "sourceKinds": [
+          "Liberacao"
+        ],
+        "events": 1,
+        "issued": 45,
+        "validated": 15,
+        "repasse": 15,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 45,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Deleite",
+        "sourceNames": [
+          "deleite"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 12,
+        "validated": 12,
+        "repasse": 126,
+        "sold": 12,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 1260
+      },
+      {
+        "name": "Dellacqua",
+        "sourceNames": [
+          "dellacqua-"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 1,
+        "validated": 1,
+        "repasse": 30.6,
+        "sold": 1,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 306
+      },
+      {
+        "name": "Didi",
+        "sourceNames": [
+          "didi-",
+          "didi"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 11,
+        "validated": 11,
+        "repasse": 378.3,
+        "sold": 11,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 3783
+      },
+      {
+        "name": "Direct",
+        "sourceNames": [
+          "Direct",
+          "direct",
+          "direct-",
+          "direct_"
+        ],
+        "sourceKinds": [
+          "PNE",
+          "Liberacao",
+          "Venda",
+          "Cortesia"
+        ],
+        "events": 17,
+        "issued": 3293,
+        "validated": 1155,
+        "repasse": 1935.35,
+        "sold": 72,
+        "courtesy": 1498,
+        "liberation": 1045,
+        "pne": 678,
+        "revenue": 8483.5
+      },
+      {
+        "name": "Dj Victinho",
+        "sourceNames": [
+          "Dj Victinho"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 1,
+        "issued": 7,
+        "validated": 5,
+        "repasse": 5,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 7,
+        "revenue": 0
+      },
+      {
+        "name": "Djpuff",
+        "sourceNames": [
+          "djpuff"
+        ],
+        "sourceKinds": [
+          "Liberacao"
+        ],
+        "events": 1,
+        "issued": 1,
+        "validated": 1,
+        "repasse": 1,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 1,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Duolugui",
+        "sourceNames": [
+          "duolugui"
+        ],
+        "sourceKinds": [
+          "Liberacao"
+        ],
+        "events": 1,
+        "issued": 5,
+        "validated": 3,
+        "repasse": 3,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 5,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Edinaldo",
+        "sourceNames": [
+          "Edinaldo"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 2,
+        "issued": 41,
+        "validated": 5,
+        "repasse": 5,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 41,
+        "revenue": 0
+      },
+      {
+        "name": "Edric",
+        "sourceNames": [
+          "edric"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 2,
+        "validated": 2,
+        "repasse": 53.25,
+        "sold": 2,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 532.5
+      },
+      {
+        "name": "Emkt",
+        "sourceNames": [
+          "emkt-"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 5,
+        "validated": 5,
+        "repasse": 90,
+        "sold": 5,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 900
+      },
+      {
+        "name": "Equipe Promo",
+        "sourceNames": [
+          "equipe promo"
+        ],
+        "sourceKinds": [
+          "Cortesia"
+        ],
+        "events": 1,
+        "issued": 32,
+        "validated": 11,
+        "repasse": 11,
+        "sold": 0,
+        "courtesy": 32,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Everyone",
+        "sourceNames": [
+          "Everyone",
+          "everyone",
+          "everyone_"
+        ],
+        "sourceKinds": [
+          "PNE",
+          "Cortesia",
+          "Venda",
+          "Liberacao"
+        ],
+        "events": 8,
+        "issued": 571,
+        "validated": 217,
+        "repasse": 362.1,
+        "sold": 13,
+        "courtesy": 179,
+        "liberation": 333,
+        "pne": 46,
+        "revenue": 1581
+      },
+      {
+        "name": "Exclusivemidas",
+        "sourceNames": [
+          "exclusivemidas"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 7,
+        "validated": 7,
+        "repasse": 314,
+        "sold": 7,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 3140
+      },
+      {
+        "name": "Exit",
+        "sourceNames": [
+          "exit-",
+          "Exit",
+          "exit",
+          "exit_"
+        ],
+        "sourceKinds": [
+          "Venda",
+          "PNE",
+          "Liberacao",
+          "Cortesia"
+        ],
+        "events": 18,
+        "issued": 1954,
+        "validated": 821,
+        "repasse": 1109.35,
+        "sold": 20,
+        "courtesy": 1099,
+        "liberation": 463,
+        "pne": 372,
+        "revenue": 3083.5
+      },
+      {
+        "name": "Fabricio Lalas",
+        "sourceNames": [
+          "Fabricio Lalas"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 5,
+        "issued": 97,
+        "validated": 26,
+        "repasse": 26,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 97,
+        "revenue": 0
+      },
+      {
+        "name": "Falcade",
+        "sourceNames": [
+          "Falcade",
+          "gustavofalcade_"
+        ],
+        "sourceKinds": [
+          "PNE",
+          "Liberacao"
+        ],
+        "events": 4,
+        "issued": 11,
+        "validated": 1,
+        "repasse": 1,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 5,
+        "pne": 6,
+        "revenue": 0
+      },
+      {
+        "name": "Fares",
+        "sourceNames": [
+          "Fares",
+          "fares",
+          "fares_"
+        ],
+        "sourceKinds": [
+          "PNE",
+          "Venda",
+          "Cortesia",
+          "Liberacao"
+        ],
+        "events": 9,
+        "issued": 437,
+        "validated": 102,
+        "repasse": 147.05,
+        "sold": 4,
+        "courtesy": 84,
+        "liberation": 159,
+        "pne": 190,
+        "revenue": 490.5
+      },
+      {
+        "name": "Felipe Mariano",
+        "sourceNames": [
+          "Felipe Mariano"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 1,
+        "issued": 49,
+        "validated": 17,
+        "repasse": 17,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 49,
+        "revenue": 0
+      },
+      {
+        "name": "Fewones",
+        "sourceNames": [
+          "fewones"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 2,
+        "issued": 3,
+        "validated": 3,
+        "repasse": 32.300000000000004,
+        "sold": 3,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 323
+      },
+      {
+        "name": "Ff",
+        "sourceNames": [
+          "ff"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 22,
+        "validated": 21,
+        "repasse": 257.40000000000003,
+        "sold": 22,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 2574
+      },
+      {
+        "name": "Ffinto",
+        "sourceNames": [
+          "ffinto"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 2,
+        "validated": 2,
+        "repasse": 32,
+        "sold": 2,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 320
+      },
+      {
+        "name": "Flowtickets",
+        "sourceNames": [
+          "flowtickets-",
+          "flowtickets"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 5,
+        "validated": 5,
+        "repasse": 169.20000000000002,
+        "sold": 5,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 1692
+      },
+      {
+        "name": "Foz",
+        "sourceNames": [
+          "foz"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 11,
+        "validated": 10,
+        "repasse": 191.70000000000002,
+        "sold": 11,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 1917
+      },
+      {
+        "name": "Fun",
+        "sourceNames": [
+          "Fun",
+          "fun",
+          "fun_"
+        ],
+        "sourceKinds": [
+          "PNE",
+          "Liberacao",
+          "Cortesia",
+          "Venda"
+        ],
+        "events": 13,
+        "issued": 588,
+        "validated": 232,
+        "repasse": 292.25,
+        "sold": 6,
+        "courtesy": 305,
+        "liberation": 196,
+        "pne": 81,
+        "revenue": 662.5
+      },
+      {
+        "name": "Fun7",
+        "sourceNames": [
+          "fun7"
+        ],
+        "sourceKinds": [
+          "Liberacao"
+        ],
+        "events": 1,
+        "issued": 7,
+        "validated": 2,
+        "repasse": 2,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 7,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Gabd",
+        "sourceNames": [
+          "gabd"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 1,
+        "validated": 1,
+        "repasse": 14.4,
+        "sold": 1,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 144
+      },
+      {
+        "name": "Gabidias",
+        "sourceNames": [
+          "gabidias"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 15,
+        "validated": 10,
+        "repasse": 170.05,
+        "sold": 15,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 1700.5
+      },
+      {
+        "name": "Gabigol",
+        "sourceNames": [
+          "gabigol"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 8,
+        "validated": 8,
+        "repasse": 102.60000000000001,
+        "sold": 8,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 1026
+      },
+      {
+        "name": "Gabriel",
+        "sourceNames": [
+          "gabriel-",
+          "Gabriel"
+        ],
+        "sourceKinds": [
+          "Venda",
+          "PNE"
+        ],
+        "events": 2,
+        "issued": 56,
+        "validated": 36,
+        "repasse": 512.6,
+        "sold": 18,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 38,
+        "revenue": 4936
+      },
+      {
+        "name": "Gabriel Menda",
+        "sourceNames": [
+          "Gabriel Menda"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 1,
+        "issued": 19,
+        "validated": 2,
+        "repasse": 2,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 19,
+        "revenue": 0
+      },
+      {
+        "name": "Gandaya",
+        "sourceNames": [
+          "gandaya"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 2,
+        "validated": 1,
+        "repasse": 70.2,
+        "sold": 2,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 702
+      },
+      {
+        "name": "Gimollica",
+        "sourceNames": [
+          "gimollica"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 6,
+        "validated": 6,
+        "repasse": 94.10000000000001,
+        "sold": 6,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 941
+      },
+      {
+        "name": "Grupo Rub",
+        "sourceNames": [
+          "grupo rub",
+          "gruporub-",
+          "gruporub"
+        ],
+        "sourceKinds": [
+          "Cortesia",
+          "Venda"
+        ],
+        "events": 14,
+        "issued": 565,
+        "validated": 348,
+        "repasse": 630.25,
+        "sold": 16,
+        "courtesy": 549,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 2982.5
+      },
+      {
+        "name": "Gudi",
+        "sourceNames": [
+          "gudi"
+        ],
+        "sourceKinds": [
+          "Liberacao"
+        ],
+        "events": 1,
+        "issued": 1,
+        "validated": 1,
+        "repasse": 1,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 1,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Gui Araujo",
+        "sourceNames": [
+          "Gui Araujo"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 1,
+        "issued": 5,
+        "validated": 1,
+        "repasse": 1,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 5,
+        "revenue": 0
+      },
+      {
+        "name": "Guilherme Alves Lopes",
+        "sourceNames": [
+          "Guilherme Alves Lopes"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 1,
+        "issued": 4,
+        "validated": 4,
+        "repasse": 4,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 4,
+        "revenue": 0
+      },
+      {
+        "name": "Hfeventos",
+        "sourceNames": [
+          "hfeventos",
+          "hfeventos_"
+        ],
+        "sourceKinds": [
+          "Venda",
+          "Liberacao"
+        ],
+        "events": 2,
+        "issued": 35,
+        "validated": 14,
+        "repasse": 31,
+        "sold": 1,
+        "courtesy": 0,
+        "liberation": 34,
+        "pne": 0,
+        "revenue": 180
+      },
+      {
+        "name": "Huber",
+        "sourceNames": [
+          "huber",
+          "Huber",
+          "huber_"
+        ],
+        "sourceKinds": [
+          "Liberacao",
+          "PNE",
+          "Cortesia"
+        ],
+        "events": 5,
+        "issued": 199,
+        "validated": 100,
+        "repasse": 100,
+        "sold": 0,
+        "courtesy": 24,
+        "liberation": 71,
+        "pne": 104,
+        "revenue": 0
+      },
+      {
+        "name": "Impact",
+        "sourceNames": [
+          "impact",
+          "impact-",
+          "impact_"
+        ],
+        "sourceKinds": [
+          "Venda",
+          "Cortesia",
+          "Liberacao"
+        ],
+        "events": 4,
+        "issued": 428,
+        "validated": 138,
+        "repasse": 219.45,
+        "sold": 9,
+        "courtesy": 226,
+        "liberation": 193,
+        "pne": 0,
+        "revenue": 884.5
+      },
+      {
+        "name": "Into",
+        "sourceNames": [
+          "into"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 70,
+        "validated": 60,
+        "repasse": 1073.4,
+        "sold": 70,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 10734
+      },
+      {
+        "name": "Jhonny",
+        "sourceNames": [
+          "Jhonny",
+          "jhonny"
+        ],
+        "sourceKinds": [
+          "PNE",
+          "Cortesia"
+        ],
+        "events": 3,
+        "issued": 262,
+        "validated": 142,
+        "repasse": 142,
+        "sold": 0,
+        "courtesy": 249,
+        "liberation": 0,
+        "pne": 13,
+        "revenue": 0
+      },
+      {
+        "name": "Joaocury",
+        "sourceNames": [
+          "joaocury-"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 2,
+        "validated": 2,
+        "repasse": 58.5,
+        "sold": 2,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 585
+      },
+      {
+        "name": "Jode We Go Out",
+        "sourceNames": [
+          "Jode We Go Out"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 1,
+        "issued": 2,
+        "validated": 0,
+        "repasse": 0,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 2,
+        "revenue": 0
+      },
+      {
+        "name": "Jorge Morillas",
+        "sourceNames": [
+          "Jorge Morillas"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 1,
+        "issued": 41,
+        "validated": 17,
+        "repasse": 17,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 41,
+        "revenue": 0
+      },
+      {
+        "name": "Jumello",
+        "sourceNames": [
+          "jumello"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 10,
+        "validated": 10,
+        "repasse": 172.8,
+        "sold": 10,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 1728
+      },
+      {
+        "name": "Junarciso",
+        "sourceNames": [
+          "junarciso"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 11,
+        "validated": 11,
+        "repasse": 78.30000000000001,
+        "sold": 11,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 783
+      },
+      {
+        "name": "Karina Dias",
+        "sourceNames": [
+          "Karina Dias",
+          "karinadias_"
+        ],
+        "sourceKinds": [
+          "PNE",
+          "Liberacao"
+        ],
+        "events": 2,
+        "issued": 13,
+        "validated": 3,
+        "repasse": 3,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 11,
+        "pne": 2,
+        "revenue": 0
+      },
+      {
+        "name": "Kaue",
+        "sourceNames": [
+          "kaue"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 1,
+        "validated": 0,
+        "repasse": 28.8,
+        "sold": 1,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 288
+      },
+      {
+        "name": "Kayque",
+        "sourceNames": [
+          "kayque"
+        ],
+        "sourceKinds": [
+          "Cortesia"
+        ],
+        "events": 2,
+        "issued": 40,
+        "validated": 12,
+        "repasse": 12,
+        "sold": 0,
+        "courtesy": 40,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Kayque Apolo",
+        "sourceNames": [
+          "Kayque Apolo"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 2,
+        "issued": 19,
+        "validated": 7,
+        "repasse": 7,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 19,
+        "revenue": 0
+      },
+      {
+        "name": "Krush",
+        "sourceNames": [
+          "krush"
+        ],
+        "sourceKinds": [
+          "Liberacao"
+        ],
+        "events": 1,
+        "issued": 26,
+        "validated": 6,
+        "repasse": 6,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 26,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Kzei",
+        "sourceNames": [
+          "kzei"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 9,
+        "validated": 8,
+        "repasse": 106.2,
+        "sold": 9,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 1062
+      },
+      {
+        "name": "Laina Clucas",
+        "sourceNames": [
+          "Laina Clucas"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 2,
+        "issued": 94,
+        "validated": 48,
+        "repasse": 48,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 94,
+        "revenue": 0
+      },
+      {
+        "name": "Lalas",
+        "sourceNames": [
+          "lalas_"
+        ],
+        "sourceKinds": [
+          "Liberacao"
+        ],
+        "events": 1,
+        "issued": 82,
+        "validated": 42,
+        "repasse": 42,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 82,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Larap",
+        "sourceNames": [
+          "larap"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 3,
+        "validated": 3,
+        "repasse": 50.400000000000006,
+        "sold": 3,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 504
+      },
+      {
+        "name": "Laritaglioli",
+        "sourceNames": [
+          "laritaglioli_"
+        ],
+        "sourceKinds": [
+          "Liberacao"
+        ],
+        "events": 1,
+        "issued": 2,
+        "validated": 0,
+        "repasse": 0,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 2,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Lela",
+        "sourceNames": [
+          "lela-",
+          "lela"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 6,
+        "validated": 6,
+        "repasse": 186.10000000000002,
+        "sold": 6,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 1861
+      },
+      {
+        "name": "Liberacao",
+        "sourceNames": [
+          "liberacao"
+        ],
+        "sourceKinds": [
+          "Cortesia"
+        ],
+        "events": 1,
+        "issued": 15,
+        "validated": 3,
+        "repasse": 3,
+        "sold": 0,
+        "courtesy": 15,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Likekami",
+        "sourceNames": [
+          "likekami-"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 1,
+        "validated": 1,
+        "repasse": 30.6,
+        "sold": 1,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 306
+      },
+      {
+        "name": "Linklakes",
+        "sourceNames": [
+          "linklakes"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 3,
+        "validated": 3,
+        "repasse": 34.2,
+        "sold": 3,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 342
+      },
+      {
+        "name": "Livss",
+        "sourceNames": [
+          "livss"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 1,
+        "validated": 1,
+        "repasse": 9,
+        "sold": 1,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 90
+      },
+      {
+        "name": "Loteamigo",
+        "sourceNames": [
+          "loteamigo"
+        ],
+        "sourceKinds": [
+          "Venda",
+          "Liberacao"
+        ],
+        "events": 1,
+        "issued": 16,
+        "validated": 12,
+        "repasse": 304,
+        "sold": 12,
+        "courtesy": 0,
+        "liberation": 4,
+        "pne": 0,
+        "revenue": 3000
+      },
+      {
+        "name": "Lucas",
+        "sourceNames": [
+          "convidadolucas"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 25,
+        "validated": 25,
+        "repasse": 307.8,
+        "sold": 25,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 3078
+      },
+      {
+        "name": "Lucas Gabriel Melo De Almeida",
+        "sourceNames": [
+          "Lucas Gabriel Melo De Almeida"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 1,
+        "issued": 3,
+        "validated": 0,
+        "repasse": 0,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 3,
+        "revenue": 0
+      },
+      {
+        "name": "Lucasmoreno",
+        "sourceNames": [
+          "lucasmoreno_"
+        ],
+        "sourceKinds": [
+          "Liberacao"
+        ],
+        "events": 1,
+        "issued": 46,
+        "validated": 16,
+        "repasse": 16,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 46,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Luciano Feruck",
+        "sourceNames": [
+          "Luciano Feruck"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 1,
+        "issued": 14,
+        "validated": 9,
+        "repasse": 9,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 14,
+        "revenue": 0
+      },
+      {
+        "name": "Lugui",
+        "sourceNames": [
+          "lugui"
+        ],
+        "sourceKinds": [
+          "Venda",
+          "Liberacao"
+        ],
+        "events": 1,
+        "issued": 3,
+        "validated": 3,
+        "repasse": 11,
+        "sold": 1,
+        "courtesy": 0,
+        "liberation": 2,
+        "pne": 0,
+        "revenue": 90
+      },
+      {
+        "name": "Lukinhas",
+        "sourceNames": [
+          "lukinhas"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 2,
+        "issued": 11,
+        "validated": 11,
+        "repasse": 115.10000000000001,
+        "sold": 11,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 1151
+      },
+      {
+        "name": "Lulilemos",
+        "sourceNames": [
+          "lulilemos-"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 8,
+        "validated": 8,
+        "repasse": 225.9,
+        "sold": 8,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 2259
+      },
+      {
+        "name": "Luma",
+        "sourceNames": [
+          "Luma"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 4,
+        "issued": 56,
+        "validated": 20,
+        "repasse": 20,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 56,
+        "revenue": 0
+      },
+      {
+        "name": "Lumaciel",
+        "sourceNames": [
+          "lumaciel-",
+          "lumaciel"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 12,
+        "validated": 11,
+        "repasse": 434.3,
+        "sold": 12,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 4343
+      },
+      {
+        "name": "Lumenna",
+        "sourceNames": [
+          "lumenna"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 38,
+        "validated": 30,
+        "repasse": 435.6,
+        "sold": 38,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 4356
+      },
+      {
+        "name": "Lumoreno",
+        "sourceNames": [
+          "Lumoreno",
+          "lumoreno",
+          "lumoreno_"
+        ],
+        "sourceKinds": [
+          "PNE",
+          "Venda",
+          "Liberacao"
+        ],
+        "events": 4,
+        "issued": 129,
+        "validated": 26,
+        "repasse": 46.8,
+        "sold": 2,
+        "courtesy": 0,
+        "liberation": 27,
+        "pne": 100,
+        "revenue": 228
+      },
+      {
+        "name": "Maggiore",
+        "sourceNames": [
+          "maggiore-"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 1,
+        "validated": 1,
+        "repasse": 30.6,
+        "sold": 1,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 306
+      },
+      {
+        "name": "Mahfuz",
+        "sourceNames": [
+          "mahfuz-",
+          "mahfuz"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 8,
+        "validated": 8,
+        "repasse": 311.90000000000003,
+        "sold": 8,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 3119
+      },
+      {
+        "name": "Mailing",
+        "sourceNames": [
+          "mailing"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 11,
+        "validated": 9,
+        "repasse": 127.80000000000001,
+        "sold": 11,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 1278
+      },
+      {
+        "name": "Maipp",
+        "sourceNames": [
+          "maipp"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 152,
+        "validated": 135,
+        "repasse": 1716.3000000000002,
+        "sold": 152,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 17163
+      },
+      {
+        "name": "Maisquenosso",
+        "sourceNames": [
+          "maisquenosso"
+        ],
+        "sourceKinds": [
+          "Liberacao"
+        ],
+        "events": 1,
+        "issued": 4,
+        "validated": 3,
+        "repasse": 3,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 4,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Mamiyake",
+        "sourceNames": [
+          "mamiyake"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 5,
+        "validated": 4,
+        "repasse": 75.2,
+        "sold": 5,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 752
+      },
+      {
+        "name": "Manub",
+        "sourceNames": [
+          "manub"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 1,
+        "validated": 1,
+        "repasse": 13.3,
+        "sold": 1,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 133
+      },
+      {
+        "name": "Masato",
+        "sourceNames": [
+          "masato_"
+        ],
+        "sourceKinds": [
+          "Liberacao"
+        ],
+        "events": 1,
+        "issued": 2,
+        "validated": 0,
+        "repasse": 0,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 2,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Mdaculla",
+        "sourceNames": [
+          "Mdaculla",
+          "mdaculla",
+          "mdaccula",
+          "mdaccula_"
+        ],
+        "sourceKinds": [
+          "PNE",
+          "Cortesia",
+          "Venda",
+          "Liberacao"
+        ],
+        "events": 8,
+        "issued": 955,
+        "validated": 288,
+        "repasse": 655.5,
+        "sold": 28,
+        "courtesy": 126,
+        "liberation": 220,
+        "pne": 581,
+        "revenue": 3955
+      },
+      {
+        "name": "Midas 2",
+        "sourceNames": [
+          "midas 2"
+        ],
+        "sourceKinds": [
+          "Cortesia"
+        ],
+        "events": 1,
+        "issued": 37,
+        "validated": 30,
+        "repasse": 30,
+        "sold": 0,
+        "courtesy": 37,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Midia011",
+        "sourceNames": [
+          "midia011-",
+          "midia011",
+          "midia11_",
+          "midia011_",
+          "Midia011"
+        ],
+        "sourceKinds": [
+          "Venda",
+          "Cortesia",
+          "Liberacao",
+          "PNE"
+        ],
+        "events": 13,
+        "issued": 1893,
+        "validated": 947,
+        "repasse": 3217.75,
+        "sold": 239,
+        "courtesy": 172,
+        "liberation": 286,
+        "pne": 1196,
+        "revenue": 24717.5
+      },
+      {
+        "name": "Ms",
+        "sourceNames": [
+          "Ms",
+          "ms",
+          "ms_"
+        ],
+        "sourceKinds": [
+          "PNE",
+          "Cortesia",
+          "Venda",
+          "Liberacao"
+        ],
+        "events": 6,
+        "issued": 510,
+        "validated": 149,
+        "repasse": 242.4,
+        "sold": 10,
+        "courtesy": 123,
+        "liberation": 163,
+        "pne": 214,
+        "revenue": 1034
+      },
+      {
+        "name": "Murakami",
+        "sourceNames": [
+          "Murakami",
+          "murakami",
+          "murakami_",
+          "murakami-"
+        ],
+        "sourceKinds": [
+          "PNE",
+          "Venda",
+          "Liberacao"
+        ],
+        "events": 6,
+        "issued": 90,
+        "validated": 54,
+        "repasse": 85.2,
+        "sold": 3,
+        "courtesy": 0,
+        "liberation": 42,
+        "pne": 45,
+        "revenue": 342
+      },
+      {
+        "name": "Nati",
+        "sourceNames": [
+          "nati_"
+        ],
+        "sourceKinds": [
+          "Liberacao"
+        ],
+        "events": 2,
+        "issued": 7,
+        "validated": 2,
+        "repasse": 2,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 7,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Naza",
+        "sourceNames": [
+          "naza_"
+        ],
+        "sourceKinds": [
+          "Liberacao"
+        ],
+        "events": 1,
+        "issued": 3,
+        "validated": 0,
+        "repasse": 0,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 3,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Nemarques",
+        "sourceNames": [
+          "Nemarques"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 1,
+        "issued": 9,
+        "validated": 3,
+        "repasse": 3,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 9,
+        "revenue": 0
+      },
+      {
+        "name": "Nossa Casa",
+        "sourceNames": [
+          "nossa casa"
+        ],
+        "sourceKinds": [
+          "Cortesia"
+        ],
+        "events": 1,
+        "issued": 45,
+        "validated": 38,
+        "repasse": 38,
+        "sold": 0,
+        "courtesy": 45,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Nucci",
+        "sourceNames": [
+          "nucci_",
+          "nucci-"
+        ],
+        "sourceKinds": [
+          "Liberacao"
+        ],
+        "events": 1,
+        "issued": 20,
+        "validated": 5,
+        "repasse": 5,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 20,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Openvibe",
+        "sourceNames": [
+          "openvibe"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 2,
+        "validated": 2,
+        "repasse": 16.2,
+        "sold": 2,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 162
+      },
+      {
+        "name": "Ore",
+        "sourceNames": [
+          "ore_"
+        ],
+        "sourceKinds": [
+          "Liberacao"
+        ],
+        "events": 1,
+        "issued": 5,
+        "validated": 0,
+        "repasse": 0,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 5,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Orestes",
+        "sourceNames": [
+          "Orestes"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 2,
+        "issued": 11,
+        "validated": 8,
+        "repasse": 8,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 11,
+        "revenue": 0
+      },
+      {
+        "name": "Palermo",
+        "sourceNames": [
+          "palermo"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 14,
+        "validated": 11,
+        "repasse": 215.20000000000002,
+        "sold": 14,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 2152
+      },
+      {
+        "name": "Partiu",
+        "sourceNames": [
+          "partiu-",
+          "partiu"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 3,
+        "issued": 7,
+        "validated": 7,
+        "repasse": 100,
+        "sold": 7,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 1000
+      },
+      {
+        "name": "Patifaria",
+        "sourceNames": [
+          "patifaria"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 7,
+        "validated": 7,
+        "repasse": 81.9,
+        "sold": 7,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 819
+      },
+      {
+        "name": "Patrocinado",
+        "sourceNames": [
+          "patrocinado-",
+          "patrocinado"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 175,
+        "validated": 167,
+        "repasse": 2043.95,
+        "sold": 175,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 20439.5
+      },
+      {
+        "name": "Pedrov",
+        "sourceNames": [
+          "pedrov-"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 4,
+        "validated": 4,
+        "repasse": 121.5,
+        "sold": 4,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 1215
+      },
+      {
+        "name": "Pendall23",
+        "sourceNames": [
+          "pendall23-"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 2,
+        "validated": 2,
+        "repasse": 20.400000000000002,
+        "sold": 2,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 204
+      },
+      {
+        "name": "Peperes",
+        "sourceNames": [
+          "peperes"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 1,
+        "validated": 1,
+        "repasse": 42,
+        "sold": 1,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 420
+      },
+      {
+        "name": "Pet",
+        "sourceNames": [
+          "Pet",
+          "pet_"
+        ],
+        "sourceKinds": [
+          "PNE",
+          "Venda",
+          "Liberacao"
+        ],
+        "events": 2,
+        "issued": 159,
+        "validated": 74,
+        "repasse": 85,
+        "sold": 1,
+        "courtesy": 0,
+        "liberation": 12,
+        "pne": 146,
+        "revenue": 120
+      },
+      {
+        "name": "Pmt",
+        "sourceNames": [
+          "pmt"
+        ],
+        "sourceKinds": [
+          "Cortesia"
+        ],
+        "events": 2,
+        "issued": 24,
+        "validated": 22,
+        "repasse": 22,
+        "sold": 0,
+        "courtesy": 24,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Poliana Adami",
+        "sourceNames": [
+          "Poliana Adami"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 1,
+        "issued": 28,
+        "validated": 21,
+        "repasse": 21,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 28,
+        "revenue": 0
+      },
+      {
+        "name": "Prevendaff",
+        "sourceNames": [
+          "prevendaff"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 1,
+        "validated": 0,
+        "repasse": 11.4,
+        "sold": 1,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 114
+      },
+      {
+        "name": "Rafam",
+        "sourceNames": [
+          "rafam"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 3,
+        "validated": 3,
+        "repasse": 49.5,
+        "sold": 3,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 495
+      },
+      {
+        "name": "Rafife",
+        "sourceNames": [
+          "Rafife"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 1,
+        "issued": 38,
+        "validated": 10,
+        "repasse": 10,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 38,
+        "revenue": 0
+      },
+      {
+        "name": "Reclaim",
+        "sourceNames": [
+          "reclaim-"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 20,
+        "validated": 20,
+        "repasse": 598.5,
+        "sold": 20,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 5985
+      },
+      {
+        "name": "Renan Nucci",
+        "sourceNames": [
+          "Renan Nucci"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 1,
+        "issued": 3,
+        "validated": 0,
+        "repasse": 0,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 3,
+        "revenue": 0
+      },
+      {
+        "name": "Renova",
+        "sourceNames": [
+          "renova-",
+          "Renova",
+          "renova",
+          "renova_"
+        ],
+        "sourceKinds": [
+          "Venda",
+          "PNE",
+          "Cortesia",
+          "Liberacao"
+        ],
+        "events": 9,
+        "issued": 376,
+        "validated": 148,
+        "repasse": 776.215,
+        "sold": 41,
+        "courtesy": 100,
+        "liberation": 150,
+        "pne": 85,
+        "revenue": 6672.15
+      },
+      {
+        "name": "Rocky",
+        "sourceNames": [
+          "rocky",
+          "Rocky",
+          "rocky_"
+        ],
+        "sourceKinds": [
+          "Cortesia",
+          "PNE",
+          "Liberacao"
+        ],
+        "events": 15,
+        "issued": 747,
+        "validated": 294,
+        "repasse": 294,
+        "sold": 0,
+        "courtesy": 478,
+        "liberation": 78,
+        "pne": 191,
+        "revenue": 0
+      },
+      {
+        "name": "Rodolfo Capacci",
+        "sourceNames": [
+          "Rodolfo Capacci"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 2,
+        "issued": 16,
+        "validated": 7,
+        "repasse": 7,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 16,
+        "revenue": 0
+      },
+      {
+        "name": "Romanha",
+        "sourceNames": [
+          "romanha",
+          "Romanha",
+          "romanha_"
+        ],
+        "sourceKinds": [
+          "Cortesia",
+          "PNE",
+          "Venda",
+          "Liberacao"
+        ],
+        "events": 15,
+        "issued": 889,
+        "validated": 339,
+        "repasse": 551.1,
+        "sold": 22,
+        "courtesy": 657,
+        "liberation": 40,
+        "pne": 170,
+        "revenue": 2341
+      },
+      {
+        "name": "Rub",
+        "sourceNames": [
+          "rub",
+          "rub_"
+        ],
+        "sourceKinds": [
+          "Liberacao",
+          "Venda",
+          "Cortesia"
+        ],
+        "events": 4,
+        "issued": 55,
+        "validated": 33,
+        "repasse": 74.7,
+        "sold": 2,
+        "courtesy": 38,
+        "liberation": 15,
+        "pne": 0,
+        "revenue": 437
+      },
+      {
+        "name": "Rub Formaturas",
+        "sourceNames": [
+          "rub formaturas"
+        ],
+        "sourceKinds": [
+          "Cortesia"
+        ],
+        "events": 1,
+        "issued": 72,
+        "validated": 58,
+        "repasse": 58,
+        "sold": 0,
+        "courtesy": 72,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "S1",
+        "sourceNames": [
+          "s1"
+        ],
+        "sourceKinds": [
+          "Cortesia"
+        ],
+        "events": 1,
+        "issued": 18,
+        "validated": 0,
+        "repasse": 0,
+        "sold": 0,
+        "courtesy": 18,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "S4",
+        "sourceNames": [
+          "s4"
+        ],
+        "sourceKinds": [
+          "Cortesia"
+        ],
+        "events": 1,
+        "issued": 18,
+        "validated": 14,
+        "repasse": 14,
+        "sold": 0,
+        "courtesy": 18,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Sambalove",
+        "sourceNames": [
+          "sambalove"
+        ],
+        "sourceKinds": [
+          "Cortesia"
+        ],
+        "events": 1,
+        "issued": 9,
+        "validated": 3,
+        "repasse": 3,
+        "sold": 0,
+        "courtesy": 9,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Semtaxaallnightlou",
+        "sourceNames": [
+          "semtaxaallnightlou"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 9,
+        "validated": 5,
+        "repasse": 82.04400000000001,
+        "sold": 9,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 820.44
+      },
+      {
+        "name": "Silvestre",
+        "sourceNames": [
+          "Silvestre"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 4,
+        "issued": 327,
+        "validated": 166,
+        "repasse": 166,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 327,
+        "revenue": 0
+      },
+      {
+        "name": "Sorteio Kvsh",
+        "sourceNames": [
+          "sorteio kvsh"
+        ],
+        "sourceKinds": [
+          "Cortesia"
+        ],
+        "events": 1,
+        "issued": 53,
+        "validated": 0,
+        "repasse": 0,
+        "sold": 0,
+        "courtesy": 53,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Stanz",
+        "sourceNames": [
+          "stanz",
+          "stanz_"
+        ],
+        "sourceKinds": [
+          "Venda",
+          "Liberacao"
+        ],
+        "events": 1,
+        "issued": 17,
+        "validated": 6,
+        "repasse": 35.300000000000004,
+        "sold": 3,
+        "courtesy": 0,
+        "liberation": 14,
+        "pne": 0,
+        "revenue": 323
+      },
+      {
+        "name": "Susan Villalobos",
+        "sourceNames": [
+          "Susan Villalobos",
+          "susanvillalobos",
+          "susanvillalobos_"
+        ],
+        "sourceKinds": [
+          "PNE",
+          "Venda",
+          "Liberacao"
+        ],
+        "events": 7,
+        "issued": 67,
+        "validated": 14,
+        "repasse": 86.375,
+        "sold": 6,
+        "courtesy": 0,
+        "liberation": 16,
+        "pne": 45,
+        "revenue": 783.75
+      },
+      {
+        "name": "Tai",
+        "sourceNames": [
+          "Tai",
+          "tai-"
+        ],
+        "sourceKinds": [
+          "PNE",
+          "Venda"
+        ],
+        "events": 2,
+        "issued": 6,
+        "validated": 5,
+        "repasse": 32,
+        "sold": 3,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 3,
+        "revenue": 300
+      },
+      {
+        "name": "Technosp",
+        "sourceNames": [
+          "technosp"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 4,
+        "validated": 4,
+        "repasse": 36,
+        "sold": 4,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 360
+      },
+      {
+        "name": "Tenorio",
+        "sourceNames": [
+          "tenorio"
+        ],
+        "sourceKinds": [
+          "Cortesia"
+        ],
+        "events": 1,
+        "issued": 30,
+        "validated": 11,
+        "repasse": 11,
+        "sold": 0,
+        "courtesy": 30,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Thi Cenora",
+        "sourceNames": [
+          "thi cenora",
+          "convidadothicenora",
+          "convidadothicenora_"
+        ],
+        "sourceKinds": [
+          "Cortesia",
+          "Venda",
+          "Liberacao"
+        ],
+        "events": 14,
+        "issued": 770,
+        "validated": 271,
+        "repasse": 360,
+        "sold": 6,
+        "courtesy": 756,
+        "liberation": 8,
+        "pne": 0,
+        "revenue": 950
+      },
+      {
+        "name": "Timelapse",
+        "sourceNames": [
+          "Timelapse",
+          "timelapse",
+          "timelapse_"
+        ],
+        "sourceKinds": [
+          "PNE",
+          "Venda",
+          "Cortesia",
+          "Liberacao"
+        ],
+        "events": 10,
+        "issued": 677,
+        "validated": 260,
+        "repasse": 1331,
+        "sold": 75,
+        "courtesy": 118,
+        "liberation": 205,
+        "pne": 279,
+        "revenue": 11430
+      },
+      {
+        "name": "Tina",
+        "sourceNames": [
+          "tina"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 12,
+        "validated": 10,
+        "repasse": 203.4,
+        "sold": 12,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 2034
+      },
+      {
+        "name": "Ufa",
+        "sourceNames": [
+          "ufa"
+        ],
+        "sourceKinds": [
+          "Venda",
+          "Cortesia"
+        ],
+        "events": 2,
+        "issued": 90,
+        "validated": 71,
+        "repasse": 163,
+        "sold": 13,
+        "courtesy": 77,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 1050
+      },
+      {
+        "name": "Unique",
+        "sourceNames": [
+          "unique",
+          "unique_"
+        ],
+        "sourceKinds": [
+          "Cortesia",
+          "Venda",
+          "Liberacao"
+        ],
+        "events": 3,
+        "issued": 63,
+        "validated": 29,
+        "repasse": 39.4,
+        "sold": 1,
+        "courtesy": 40,
+        "liberation": 22,
+        "pne": 0,
+        "revenue": 114
+      },
+      {
+        "name": "Unisex",
+        "sourceNames": [
+          "unisex"
+        ],
+        "sourceKinds": [
+          "Cortesia"
+        ],
+        "events": 1,
+        "issued": 7,
+        "validated": 1,
+        "repasse": 1,
+        "sold": 0,
+        "courtesy": 7,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Vanessa Pedroso",
+        "sourceNames": [
+          "Vanessa Pedroso"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 2,
+        "issued": 3,
+        "validated": 0,
+        "repasse": 0,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 3,
+        "revenue": 0
+      },
+      {
+        "name": "Vanpedroso",
+        "sourceNames": [
+          "vanpedroso_"
+        ],
+        "sourceKinds": [
+          "Liberacao"
+        ],
+        "events": 2,
+        "issued": 36,
+        "validated": 6,
+        "repasse": 6,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 36,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Vitty",
+        "sourceNames": [
+          "vitty",
+          "vitty-",
+          "vitty_"
+        ],
+        "sourceKinds": [
+          "Venda",
+          "Cortesia",
+          "Liberacao"
+        ],
+        "events": 11,
+        "issued": 474,
+        "validated": 283,
+        "repasse": 426.4,
+        "sold": 14,
+        "courtesy": 457,
+        "liberation": 3,
+        "pne": 0,
+        "revenue": 1544
+      },
+      {
+        "name": "Viva",
+        "sourceNames": [
+          "viva"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 102,
+        "validated": 99,
+        "repasse": 1004.4000000000001,
+        "sold": 102,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 10044
+      },
+      {
+        "name": "Viva Sessions",
+        "sourceNames": [
+          "viva sessions"
+        ],
+        "sourceKinds": [
+          "Cortesia"
+        ],
+        "events": 1,
+        "issued": 1,
+        "validated": 0,
+        "repasse": 0,
+        "sold": 0,
+        "courtesy": 1,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 0
+      },
+      {
+        "name": "Vr",
+        "sourceNames": [
+          "vr"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 1,
+        "issued": 11,
+        "validated": 11,
+        "repasse": 378,
+        "sold": 11,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 3780
+      },
+      {
+        "name": "Wegoout",
+        "sourceNames": [
+          "wegoout",
+          "wegoout-"
+        ],
+        "sourceKinds": [
+          "Venda"
+        ],
+        "events": 8,
+        "issued": 74,
+        "validated": 64,
+        "repasse": 794.9250000000001,
+        "sold": 74,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 0,
+        "revenue": 7949.25
+      },
+      {
+        "name": "Will",
+        "sourceNames": [
+          "Will"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 5,
+        "issued": 66,
+        "validated": 25,
+        "repasse": 25,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 66,
+        "revenue": 0
+      },
+      {
+        "name": "William Pereira",
+        "sourceNames": [
+          "William Pereira"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 1,
+        "issued": 105,
+        "validated": 52,
+        "repasse": 52,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 105,
+        "revenue": 0
+      },
+      {
+        "name": "Yure",
+        "sourceNames": [
+          "Yure"
+        ],
+        "sourceKinds": [
+          "PNE"
+        ],
+        "events": 3,
+        "issued": 71,
+        "validated": 38,
+        "repasse": 38,
+        "sold": 0,
+        "courtesy": 0,
+        "liberation": 0,
+        "pne": 71,
+        "revenue": 0
+      }
+    ]
+  }
+}

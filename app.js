@@ -537,6 +537,10 @@ function eventSalesBreakdown(event) {
   const linkRevenue = linkRows.reduce((acc, row) => acc + Number(row.revenue || 0), 0);
   const revenue = Number(event.revenue || 0);
   const sold = Number(event.sold || 0);
+  const liberation = Number(event.liberation || 0);
+  const liberationValidated = Number(event.liberationValidated || 0);
+  const complimentary = Number(event.complimentary || 0);
+  const complimentaryValidated = eventComplimentaryValidated(event);
   return {
     revenue,
     sold,
@@ -544,8 +548,12 @@ function eventSalesBreakdown(event) {
     linkRevenue,
     generalSold: Math.max(0, sold - linkSold),
     generalRevenue: Math.max(0, revenue - linkRevenue),
-    complimentary: Number(event.complimentary || 0),
-    complimentaryValidated: eventComplimentaryValidated(event),
+    complimentary,
+    complimentaryValidated,
+    courtesy: Math.max(0, complimentary - liberation),
+    courtesyValidated: Math.max(0, complimentaryValidated - liberationValidated),
+    liberation,
+    liberationValidated,
     soldValidated: eventSoldValidated(event)
   };
 }
@@ -1286,14 +1294,20 @@ function promoterRanking(events = filteredEvents()) {
   const addRow = (event, name, data, source = "gandaya") => {
     const key = normalizeCodeName(name);
     if (!key) return;
+    const incomingCategory = eventPromoterCategory(name, data);
     if (!map.has(key)) {
       map.set(key, {
         name: data.displayName || displayName(name),
+        category: incomingCategory,
         sold: 0,
         complimentary: 0,
+        courtesy: 0,
+        liberation: 0,
         validated: 0,
         soldValidated: 0,
         complimentaryValidated: 0,
+        courtesyValidated: 0,
+        liberationValidated: 0,
         gandayaCourtesyIssued: 0,
         gandayaCourtesyValidated: 0,
         pneInserted: 0,
@@ -1301,22 +1315,35 @@ function promoterRanking(events = filteredEvents()) {
         linkCourtesyIssued: 0,
         linkCourtesyValidated: 0,
         revenue: 0,
+        sourceNames: [],
+        sourceKinds: [],
         events: []
       });
     }
     const row = map.get(key);
+    if (EVENT_PROMOTER_CATEGORY_PRIORITY[incomingCategory] < EVENT_PROMOTER_CATEGORY_PRIORITY[row.category]) {
+      row.category = incomingCategory;
+    }
     const sold = Number(data.sold || 0);
     const complimentary = Number(data.complimentary || 0);
     const validated = Number(data.validated || 0);
     const soldValidated = rowSoldValidated(data);
     const complimentaryValidated = rowComplimentaryValidated(data);
+    const liberation = source === "gandaya" ? Number(data.liberation || 0) : 0;
+    const liberationValidated = source === "gandaya" ? Number(data.liberationValidated || 0) : 0;
+    const courtesy = source === "gandaya" ? Math.max(0, complimentary - liberation) : 0;
+    const courtesyValidated = source === "gandaya" ? Math.max(0, complimentaryValidated - liberationValidated) : 0;
     const linkCourtesy = settlementLinkCourtesyCounts(data);
     const revenue = Number(data.revenue || 0);
     row.sold += sold;
     row.complimentary += complimentary;
+    row.courtesy += courtesy;
+    row.liberation += liberation;
     row.validated += validated;
     row.soldValidated += soldValidated;
     row.complimentaryValidated += complimentaryValidated;
+    row.courtesyValidated += courtesyValidated;
+    row.liberationValidated += liberationValidated;
     row.gandayaCourtesyIssued += source === "gandaya" ? complimentary : 0;
     row.gandayaCourtesyValidated += source === "gandaya" ? complimentaryValidated : 0;
     row.pneInserted += source === "pne" ? complimentary : 0;
@@ -1324,31 +1351,59 @@ function promoterRanking(events = filteredEvents()) {
     row.linkCourtesyIssued += linkCourtesy.issued;
     row.linkCourtesyValidated += linkCourtesy.validated;
     row.revenue += revenue;
+    const rawSourceNames = Array.isArray(data.sourceNames) && data.sourceNames.length ? data.sourceNames : [name];
+    rawSourceNames.forEach((sourceName) => {
+      const cleanName = String(sourceName || "").trim();
+      if (cleanName && !row.sourceNames.includes(cleanName)) row.sourceNames.push(cleanName);
+    });
+    const sourceKinds = [
+      sold || revenue ? "Venda" : "",
+      courtesy ? "Cortesia" : "",
+      liberation ? "Liberacao" : "",
+      source === "pne" && (complimentary || complimentaryValidated) ? "PNE" : ""
+    ].filter(Boolean);
+    sourceKinds.forEach((kind) => {
+      if (!row.sourceKinds.includes(kind)) row.sourceKinds.push(kind);
+    });
     let eventRow = row.events.find((item) => item.id === event.id);
     if (!eventRow) {
       eventRow = {
         id: event.id,
         name: event.name,
+        category: incomingCategory,
         sold: 0,
         complimentary: 0,
+        courtesy: 0,
+        liberation: 0,
         validated: 0,
         soldValidated: 0,
         complimentaryValidated: 0,
+        courtesyValidated: 0,
+        liberationValidated: 0,
         gandayaCourtesyIssued: 0,
         gandayaCourtesyValidated: 0,
         pneInserted: 0,
         pneConverted: 0,
         linkCourtesyIssued: 0,
         linkCourtesyValidated: 0,
-        revenue: 0
+        revenue: 0,
+        sourceNames: [],
+        sourceKinds: []
       };
       row.events.push(eventRow);
     }
+    if (EVENT_PROMOTER_CATEGORY_PRIORITY[incomingCategory] < EVENT_PROMOTER_CATEGORY_PRIORITY[eventRow.category]) {
+      eventRow.category = incomingCategory;
+    }
     eventRow.sold += sold;
     eventRow.complimentary += complimentary;
+    eventRow.courtesy += courtesy;
+    eventRow.liberation += liberation;
     eventRow.validated += validated;
     eventRow.soldValidated += soldValidated;
     eventRow.complimentaryValidated += complimentaryValidated;
+    eventRow.courtesyValidated += courtesyValidated;
+    eventRow.liberationValidated += liberationValidated;
     eventRow.gandayaCourtesyIssued += source === "gandaya" ? complimentary : 0;
     eventRow.gandayaCourtesyValidated += source === "gandaya" ? complimentaryValidated : 0;
     eventRow.pneInserted += source === "pne" ? complimentary : 0;
@@ -1356,6 +1411,13 @@ function promoterRanking(events = filteredEvents()) {
     eventRow.linkCourtesyIssued += linkCourtesy.issued;
     eventRow.linkCourtesyValidated += linkCourtesy.validated;
     eventRow.revenue += revenue;
+    rawSourceNames.forEach((sourceName) => {
+      const cleanName = String(sourceName || "").trim();
+      if (cleanName && !eventRow.sourceNames.includes(cleanName)) eventRow.sourceNames.push(cleanName);
+    });
+    sourceKinds.forEach((kind) => {
+      if (!eventRow.sourceKinds.includes(kind)) eventRow.sourceKinds.push(kind);
+    });
   };
   events.forEach((event) => {
     Object.entries(event.promoters || {}).forEach(([name, data]) => {
@@ -1431,12 +1493,22 @@ function capacityBatchDisplayName(batch, fallbackName = "") {
 }
 
 function salesCodeBatchRowFromBatch(batch) {
+  const liberation = Number(batch.liberation || 0);
+  const liberationValidated = Number(batch.liberationValidated || 0);
+  const complimentary = Number(batch.complimentary || 0);
+  const complimentaryValidated = rowComplimentaryValidated(batch);
   return {
     label: batch.rawLabel || batch.label || "Sem lote",
     sold: Number(batch.sold || 0),
     soldValidated: rowSoldValidated(batch),
-    complimentary: Number(batch.complimentary || 0),
-    complimentaryValidated: rowComplimentaryValidated(batch),
+    complimentary,
+    complimentaryValidated,
+    courtesy: Math.max(0, complimentary - liberation),
+    courtesyValidated: Math.max(0, complimentaryValidated - liberationValidated),
+    liberation,
+    liberationValidated,
+    pneInserted: 0,
+    pneConverted: 0,
     revenue: Number(batch.revenue || 0),
     revenueEstimated: false
   };
@@ -1564,7 +1636,36 @@ const SETTLEMENT_EXCLUDED_CODES = new Set(
 const SETTLEMENT_EXCLUDED_CODE_PATTERNS = ["niver", "bday"].map(normalizeCodeName);
 const SETTLEMENT_GUARANTEE_EXCLUDED_DATES = new Set(["2026-07-12", "2026-07-15", "2026-07-19"]);
 const SETTLEMENT_COURTESY_VALIDATION_FEE = 10;
+const EVENT_LINK_SALES_COMMISSION_RATE = 0.1;
+const EVENT_VALIDATION_REPASSE = 1;
 const SETTLEMENT_MINIMUM_COMMISSION_SOLD = 10;
+const EVENT_PROMOTER_CATEGORY_PRIORITY = { socios: 0, special: 1, generic: 2, rp: 3 };
+const EVENT_SOCIOS_CODES = new Set(["hands", "handsup", "soul", "somosbw", "today", "allan", "allansimon", "jordana", "jordanahands", "artistico", "patrocinador", "patrocinadores"]);
+const EVENT_GENERIC_CODE_PATTERNS = ["aniversariante", "aniver", "niver", "bday", "bdy", "eventocancelado"];
+
+function eventPromoterCategory(name, data = {}) {
+  if (["socios", "special", "generic", "rp"].includes(data.category)) return data.category;
+  const key = normalizeCodeName(name);
+  if (EVENT_SOCIOS_CODES.has(key)) return "socios";
+  if (SPECIAL_SETTLEMENT_CODES.has(key)) return "special";
+  const context = normalizeCodeName(
+    [
+      name,
+      ...(data.sourceNames || []),
+      ...(data.categoryEvidence || []),
+      ...Object.values(data.batches || {}).flatMap((batch) => [batch.rawLabel, batch.label])
+    ]
+      .filter(Boolean)
+      .join(" ")
+  );
+  if (EVENT_GENERIC_CODE_PATTERNS.some((pattern) => context.includes(pattern))) return "generic";
+  // RP nao existe como marcador na origem: e sempre o restante apos as exclusoes acima.
+  return "rp";
+}
+
+function isPayableEventRp(row) {
+  return (row?.category || "rp") === "rp";
+}
 
 function isSpecialSettlementCode(name) {
   return SPECIAL_SETTLEMENT_CODES.has(normalizeCodeName(name));
@@ -1990,22 +2091,37 @@ function normalizeCodeName(name) {
   return CODE_ALIASES.get(key) || key;
 }
 
+function salesCodeBatchMetrics(batch) {
+  const complimentary = Number(batch.complimentary || 0);
+  const complimentaryValidated = rowComplimentaryValidated(batch);
+  const liberation = Number(batch.liberation || 0);
+  const liberationValidated = Number(batch.liberationValidated || 0);
+  return {
+    ...batch,
+    label: batch.rawLabel || batch.label || "Sem lote",
+    sold: Number(batch.sold || 0),
+    soldValidated: rowSoldValidated(batch),
+    complimentary,
+    complimentaryValidated,
+    courtesy: Math.max(0, Number(batch.courtesy ?? complimentary - liberation)),
+    courtesyValidated: Math.max(0, Number(batch.courtesyValidated ?? complimentaryValidated - liberationValidated)),
+    liberation,
+    liberationValidated,
+    pneInserted: Number(batch.pneInserted || 0),
+    pneConverted: Number(batch.pneConverted || 0),
+    revenue: Number(batch.revenue || 0),
+    revenueEstimated: Boolean(batch.revenueEstimated)
+  };
+}
+
 function salesCodeBatchRows(row, eventRow) {
-  if (Array.isArray(eventRow.batchRows) && eventRow.batchRows.length) return eventRow.batchRows;
+  if (Array.isArray(eventRow.batchRows) && eventRow.batchRows.length) return eventRow.batchRows.map(salesCodeBatchMetrics);
   const event = state.events.find((item) => item.id === eventRow.id);
   const codeKey = normalizeCodeName(row.name);
   const promoterData = Object.entries(event?.promoters || {}).find(([name]) => normalizeCodeName(name) === codeKey)?.[1];
   const promoterBatchRows = Object.values(promoterData?.batches || {})
     .filter((batch) => Number(batch.sold || 0) > 0 || Number(batch.revenue || 0) > 0 || Number(batch.complimentary || 0) > 0 || rowComplimentaryValidated(batch) > 0)
-    .map((batch) => ({
-      label: batch.rawLabel || batch.label || "Sem lote",
-      sold: Number(batch.sold || 0),
-      soldValidated: rowSoldValidated(batch),
-      complimentary: Number(batch.complimentary || 0),
-      complimentaryValidated: rowComplimentaryValidated(batch),
-      revenue: Number(batch.revenue || 0),
-      revenueEstimated: false
-    }))
+    .map(salesCodeBatchMetrics)
     .sort(
       (a, b) =>
         b.revenue - a.revenue ||
@@ -2024,6 +2140,12 @@ function salesCodeBatchRows(row, eventRow) {
       soldValidated: 0,
       complimentary: pneInserted,
       complimentaryValidated: pneConverted,
+      courtesy: 0,
+      courtesyValidated: 0,
+      liberation: 0,
+      liberationValidated: 0,
+      pneInserted,
+      pneConverted,
       revenue: 0,
       revenueEstimated: false
     });
@@ -2033,7 +2155,7 @@ function salesCodeBatchRows(row, eventRow) {
   const grouped = new Map();
   let hasRevenueByEntry = false;
   (event?.audience || []).forEach((entry) => {
-    if (!["purchase", "courtesy"].includes(entry.type)) return;
+    if (!["purchase", "courtesy", "liberation"].includes(entry.type)) return;
     if (normalizeCodeName(entry.linkOrCommissioner || "") !== codeKey) return;
     const batchName = entry.batchName || "Sem lote";
     const batchKey = normalizeBatch(batchName);
@@ -2044,6 +2166,12 @@ function salesCodeBatchRows(row, eventRow) {
         soldValidated: 0,
         complimentary: 0,
         complimentaryValidated: 0,
+        courtesy: 0,
+        courtesyValidated: 0,
+        liberation: 0,
+        liberationValidated: 0,
+        pneInserted: 0,
+        pneConverted: 0,
         revenue: 0,
         revenueEstimated: false
       });
@@ -2052,9 +2180,20 @@ function salesCodeBatchRows(row, eventRow) {
     if (entry.type === "purchase") {
       batch.sold += 1;
       if (entry.validated) batch.soldValidated += 1;
+    } else if (entry.type === "liberation") {
+      batch.complimentary += 1;
+      batch.liberation += 1;
+      if (entry.validated) {
+        batch.complimentaryValidated += 1;
+        batch.liberationValidated += 1;
+      }
     } else {
       batch.complimentary += 1;
-      if (entry.validated) batch.complimentaryValidated += 1;
+      batch.courtesy += 1;
+      if (entry.validated) {
+        batch.complimentaryValidated += 1;
+        batch.courtesyValidated += 1;
+      }
     }
     if (entry.type === "purchase" && Number.isFinite(Number(entry.revenue)) && Number(entry.revenue) > 0) {
       hasRevenueByEntry = true;
@@ -3144,24 +3283,27 @@ function renderSalesLinkTable(rows, totalRevenue, options = {}) {
   const condensed = Boolean(options.condensed);
   const showConversion = compact && state.codeRankingSort === "conversion";
   const salesHeaders = condensed
-    ? `<th>Link/comissario</th><th>Receita</th><th>Ingressos</th><th>% faturamento</th>`
+    ? `<th>Link/comissario</th><th>Receita</th><th>Ingressos</th><th>Repasse</th><th>% faturamento</th>`
     : compact
-    ? `<th>Link/comissario</th><th>Receita</th><th>Vendidos</th><th>${showConversion ? "% conversao" : "% faturamento"}</th>`
-    : "<th>Link/comissario</th><th>Receita</th><th>% faturamento</th><th>Vendidos</th><th>Val. vendas</th>";
+    ? `<th>Link/comissario</th><th>Receita</th><th>Vendidos</th><th>Repasse</th><th>${showConversion ? "% conversao" : "% faturamento"}</th>`
+    : "<th>Link/comissario</th><th>Receita</th><th>Repasse</th><th>% faturamento</th><th>Vendidos</th><th>Val. vendas</th>";
   const salesCols = condensed
     ? `
           <col class="name-col" />
           <col class="money-col" />
           <col class="count-col" />
+          <col class="money-col" />
           <col class="percent-col" />`
     : compact
     ? `
           <col class="name-col" />
           <col class="money-col" />
           <col class="count-col" />
+          <col class="money-col" />
           <col class="percent-col" />`
     : `
           <col class="name-col" />
+          <col class="money-col" />
           <col class="money-col" />
           <col class="percent-col" />
           <col class="count-col" />
@@ -3179,16 +3321,17 @@ function renderSalesLinkTable(rows, totalRevenue, options = {}) {
               const key = salesCodeKey(row.name);
               const expanded = state.salesCodeDrawerKey === key;
               const linkCourtesyNote = row.linkCourtesyIssued ? `<small>Cortesia F/M: ${int(row.linkCourtesyValidated)} de ${int(row.linkCourtesyIssued)} val.</small>` : "";
+              const sourceBadge = renderCombinedSourcesBadge(row);
               return `
               <tr class="sales-code-row ${expanded ? "is-expanded" : ""}" data-sales-code="${esc(key)}" data-code-mode="sales" title="Clique para ver detalhes">
-                <td data-label="Link/comissario"><strong>${esc(row.name)}</strong><span class="row-hint">${expanded ? "Detalhes abertos" : "Ver detalhes"}</span></td>
+                <td data-label="Link/comissario"><strong>${esc(row.name)}</strong>${sourceBadge}<span class="row-hint">${expanded ? "Detalhes abertos" : "Ver detalhes"}</span></td>
                 <td data-label="Receita"><span class="cell-value">${money(row.revenue)}</span></td>
                 ${
                   condensed
-                    ? `<td data-label="Ingressos"><span class="cell-value">${int(row.sold)}</span><small>${int(row.soldValidated)} validados</small>${linkCourtesyNote}</td><td data-label="% faturamento">${shareCell(row.revenue, totalRevenue)}</td>`
+                    ? `<td data-label="Ingressos"><span class="cell-value">${int(row.sold)}</span><small>${int(row.soldValidated)} validados</small>${linkCourtesyNote}</td><td data-label="Repasse">${money(eventSalesRepasse(row))}</td><td data-label="% faturamento">${shareCell(row.revenue, totalRevenue)}</td>`
                     : compact
-                    ? `<td data-label="Vendidos"><span class="cell-value">${int(row.sold)}</span></td><td data-label="${showConversion ? "% conversao" : "% faturamento"}">${showConversion ? rateCell(row.soldValidated, row.sold, true, "rate-only") : shareCell(row.revenue, totalRevenue)}</td>`
-                    : `<td data-label="% faturamento">${shareCell(row.revenue, totalRevenue)}</td><td data-label="Vendidos"><span class="cell-value">${int(row.sold)}</span>${linkCourtesyNote}</td><td data-label="Val. vendas">${row.sold ? rateCell(row.soldValidated, row.sold) : `<span class="cell-value">-</span>`}</td>`
+                    ? `<td data-label="Vendidos"><span class="cell-value">${int(row.sold)}</span></td><td data-label="Repasse">${money(eventSalesRepasse(row))}</td><td data-label="${showConversion ? "% conversao" : "% faturamento"}">${showConversion ? rateCell(row.soldValidated, row.sold, true, "rate-only") : shareCell(row.revenue, totalRevenue)}</td>`
+                    : `<td data-label="Repasse">${money(eventSalesRepasse(row))}</td><td data-label="% faturamento">${shareCell(row.revenue, totalRevenue)}</td><td data-label="Vendidos"><span class="cell-value">${int(row.sold)}</span>${linkCourtesyNote}</td><td data-label="Val. vendas">${row.sold ? rateCell(row.soldValidated, row.sold) : `<span class="cell-value">-</span>`}</td>`
                 }
               </tr>
             `;
@@ -3200,24 +3343,52 @@ function renderSalesLinkTable(rows, totalRevenue, options = {}) {
   `;
 }
 
-function renderSalesCodeBatchTable(batchRows, mode = "sales") {
-  const visibleRows = batchRows.filter((batch) =>
-    mode === "courtesy" ? Number(batch.complimentary || 0) > 0 : Number(batch.sold || 0) > 0
-  );
-  if (mode === "courtesy") {
+function eventSalesRepasse(row) {
+  return isPayableEventRp(row) ? Number(row?.revenue || 0) * EVENT_LINK_SALES_COMMISSION_RATE : 0;
+}
+
+function eventValidationRepasse(row, validatedField) {
+  return isPayableEventRp(row) ? Number(row?.[validatedField] || 0) * EVENT_VALIDATION_REPASSE : 0;
+}
+
+function renderCombinedSourcesBadge(row) {
+  const sourceKinds = [...new Set(row?.sourceKinds || [])];
+  const sourceNames = [...new Set(row?.sourceNames || [])];
+  if (sourceKinds.length < 2 && sourceNames.length < 2) return "";
+  const count = sourceKinds.length > 1 ? sourceKinds.length : sourceNames.length;
+  const details = [
+    sourceKinds.length ? `Fontes: ${sourceKinds.join(", ")}` : "",
+    sourceNames.length ? `Nomes agrupados: ${sourceNames.join(", ")}` : ""
+  ]
+    .filter(Boolean)
+    .join(". ");
+  return `<span class="source-combination-badge" title="${esc(details)}">${int(count)} fontes combinadas</span>`;
+}
+
+function renderSalesCodeBatchTable(batchRows, mode = "sales", category = "rp") {
+  const modeFields = {
+    combined: ["complimentary", "complimentaryValidated", "Emitidas", "Validadas"],
+    courtesy: ["courtesy", "courtesyValidated", "Emitidas", "Validadas"],
+    liberation: ["liberation", "liberationValidated", "Liberados", "Validados"],
+    pne: ["pneInserted", "pneConverted", "Inseridos", "Convertidos"]
+  };
+  const fields = modeFields[mode];
+  const visibleRows = batchRows.filter((batch) => (fields ? Number(batch[fields[0]] || 0) > 0 : Number(batch.sold || 0) > 0));
+  if (fields) {
     return `
       <div class="table-wrap nested-detail-table" tabindex="0">
         <table class="sales-detail-table">
-          <thead><tr><th>Lote</th><th>Emitidas</th><th>Validadas</th><th>% validacao</th></tr></thead>
+          <thead><tr><th>Lote</th><th>${fields[2]}</th><th>${fields[3]}</th><th>% validacao</th><th>Repasse</th></tr></thead>
           <tbody>
             ${visibleRows
               .map(
                 (batch) => `
                   <tr class="detail-batch-row">
                     <td class="detail-lot-cell" data-label="Lote">${esc(batch.label)}</td>
-                    <td class="detail-count-cell" data-label="Emitidas">${int(batch.complimentary)}</td>
-                    <td class="detail-count-cell" data-label="Validadas">${int(batch.complimentaryValidated)}</td>
-                    <td class="detail-count-cell" data-label="% validacao">${batch.complimentary ? pct(safeRate(batch.complimentaryValidated, batch.complimentary)) : "-"}</td>
+                    <td class="detail-count-cell" data-label="${fields[2]}">${int(batch[fields[0]])}</td>
+                    <td class="detail-count-cell" data-label="${fields[3]}">${int(batch[fields[1]])}</td>
+                    <td class="detail-count-cell" data-label="% validacao">${batch[fields[0]] ? pct(safeRate(batch[fields[1]], batch[fields[0]])) : "-"}</td>
+                    <td class="detail-count-cell" data-label="Repasse">${money(category === "rp" ? Number(batch[fields[1]] || 0) * EVENT_VALIDATION_REPASSE : 0)}</td>
                   </tr>
                 `
               )
@@ -3230,7 +3401,7 @@ function renderSalesCodeBatchTable(batchRows, mode = "sales") {
   return `
     <div class="table-wrap nested-detail-table" tabindex="0">
       <table class="sales-detail-table">
-        <thead><tr><th>Lote</th><th>Vendidos</th><th>Val. vendas</th><th>Receita</th></tr></thead>
+        <thead><tr><th>Lote</th><th>Vendidos</th><th>Val. vendas</th><th>Receita</th><th>Repasse</th></tr></thead>
         <tbody>
           ${visibleRows
             .map(
@@ -3240,6 +3411,7 @@ function renderSalesCodeBatchTable(batchRows, mode = "sales") {
                   <td class="detail-count-cell" data-label="Vendidos">${int(batch.sold)}</td>
                   <td class="detail-count-cell" data-label="Val. vendas">${int(batch.soldValidated)}</td>
                   <td class="detail-count-cell" data-label="Receita">${money(batch.revenue)}${batch.revenueEstimated ? ` <small title="Receita estimada proporcionalmente aos vendidos do lote.">estimado</small>` : ""}</td>
+                  <td class="detail-count-cell" data-label="Repasse">${money(category === "rp" ? Number(batch.revenue || 0) * EVENT_LINK_SALES_COMMISSION_RATE : 0)}</td>
                 </tr>
               `
             )
@@ -3251,7 +3423,13 @@ function renderSalesCodeBatchTable(batchRows, mode = "sales") {
 }
 
 function renderSalesCodeDetail(row, totalRevenue, mode = "sales") {
-  const courtesyMode = mode === "courtesy";
+  const modeFields = {
+    combined: ["complimentary", "complimentaryValidated"],
+    courtesy: ["courtesy", "courtesyValidated"],
+    liberation: ["liberation", "liberationValidated"],
+    pne: ["pneInserted", "pneConverted"]
+  };
+  const fields = modeFields[mode];
   const events = row.events
     .slice()
     .sort((a, b) => Number(b.revenue || 0) - Number(a.revenue || 0) || Number(b.sold || 0) - Number(a.sold || 0));
@@ -3265,9 +3443,15 @@ function renderSalesCodeDetail(row, totalRevenue, mode = "sales") {
       soldValidated: batchRows.reduce((sum, batch) => sum + Number(batch.soldValidated || 0), 0),
       complimentary: batchRows.reduce((sum, batch) => sum + Number(batch.complimentary || 0), 0),
       complimentaryValidated: batchRows.reduce((sum, batch) => sum + Number(batch.complimentaryValidated || 0), 0),
+      courtesy: batchRows.reduce((sum, batch) => sum + Number(batch.courtesy || 0), 0),
+      courtesyValidated: batchRows.reduce((sum, batch) => sum + Number(batch.courtesyValidated || 0), 0),
+      liberation: batchRows.reduce((sum, batch) => sum + Number(batch.liberation || 0), 0),
+      liberationValidated: batchRows.reduce((sum, batch) => sum + Number(batch.liberationValidated || 0), 0),
+      pneInserted: batchRows.reduce((sum, batch) => sum + Number(batch.pneInserted || 0), 0),
+      pneConverted: batchRows.reduce((sum, batch) => sum + Number(batch.pneConverted || 0), 0),
       revenue: batchRows.reduce((sum, batch) => sum + Number(batch.revenue || 0), 0)
     };
-  }).filter((eventRow) => !courtesyMode || Number(eventRow.complimentary || 0) > 0 || Number(eventRow.complimentaryValidated || 0) > 0);
+  }).filter((eventRow) => (fields ? Number(eventRow[fields[0]] || 0) > 0 || Number(eventRow[fields[1]] || 0) > 0 : Number(eventRow.sold || 0) > 0));
   return `
     <div class="sales-code-detail">
       <div class="sales-code-event-list">
@@ -3280,10 +3464,15 @@ function renderSalesCodeDetail(row, totalRevenue, mode = "sales") {
             const courtesyRate = courtesyIssued ? pct(safeRate(courtesyValidated, courtesyIssued)) : "-";
             const linkCourtesyIssued = Number(eventRow.linkCourtesyIssued || 0);
             const linkCourtesyValidated = Number(eventRow.linkCourtesyValidated || 0);
-            const metaHtml = courtesyMode
-              ? `${int(courtesyIssued)} emitidas - ${int(courtesyValidated)} validadas - ${courtesyRate} validacao`
-              : `${int(eventRow.sold)} vendidos - ${money(eventRow.revenue)} - ${validationRate} validados
-                  <span class="sales-code-event-extra">${int(courtesyIssued)} cortesias emitidas - ${int(courtesyValidated)} validadas - ${courtesyRate} validacao</span>
+            const modeMeta = {
+              combined: `${int(eventRow.complimentary)} cortesias/PNE emitidos - ${int(eventRow.complimentaryValidated)} validados - ${pct(safeRate(eventRow.complimentaryValidated, eventRow.complimentary))} validacao`,
+              courtesy: `${int(eventRow.courtesy)} cortesias emitidas - ${int(eventRow.courtesyValidated)} validadas - ${pct(safeRate(eventRow.courtesyValidated, eventRow.courtesy))} validacao - ${money(eventValidationRepasse(eventRow, "courtesyValidated"))} repasse`,
+              liberation: `${int(eventRow.liberation)} liberados - ${int(eventRow.liberationValidated)} validados - ${pct(safeRate(eventRow.liberationValidated, eventRow.liberation))} validacao - ${money(eventValidationRepasse(eventRow, "liberationValidated"))} repasse`,
+              pne: `${int(eventRow.pneInserted)} inseridos - ${int(eventRow.pneConverted)} convertidos - ${pct(safeRate(eventRow.pneConverted, eventRow.pneInserted))} conversao - ${money(eventValidationRepasse(eventRow, "pneConverted"))} repasse`
+            };
+            const metaHtml = fields
+              ? modeMeta[mode]
+              : `${int(eventRow.sold)} vendidos - ${money(eventRow.revenue)} - ${validationRate} validados - ${money(eventSalesRepasse(eventRow))} repasse
                   ${linkCourtesyIssued ? `<span class="sales-code-event-extra">Cortesia F/M por link: ${int(linkCourtesyValidated)} de ${int(linkCourtesyIssued)} validadas</span>` : ""}`;
             return `
               <article class="sales-code-event-item ${expanded ? "is-expanded" : ""}" data-sales-event-item="${esc(eventRow.key)}">
@@ -3296,7 +3485,7 @@ function renderSalesCodeDetail(row, totalRevenue, mode = "sales") {
                 <p class="sales-code-event-meta">
                   ${metaHtml}
                 </p>
-                ${expanded ? `<div class="sales-code-event-lots">${renderSalesCodeBatchTable(eventRow.batchRows, mode)}</div>` : ""}
+                ${expanded ? `<div class="sales-code-event-lots">${renderSalesCodeBatchTable(eventRow.batchRows, mode, eventRow.category)}</div>` : ""}
               </article>
             `;
           })
@@ -3326,11 +3515,21 @@ function renderSalesCodeDrawer() {
   const context = salesCodeDrawerContext();
   if (!context) return "";
   const { row, totalRevenue, scopeTitle } = context;
-  const mode = state.salesCodeDrawerMode === "courtesy" ? "courtesy" : "sales";
-  const headerMeta =
-    mode === "courtesy"
-      ? `${int(row.complimentary)} cortesias emitidas · ${int(row.complimentaryValidated)} validadas · ${pct(safeRate(row.complimentaryValidated, row.complimentary))} validacao`
-      : `${int(row.sold)} vendidos · ${int(row.soldValidated)} validados · ${money(row.revenue)} · ${pct(safeRate(row.revenue, totalRevenue))}`;
+  const allowedModes = ["sales", "combined", "courtesy", "liberation", "pne"];
+  const mode = allowedModes.includes(state.salesCodeDrawerMode) ? state.salesCodeDrawerMode : "sales";
+  const headerMetaByMode = {
+    sales: `${int(row.sold)} vendidos · ${int(row.soldValidated)} validados · ${money(row.revenue)} · ${money(eventSalesRepasse(row))} repasse · ${pct(safeRate(row.revenue, totalRevenue))}`,
+    combined: `${int(row.complimentary)} cortesias/PNE emitidos · ${int(row.complimentaryValidated)} validados`,
+    courtesy: `${int(row.courtesy)} cortesias emitidas · ${int(row.courtesyValidated)} validadas · ${money(eventValidationRepasse(row, "courtesyValidated"))} repasse`,
+    liberation: `${int(row.liberation)} ingressos liberados · ${int(row.liberationValidated)} validados · ${money(eventValidationRepasse(row, "liberationValidated"))} repasse`,
+    pne: `${int(row.pneInserted)} PNE inseridos · ${int(row.pneConverted)} convertidos · ${money(eventValidationRepasse(row, "pneConverted"))} repasse`
+  };
+  const headerMeta = headerMetaByMode[mode];
+  const categoryLabel = { socios: "Socio · sem repasse", special: "Negociacao especial · ver Fechamento", generic: "Categoria generica · sem repasse", rp: "RP" }[row.category || "rp"];
+  const sourceDetails = [
+    row.sourceKinds?.length ? row.sourceKinds.join(", ") : "",
+    row.sourceNames?.length ? row.sourceNames.join(", ") : ""
+  ].filter(Boolean);
   return `
     <div class="batch-drawer-backdrop" data-action="close-sales-code-drawer"></div>
     <aside class="batch-drawer" role="dialog" aria-modal="true" aria-label="Detalhes do link">
@@ -3338,7 +3537,9 @@ function renderSalesCodeDrawer() {
         <div>
           <span class="eyebrow">${esc(scopeTitle || "Recorte atual")}</span>
           <h3>${esc(row.name)}</h3>
+          <span class="pill neutral">${esc(categoryLabel)}</span>
           <p>${headerMeta}</p>
+          ${sourceDetails.length ? `<p class="drawer-source-note">Origens consolidadas: ${esc(sourceDetails.join(" · "))}</p>` : ""}
         </div>
         <button class="ghost icon-button" data-action="close-sales-code-drawer" aria-label="Fechar detalhes">×</button>
       </div>
@@ -3350,33 +3551,47 @@ function renderSalesCodeDrawer() {
 function renderCourtesyLinkTable(rows, options = {}) {
   if (!rows.length) return renderStatePanel("Nenhuma cortesia por link no recorte atual.", "", "empty");
   const compact = Boolean(options.compact);
-  const orderedRows = options.preserveOrder ? rows : rows.slice().sort((a, b) => b.complimentaryValidated - a.complimentaryValidated || b.complimentary - a.complimentary);
+  const mode = ["courtesy", "liberation", "pne"].includes(options.mode) ? options.mode : "combined";
+  const fieldsByMode = {
+    combined: ["complimentary", "complimentaryValidated", "Emitidas", "Validadas", "Cortesias"],
+    courtesy: ["courtesy", "courtesyValidated", "Emitidas", "Validadas", "Cortesias"],
+    liberation: ["liberation", "liberationValidated", "Liberados", "Validados", "Liberacao"],
+    pne: ["pneInserted", "pneConverted", "Inseridos", "Convertidos", "PNE"]
+  };
+  const fields = fieldsByMode[mode];
+  const drawerMode = mode;
+  const orderedRows = options.preserveOrder ? rows : rows.slice().sort((a, b) => Number(b[fields[1]] || 0) - Number(a[fields[1]] || 0) || Number(b[fields[0]] || 0) - Number(a[fields[0]] || 0));
   return `
-    <div class="table-wrap compact-table courtesy-link-table ${compact ? "overview-compact-table" : ""}">
+    <div class="table-wrap compact-table courtesy-link-table ${compact ? "overview-compact-table" : ""} ${options.listStyle ? "source-compact-table" : ""}">
       <table>
         <colgroup>
           <col class="name-col" />
           <col class="count-col" />
           <col class="count-col" />
+          <col class="money-col" />
           <col class="percent-col" />
         </colgroup>
-        <thead><tr><th>Link/comissario</th><th>Emitidas</th><th>Validadas</th><th>% validacao</th></tr></thead>
+        <thead><tr><th>Link/comissario</th><th>${fields[2]}</th><th>${fields[3]}</th><th>Repasse</th><th>% validacao</th></tr></thead>
         <tbody>
           ${orderedRows
             .map((row) => {
               const key = salesCodeKey(row.name);
               const expanded = state.salesCodeDrawerKey === key;
-              const rate = safeRate(row.complimentaryValidated, row.complimentary);
+              const issued = Number(row[fields[0]] || 0);
+              const validated = Number(row[fields[1]] || 0);
+              const rate = safeRate(validated, issued);
               const linkCourtesyNote = row.linkCourtesyIssued ? `<small>Cortesia F/M: ${int(row.linkCourtesyValidated)} de ${int(row.linkCourtesyIssued)} val.</small>` : "";
-              const sourceNote = row.pneInserted
+              const sourceNote = mode === "combined" && row.pneInserted
                 ? `<small>Gandaya: ${int(row.gandayaCourtesyValidated)} val. · PNE: ${int(row.pneConverted)} conv.</small>`
                 : "";
+              const sourceBadge = renderCombinedSourcesBadge(row);
               return `
-                <tr class="sales-code-row ${expanded ? "is-expanded" : ""}" data-sales-code="${esc(key)}" data-code-mode="courtesy" title="Clique para ver detalhes">
-                  <td data-label="Link/comissario"><strong>${esc(row.name)}</strong><span class="row-hint">${expanded ? "Detalhes abertos" : "Ver detalhes"}</span>${sourceNote}${linkCourtesyNote}</td>
-                  <td data-label="Cortesias emitidas"><span class="cell-value">${int(row.complimentary)}</span></td>
-                  <td data-label="Validadas"><span class="cell-value">${int(row.complimentaryValidated)}</span></td>
-                  <td data-label="% validacao">${rateCell(row.complimentaryValidated, row.complimentary, true, compact ? "rate-only" : "count-rate")}</td>
+                <tr class="sales-code-row ${expanded ? "is-expanded" : ""}" data-sales-code="${esc(key)}" data-code-mode="${drawerMode}" title="Clique para ver detalhes">
+                  <td data-label="Link/comissario"><strong>${esc(row.name)}</strong>${sourceBadge}<span class="row-hint">${expanded ? "Detalhes abertos" : "Ver detalhes"}</span>${sourceNote}${mode === "combined" ? linkCourtesyNote : ""}</td>
+                  <td data-label="${fields[2]}"><span class="cell-value">${int(issued)}</span></td>
+                  <td data-label="${fields[3]}"><span class="cell-value">${int(validated)}</span></td>
+                  <td data-label="Repasse"><span class="cell-value">${money(eventValidationRepasse(row, fields[1]))}</span></td>
+                  <td data-label="% validacao">${rateCell(validated, issued, true, compact ? "rate-only" : "count-rate")}</td>
                 </tr>
               `;
             })
@@ -4353,6 +4568,31 @@ function renderValidation() {
   `;
 }
 
+function eventPromoterActivity(row) {
+  return {
+    issued: Number(row.sold || 0) + Number(row.courtesy || 0) + Number(row.liberation || 0) + Number(row.pneInserted || 0),
+    validated: Number(row.soldValidated || 0) + Number(row.courtesyValidated || 0) + Number(row.liberationValidated || 0) + Number(row.pneConverted || 0),
+    repasse:
+      eventSalesRepasse(row) +
+      eventValidationRepasse(row, "courtesyValidated") +
+      eventValidationRepasse(row, "liberationValidated") +
+      eventValidationRepasse(row, "pneConverted")
+  };
+}
+
+function eventCategoryTotals(rows) {
+  return rows.reduce(
+    (acc, row) => {
+      const item = eventPromoterActivity(row);
+      acc.issued += item.issued;
+      acc.validated += item.validated;
+      acc.repasse += item.repasse;
+      return acc;
+    },
+    { issued: 0, validated: 0, repasse: 0 }
+  );
+}
+
 function renderDetail() {
   const event = selectedEvent();
   if (!event) return renderStatePanel("Nenhum evento selecionado.", "", "empty");
@@ -4362,8 +4602,28 @@ function renderDetail() {
   const audienceSummary = eventAudienceSummary(event);
   const ticketAudit = eventTicketAudit(event);
   const genderRows = eventGenderRows(event);
+  const soldValidated = Number(split.soldValidated || 0);
+  const pneInserted = Number(event.pne?.inserted || 0);
+  const pneConverted = Number(event.pne?.converted || 0);
+  const eventPromoterRows = promoterRanking([event]);
+  const rpRows = eventPromoterRows.filter((row) => row.category === "rp");
+  const sociosRows = eventPromoterRows.filter((row) => row.category === "socios");
+  const rpTotals = eventCategoryTotals(rpRows);
+  const sociosTotals = eventCategoryTotals(sociosRows);
+  const linkSalesRepasse = rpRows.reduce((sum, row) => sum + eventSalesRepasse(row), 0);
+  const courtesyRepasse = rpRows.reduce((sum, row) => sum + eventValidationRepasse(row, "courtesyValidated"), 0);
+  const liberationRepasse = rpRows.reduce((sum, row) => sum + eventValidationRepasse(row, "liberationValidated"), 0);
+  const pneRepasse = rpRows.reduce((sum, row) => sum + eventValidationRepasse(row, "pneConverted"), 0);
   return `
     <section class="grid">
+      <div class="event-category-summary" aria-label="Resumo por origem dos ingressos">
+        ${metric("Ingressos vendidos", int(event.sold), `${int(soldValidated)} validados · ${money(linkSalesRepasse)} repasse de RPs`)}
+        ${metric("Cortesias", int(split.courtesy), `${int(split.courtesyValidated)} validadas · ${money(courtesyRepasse)} repasse de RPs`)}
+        ${metric("Liberacoes", int(split.liberation), `${int(split.liberationValidated)} validadas · ${money(liberationRepasse)} repasse de RPs`)}
+        ${metric("PNE", int(pneInserted), `${int(pneConverted)} convertidos · ${money(pneRepasse)} repasse de RPs`)}
+        ${metric("RPs", money(rpTotals.repasse), `${int(rpTotals.issued)} ingressos · ${int(rpTotals.validated)} validados`)}
+        ${metric("Socios", int(sociosTotals.issued), `${int(sociosTotals.validated)} validados · ${money(0)} repasse`)}
+      </div>
       <div class="grid cards">
         ${metric("Faturamento", money(event.revenue), "Receita total do evento")}
         ${metric("Venda geral", money(split.generalRevenue), `${int(split.generalSold)} ingressos · ${pct(safeRate(split.generalRevenue, event.revenue))} do faturamento`)}
@@ -4371,10 +4631,8 @@ function renderDetail() {
         ${metric("Ingressos totais", int(ticketAudit.displayTotal), ticketAudit.note)}
         ${metric("Check-ins", int(event.validated), `${pct(rate)} de presenca`)}
         ${metric("Compradores unicos", int(audienceSummary.uniqueBuyers), "Participantes finais com compra")}
-        ${metric("Cortesias", int(event.complimentary), `${int(split.complimentaryValidated)} validadas (${pct(safeRate(split.complimentaryValidated, event.complimentary))})`)}
         ${metric("Convidados unicos", int(audienceSummary.uniqueCourtesy), "Participantes finais com cortesia")}
         ${genderRows.slice(0, 2).map((row) => metric(row.label, pct(row.share), `${int(row.people)} pessoas no perfil do publico`)).join("")}
-        ${metric("PNE", event.pne ? `${int(event.pne.converted)}/${int(event.pne.inserted)}` : "-", "Convertidos / inseridos")}
       </div>
       <div class="card">
         <div class="toolbar">
@@ -4398,7 +4656,9 @@ function renderPne(event) {
     return renderStatePanel("Nao encontrei PDF PNE correspondente para este evento na pasta PNE.", "", "empty");
   }
   const rate = (Number(event.pne.converted || 0) / Math.max(Number(event.pne.inserted || 0), 1)) * 100;
-  const pneRepasse = Number(event.pne.converted || 0) * SETTLEMENT_COURTESY_VALIDATION_FEE;
+  const pneRepasse = (event.pne.people || []).reduce((sum, person) => {
+    return sum + (eventPromoterCategory(person.name) === "rp" ? Number(person.converted || 0) * EVENT_VALIDATION_REPASSE : 0);
+  }, 0);
   const query = normalizeText(state.pneSearch);
   const people = [...(event.pne.people || [])]
     .filter((person) => !query || normalizeText(person.name).includes(query))
@@ -4408,7 +4668,7 @@ function renderPne(event) {
       <div class="grid cards">
         ${metric("PNE inseridos", int(event.pne.inserted), "Total do PDF")}
         ${metric("PNE convertidos", int(event.pne.converted), `${pct(rate)} de conversao`)}
-        ${metric("Repasse PNE", money(pneRepasse), `${int(event.pne.converted)} validacoes · ${money(SETTLEMENT_COURTESY_VALIDATION_FEE)} por pessoa`)}
+        ${metric("Repasse PNE", money(pneRepasse), `${int(event.pne.converted)} validacoes · ${money(EVENT_VALIDATION_REPASSE)} por pessoa`)}
         ${metric("Fonte PNE", event.pne.source, "Documents/Nossa Casa/PNE")}
       </div>
       <div class="grid">
@@ -4426,10 +4686,11 @@ function renderPne(event) {
                     ${people
                       .map((person) => {
                         const personRate = (Number(person.converted || 0) / Math.max(Number(person.inserted || 0), 1)) * 100;
-                        const personRepasse = Number(person.converted || 0) * SETTLEMENT_COURTESY_VALIDATION_FEE;
+                        const personCategory = eventPromoterCategory(person.name);
+                        const personRepasse = personCategory === "rp" ? Number(person.converted || 0) * EVENT_VALIDATION_REPASSE : 0;
                         return `
                           <tr>
-                            <td><strong>${esc(person.name)}</strong></td>
+                            <td><strong>${esc(person.name)}</strong>${personCategory !== "rp" ? `<small>${personCategory === "socios" ? "Socio" : personCategory === "special" ? "Negociacao especial" : "Categoria generica"}</small>` : ""}</td>
                             <td>${int(person.inserted)}</td>
                             <td>${int(person.converted)}</td>
                             <td><span class="pill ${personRate >= 35 ? "good" : "warn"}">${pct(personRate)}</span></td>
@@ -4480,17 +4741,71 @@ function eventPromoters(event) {
     .sort((a, b) => b.revenue - a.revenue || b.sold - a.sold);
 }
 
+function renderNonPayableEventCodes(sociosRows, genericRows) {
+  const renderGroup = (title, description, rows, categoryLabel) => `
+    <section class="nonpayable-code-group">
+      <div class="section-title inline-section">
+        <h3>${title}</h3>
+        <p>${description}</p>
+      </div>
+      ${
+        rows.length
+          ? `<div class="nonpayable-code-list">
+              ${rows
+                .map((row) => {
+                  const activity = eventPromoterActivity(row);
+                  return `
+                    <article class="nonpayable-code-item">
+                      <div>
+                        <strong>${esc(row.name)}</strong>
+                        <span class="pill neutral">${categoryLabel}</span>
+                        <small>${int(row.sold)} vendidos · ${int(row.courtesy)} cortesias · ${int(row.liberation)} liberados · ${int(row.pneInserted)} PNE</small>
+                      </div>
+                      <div class="nonpayable-code-result">
+                        <span>${int(activity.validated)} validados</span>
+                        <strong>${money(0)} repasse</strong>
+                      </div>
+                    </article>
+                  `;
+                })
+                .join("")}
+            </div>`
+          : renderStatePanel(`Nenhum codigo em ${title.toLowerCase()} neste evento.`, "", "empty")
+      }
+    </section>
+  `;
+  return `
+    <div class="card nonpayable-codes-card">
+      <div class="section-title">
+        <h2>Codigos sem repasse</h2>
+        <p>Socios e categorias genericas ficam visiveis para auditoria, sempre com pagamento zerado.</p>
+      </div>
+      <div class="grid two nonpayable-code-grid">
+        ${renderGroup("Socios", "Codigos internos que nao geram comissao.", sociosRows, "Socio")}
+        ${renderGroup("Categorias genericas", "Aniversarios e links marcados como evento cancelado.", genericRows, "Generico")}
+      </div>
+    </div>
+  `;
+}
+
 function renderEventPromoterSplit(event) {
   const query = normalizeText(state.promoterLinkSearch);
   const rows = promoterRanking([event]).filter((row) => promoterMatchesSearch(row, query));
-  const salesRows = rows.filter((row) => row.revenue > 0 || row.sold > 0);
-  const courtesyRows = rows.filter((row) => row.complimentary > 0);
+  const rpRows = rows.filter((row) => row.category === "rp");
+  const sociosRows = rows.filter((row) => row.category === "socios");
+  const genericRows = rows.filter((row) => row.category === "generic");
+  const specialRows = rows.filter((row) => row.category === "special");
+  const salesRows = rpRows.filter((row) => row.revenue > 0 || row.sold > 0);
+  const courtesyRows = rpRows.filter((row) => row.courtesy > 0);
+  const liberationRows = rpRows.filter((row) => row.liberation > 0);
+  const pneRows = rpRows.filter((row) => row.pneInserted > 0 || row.pneConverted > 0);
   return `
     <div class="grid promoter-compare-panel">
       <div class="card filter-panel promoter-link-filter">
         <div class="section-title">
           <h3>Comparativo por link</h3>
-          <p>Busque um link/comissario para comparar vendas e cortesias nas duas colunas.</p>
+          <p>Busque um codigo para comparar vendas, cortesias, liberacoes e PNE.</p>
+          ${specialRows.length ? `<small class="special-category-note">${int(specialRows.length)} codigo(s) RA/MARE/Parik tratados exclusivamente no Fechamento.</small>` : ""}
         </div>
         <div class="filter-grid promoter-link-filter-grid">
           <label class="filter-field">
@@ -4500,6 +4815,8 @@ function renderEventPromoterSplit(event) {
           <div class="detail-metrics promoter-link-summary">
             <span><b>${int(salesRows.length)}</b><small>Links com venda</small></span>
             <span><b>${int(courtesyRows.length)}</b><small>Links com cortesia</small></span>
+            <span><b>${int(liberationRows.length)}</b><small>Links com liberacao</small></span>
+            <span><b>${int(pneRows.length)}</b><small>Codigos no PNE</small></span>
           </div>
         </div>
       </div>
@@ -4516,10 +4833,21 @@ function renderEventPromoterSplit(event) {
           title="Arraste para redimensionar"
         ></button>
         <div class="promoter-pane">
-          <div class="section-title inline-section"><h3>Cortesias por link</h3><p>Gandaya e PNE consolidados, com fontes identificadas.</p></div>
-          ${renderCourtesyLinkTable(courtesyRows)}
+          <div class="section-title inline-section"><h3>Cortesias por link</h3><p>Cortesias Gandaya, sem misturar liberacoes ou PNE.</p></div>
+          ${renderCourtesyLinkTable(courtesyRows, { mode: "courtesy" })}
         </div>
       </div>
+      <div class="grid two event-source-split">
+        <div class="promoter-pane">
+          <div class="section-title inline-section"><h3>Liberacoes por link</h3><p>Ingressos gratuitos liberados fora do fluxo de cortesia nomeada.</p></div>
+          ${renderCourtesyLinkTable(liberationRows, { mode: "liberation", compact: liberationRows.length <= 6, listStyle: liberationRows.length <= 6 })}
+        </div>
+        <div class="promoter-pane">
+          <div class="section-title inline-section"><h3>PNE por codigo</h3><p>Inseridos e convertidos no relatorio PNE deste evento.</p></div>
+          ${renderCourtesyLinkTable(pneRows, { mode: "pne", compact: pneRows.length <= 6, listStyle: pneRows.length <= 6 })}
+        </div>
+      </div>
+      ${renderNonPayableEventCodes(sociosRows, genericRows)}
     </div>
   `;
 }
@@ -4781,7 +5109,7 @@ function bindActions() {
   document.querySelectorAll("[data-sales-code]").forEach((row) => {
     row.addEventListener("click", () => {
       const key = row.dataset.salesCode;
-      const mode = row.dataset.codeMode === "courtesy" ? "courtesy" : "sales";
+      const mode = ["sales", "combined", "courtesy", "liberation", "pne"].includes(row.dataset.codeMode) ? row.dataset.codeMode : "sales";
       state.salesCodeDrawerKey = key;
       state.salesCodeDrawerMode = mode;
       state.salesCodeExpandedEventId = "";

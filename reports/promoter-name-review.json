@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-07-28T10:28:00",
+  "generatedAt": "2026-07-28T13:12:52",
   "summary": {
     "resolvedByExpandedNormalization": 12,
-    "resolvedByManualAliases": 33,
-    "directCanonicalNames": 277,
-    "similarityReviewSuggestions": 8
+    "resolvedByManualAliases": 38,
+    "directCanonicalNames": 272,
+    "similarityReviewSuggestions": 7
   },
   "resolvedByExpandedNormalization": [
     "Agencia Timelapse",
@@ -22,6 +22,7 @@
   ],
   "resolvedByManualAliases": [
     "Agência Lets Fun",
+    "Allan Simon",
     "André Silvestre",
     "Anightlife Eventos",
     "Cortesias (Entrada até 00:30)",
@@ -30,7 +31,9 @@
     "Fabriccio Annunciato",
     "Gabriel Romanha",
     "Gustavo Luís Falcade",
+    "Hands Up",
     "Jhonny Upgless",
+    "Jordana Hands",
     "João Vitor Petersen",
     "Lis Castro",
     "Lucas Athanassopoulos",
@@ -52,8 +55,10 @@
     "convidadodorocky",
     "convidadothicenora",
     "gustavofalcade_",
+    "handsup",
     "mdaccula",
-    "monicamidori"
+    "monicamidori",
+    "todaycrew"
   ],
   "similarityReview": [
     {
@@ -74,24 +79,12 @@
       "candidate": "grupo rub",
       "similarity": 1.0,
       "similarityPercent": 100.0,
-      "occurrences": 79,
+      "occurrences": 110,
       "samples": [
         "gruporub"
       ],
       "sources": [
-        "gandaya"
-      ]
-    },
-    {
-      "name": "handsup",
-      "candidate": "hands up",
-      "similarity": 1.0,
-      "similarityPercent": 100.0,
-      "occurrences": 334,
-      "samples": [
-        "handsup"
-      ],
-      "sources": [
+        "classification",
         "gandaya"
       ]
     },

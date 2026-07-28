@@ -150,10 +150,34 @@ PROMOTER_ALIASES = {
     "patrocinadores": "patrocinador",
 }
 
+SOCIOS_ALIASES = {
+    "hands": "hands",
+    "hands up": "hands",
+    "handsup": "hands",
+    "soul": "soul",
+    "somos bw": "somosbw",
+    "somosbw": "somosbw",
+    "today": "today",
+    "today crew": "today",
+    "todaycrew": "today",
+    "allan": "allan",
+    "allan simon": "allan",
+    "jordana": "jordana",
+    "jordana hands": "jordana",
+    "artistico": "artistico",
+    "artístico": "artistico",
+    "patrocinador": "patrocinador",
+    "patrocinadores": "patrocinador",
+}
+
 PROMOTER_ALIAS_LOOKUP = {
     normalize_promoter_name(alias): normalize_promoter_name(canonical)
-    for alias, canonical in PROMOTER_ALIASES.items()
+    for alias, canonical in {**PROMOTER_ALIASES, **SOCIOS_ALIASES}.items()
 }
+SOCIOS_CANONICAL = {normalize_promoter_name(value) for value in SOCIOS_ALIASES.values()}
+SPECIAL_PROMOTER_CANONICAL = {"ra", "mare", "marianaparik"}
+GENERIC_PROMOTER_PATTERNS = ("aniversariante", "aniver", "niver", "bday", "bdy", "evento cancelado")
+PROMOTER_CATEGORY_PRIORITY = {"socios": 0, "special": 1, "generic": 2, "rp": 3}
 PROMOTER_SIMILARITY_IGNORED_PAIRS = {
     frozenset(("patrocinado", "patrocinador")),
     frozenset(("patrocinado", "patrocinadores")),
@@ -182,6 +206,19 @@ def canonical_promoter(value, source="unknown"):
     observation["sources"].add(source)
     observation["occurrences"] += 1
     return canonical
+
+
+def promoter_category(value, context=""):
+    """Classifica antes de consolidar nomes; RP e sempre a categoria residual por exclusao."""
+    raw = normalize(f"{value} {context}")
+    canonical = canonical_promoter(value, source="classification")
+    if canonical in SOCIOS_CANONICAL:
+        return "socios"
+    if canonical in SPECIAL_PROMOTER_CANONICAL:
+        return "special"
+    if any(pattern in raw for pattern in GENERIC_PROMOTER_PATTERNS):
+        return "generic"
+    return "rp"
 
 
 def promoter_similarity_review():
@@ -456,6 +493,12 @@ def is_complimentary_ticket(description, link, price_found=False, price=0, total
     return False
 
 
+def is_liberation_ticket(description, link, free_links=None):
+    label = normalize(f"{description} {link}")
+    link_key = canonical_promoter(str(link or "").replace("-", ""), source="gandaya")
+    return "liberacao" in label or bool(free_links and link_key in free_links)
+
+
 def cancellation_contexts(cancelamentos):
     quotas = {}
     for _, row in cancelamentos.iterrows():
@@ -518,7 +561,13 @@ def source_ticket_totals(resumo, ingressos, cancelamentos, free_links=None):
         batch_key = normalize(description) or "sem lote"
         family_key = normalize_batch(description)
         price_found, matched_price = batch_price_lookup(price_by_batch, batch_key, family_key)
-        if is_complimentary_ticket(description, get_cell(row, "Link"), price_found=price_found, price=matched_price, free_links=free_links):
+        if is_complimentary_ticket(
+            description,
+            get_cell(row, "Link"),
+            price_found=price_found,
+            price=matched_price,
+            free_links=free_links,
+        ):
             raw_complimentary += 1
         else:
             raw_sold += 1
@@ -565,13 +614,18 @@ def promoter_from(description, link, complimentary):
 
 def promoter_empty():
     return {
+        "category": "rp",
+        "categoryEvidence": [],
         "sold": 0,
         "complimentary": 0,
+        "liberation": 0,
         "validated": 0,
         "soldValidated": 0,
         "complimentaryValidated": 0,
+        "liberationValidated": 0,
         "revenue": 0,
         "batches": {},
+        "sourceNames": [],
     }
 
 
@@ -580,24 +634,37 @@ def add_promoter(
     name,
     sold=0,
     complimentary=0,
+    liberation=0,
     validated=0,
     sold_validated=0,
     complimentary_validated=0,
+    liberation_validated=0,
     revenue=0,
     batch_key="",
     batch_label="",
+    source_name="",
 ):
+    # A categoria e decidida sobre o nome/contexto bruto antes da consolidacao canonica.
+    incoming_category = promoter_category(source_name or name, batch_label)
     key = canonical_promoter(name, source="gandaya")
     if not key:
         return
     row = promoters.setdefault(key, promoter_empty())
+    if PROMOTER_CATEGORY_PRIORITY[incoming_category] < PROMOTER_CATEGORY_PRIORITY[row["category"]]:
+        row["category"] = incoming_category
+    evidence = str(source_name or name).strip()
+    if evidence:
+        append_unique(row["categoryEvidence"], evidence)
     row["sold"] += sold
     row["complimentary"] += complimentary
+    row["liberation"] += liberation
     row["validated"] += validated
     row["soldValidated"] += sold_validated
     row["complimentaryValidated"] += complimentary_validated
+    row["liberationValidated"] += liberation_validated
     row["revenue"] += revenue
-    if batch_key and (sold or complimentary or validated or sold_validated or complimentary_validated or revenue):
+    append_unique(row["sourceNames"], str(source_name or name).strip())
+    if batch_key and (sold or complimentary or liberation or validated or sold_validated or complimentary_validated or liberation_validated or revenue):
         batch = row["batches"].setdefault(
             batch_key,
             {
@@ -605,17 +672,21 @@ def add_promoter(
                 "rawLabel": batch_label or excel_label(batch_key),
                 "sold": 0,
                 "complimentary": 0,
+                "liberation": 0,
                 "validated": 0,
                 "soldValidated": 0,
                 "complimentaryValidated": 0,
+                "liberationValidated": 0,
                 "revenue": 0,
             },
         )
         batch["sold"] += sold
         batch["complimentary"] += complimentary
+        batch["liberation"] += liberation
         batch["validated"] += validated
         batch["soldValidated"] += sold_validated
         batch["complimentaryValidated"] += complimentary_validated
+        batch["liberationValidated"] += liberation_validated
         batch["revenue"] += revenue
 
 
@@ -746,16 +817,18 @@ def parse_xlsx(path):
     promoters = {}
     attendees = {}
     audience = []
-    sold = complimentary = validated = 0
+    sold = complimentary = liberation = validated = liberation_validated = 0
     revenue = 0.0
     for _, row in compras.iterrows():
         description = get_cell(row, "Descrição")
+        raw_link = str(get_cell(row, "Link") or "").strip()
         batch_label = excel_label(description)
         batch_key = normalize(description) or "sem lote"
         quantity = int(as_number(get_cell(row, "Quantidade")) or 0)
         total = as_number(get_cell(row, "Total"))
         complimentary_purchase = total == 0
-        promoter = promoter_from(description, get_cell(row, "Link"), complimentary_purchase)
+        liberation_purchase = complimentary_purchase and is_liberation_ticket(description, raw_link, free_links=free_links)
+        promoter = promoter_from(description, raw_link, complimentary_purchase)
         if quantity <= 0 and total <= 0:
             continue
         batch = batches.setdefault(
@@ -765,9 +838,11 @@ def parse_xlsx(path):
                 "rawLabel": batch_label,
                 "sold": 0,
                 "complimentary": 0,
+                "liberation": 0,
                 "validated": 0,
                 "soldValidated": 0,
                 "complimentaryValidated": 0,
+                "liberationValidated": 0,
                 "revenue": 0,
             },
         )
@@ -776,16 +851,37 @@ def parse_xlsx(path):
         if complimentary_purchase:
             complimentary += quantity
             batch["complimentary"] += quantity
-            add_promoter(promoters, promoter, complimentary=quantity, revenue=total, batch_key=batch_key, batch_label=batch_label)
+            if liberation_purchase:
+                liberation += quantity
+                batch["liberation"] += quantity
+            add_promoter(
+                promoters,
+                promoter,
+                complimentary=quantity,
+                liberation=quantity if liberation_purchase else 0,
+                revenue=total,
+                batch_key=batch_key,
+                batch_label=batch_label,
+                source_name=raw_link or promoter,
+            )
         else:
             sold += quantity
             batch["sold"] += quantity
-            add_promoter(promoters, promoter, sold=quantity, revenue=total, batch_key=batch_key, batch_label=batch_label)
+            add_promoter(
+                promoters,
+                promoter,
+                sold=quantity,
+                revenue=total,
+                batch_key=batch_key,
+                batch_label=batch_label,
+                source_name=raw_link or promoter,
+            )
         if quantity or total:
             add_attendee(attendees, row, event_id, name, complimentary=quantity if complimentary_purchase else 0, sold=0 if complimentary_purchase else quantity, revenue=total)
 
     for _, row in ingressos.iterrows():
         description = get_cell(row, "Descrição")
+        raw_link = str(get_cell(row, "Link") or "").strip()
         batch_label = excel_label(description)
         batch_key = normalize(description) or "sem lote"
         family_key = normalize_batch(description)
@@ -795,7 +891,18 @@ def parse_xlsx(path):
         if consume_cancelled_quota(cancelled_quotas, participant_key, batch_key):
             continue
         paid_purchase_ticket = consume_paid_purchase_quota(paid_purchase_quotas, participant_key, batch_key)
-        complimentary_ticket = False if paid_purchase_ticket else is_complimentary_ticket(description, get_cell(row, "Link"), price_found=price_found, price=matched_price, free_links=free_links)
+        complimentary_ticket = (
+            False
+            if paid_purchase_ticket
+            else is_complimentary_ticket(
+                description,
+                raw_link,
+                price_found=price_found,
+                price=matched_price,
+                free_links=free_links,
+            )
+        )
+        liberation_ticket = complimentary_ticket and is_liberation_ticket(description, raw_link, free_links=free_links)
         price = 0 if complimentary_ticket else matched_price
         batch = batches.setdefault(
             batch_key,
@@ -804,13 +911,15 @@ def parse_xlsx(path):
                 "rawLabel": batch_label,
                 "sold": 0,
                 "complimentary": 0,
+                "liberation": 0,
                 "validated": 0,
                 "soldValidated": 0,
                 "complimentaryValidated": 0,
+                "liberationValidated": 0,
                 "revenue": 0,
             },
         )
-        promoter = promoter_from(description, get_cell(row, "Link"), complimentary_ticket)
+        promoter = promoter_from(description, raw_link, complimentary_ticket)
         contact = contact_by_key.get(participant_key, {})
         audience.append(
             {
@@ -824,7 +933,7 @@ def parse_xlsx(path):
                 "batchName": batch_label,
                 "rawBatchName": batch_label,
                 "batchKey": batch_key,
-                "type": "courtesy" if complimentary_ticket else "purchase",
+                "type": "liberation" if liberation_ticket else "courtesy" if complimentary_ticket else "purchase",
                 "validated": bool(validated_ticket),
                 "date": str(get_cell(row, "Data de compra") or ""),
                 "linkOrCommissioner": promoter,
@@ -833,7 +942,18 @@ def parse_xlsx(path):
         if complimentary_ticket:
             complimentary += 1
             batch["complimentary"] += 1
-            add_promoter(promoters, promoter, complimentary=1, batch_key=batch_key, batch_label=batch_label)
+            if liberation_ticket:
+                liberation += 1
+                batch["liberation"] += 1
+            add_promoter(
+                promoters,
+                promoter,
+                complimentary=1,
+                liberation=1 if liberation_ticket else 0,
+                batch_key=batch_key,
+                batch_label=batch_label,
+                source_name=raw_link or promoter,
+            )
         else:
             pass
 
@@ -842,10 +962,30 @@ def parse_xlsx(path):
             batch["validated"] += 1
             if complimentary_ticket:
                 batch["complimentaryValidated"] += 1
-                add_promoter(promoters, promoter, validated=1, complimentary_validated=1, batch_key=batch_key, batch_label=batch_label)
+                if liberation_ticket:
+                    liberation_validated += 1
+                    batch["liberationValidated"] += 1
+                add_promoter(
+                    promoters,
+                    promoter,
+                    validated=1,
+                    complimentary_validated=1,
+                    liberation_validated=1 if liberation_ticket else 0,
+                    batch_key=batch_key,
+                    batch_label=batch_label,
+                    source_name=raw_link or promoter,
+                )
             else:
                 batch["soldValidated"] += 1
-                add_promoter(promoters, promoter, validated=1, sold_validated=1, batch_key=batch_key, batch_label=batch_label)
+                add_promoter(
+                    promoters,
+                    promoter,
+                    validated=1,
+                    sold_validated=1,
+                    batch_key=batch_key,
+                    batch_label=batch_label,
+                    source_name=raw_link or promoter,
+                )
                 add_attendee(attendees, row, event_id, name, validated=1, sold_validated=1)
 
     return {
@@ -856,6 +996,8 @@ def parse_xlsx(path):
         "eventDateTime": datetime_from_text(path.name),
         "sold": sold,
         "complimentary": complimentary,
+        "liberation": liberation,
+        "liberationValidated": liberation_validated,
         "validated": validated,
         "revenue": round(revenue, 2),
         "sourceTotals": {**source_totals, "active": sold + complimentary},
@@ -974,7 +1116,7 @@ def main():
         "dataVersion": data_version,
         "promoterAliases": [
             {"alias": alias, "canonical": canonical}
-            for alias, canonical in sorted(PROMOTER_ALIASES.items())
+            for alias, canonical in sorted({**PROMOTER_ALIASES, **SOCIOS_ALIASES}.items())
         ],
         "sourceFolders": {
             "gandaya": "Gandaya",
