@@ -1,14 +1,15 @@
 {
-  "generatedAt": "2026-07-27T23:15:31",
+  "generatedAt": "2026-07-28T10:28:00",
   "summary": {
     "resolvedByExpandedNormalization": 12,
-    "resolvedByManualAliases": 31,
-    "directCanonicalNames": 279,
+    "resolvedByManualAliases": 33,
+    "directCanonicalNames": 277,
     "similarityReviewSuggestions": 8
   },
   "resolvedByExpandedNormalization": [
     "Agencia Timelapse",
     "Agência Blondies",
+    "Convidado Thi Cenora",
     "Everyone Agência",
     "Mídia 011",
     "Renova Agencia",
@@ -16,14 +17,13 @@
     "convidadolucas",
     "convidadomidia011",
     "convidadoromanha",
-    "convidadothicenora",
     "convidadovitty",
     "midia11_"
   ],
   "resolvedByManualAliases": [
     "Agência Lets Fun",
+    "André Silvestre",
     "Anightlife Eventos",
-    "Convidado Thi Cenora",
     "Cortesias (Entrada até 00:30)",
     "Danilo Schwartz",
     "Direct Promo",
@@ -45,10 +45,12 @@
     "Sinisgalli/MS",
     "Tairan Perez",
     "Yasmin Fares",
+    "cenora",
     "codelissemtaxa",
     "coderesemtaxa",
     "codesemtaxa",
     "convidadodorocky",
+    "convidadothicenora",
     "gustavofalcade_",
     "mdaccula",
     "monicamidori"

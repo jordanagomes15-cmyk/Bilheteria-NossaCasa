@@ -18,7 +18,7 @@ OUT = Path("generated-data.js")
 PRIVATE_DIR = Path(os.environ.get("NOSSA_CASA_PRIVATE_DATA_DIR", "private-data"))
 PRIVATE_AUDIENCE_OUT = PRIVATE_DIR / "audience.json"
 WATCH_EXTENSIONS = {".xlsx", ".pdf"}
-DATA_SCHEMA_VERSION = "promoter-normalization-v2"
+DATA_SCHEMA_VERSION = "promoter-normalization-v3"
 PROMOTER_REVIEW_OUT = Path("reports/promoter-name-review.json")
 
 
@@ -113,7 +113,10 @@ PROMOTER_ALIASES = {
     "midia11": "midia011",
     "convidadolucas": "lucas",
     "convidado lucas": "lucas",
-    "convidado thi cenora": "convidadothicenora",
+    "convidado thi cenora": "thi cenora",
+    "convidadothicenora": "thi cenora",
+    "thicenora": "thi cenora",
+    "cenora": "thi cenora",
     "agencia timelapse": "timelapse",
     "agencia lets fun": "fun",
     "fabricio annunciato": "fun",
@@ -124,6 +127,8 @@ PROMOTER_ALIASES = {
     "everyone agencia": "everyone",
     "joao vitor petersen": "pet",
     "joaovitorpetersen": "pet",
+    "andre silvestre": "silvestre",
+    "andresilvestre": "silvestre",
     "renato murakami": "murakami",
     "renato willig lamha": "will",
     "renatowilliglamha": "will",
