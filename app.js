@@ -4630,7 +4630,6 @@ function renderDetail() {
   const rate = (Number(event.validated || 0) / Math.max(total, 1)) * 100;
   const split = eventSalesBreakdown(event);
   const ticketAudit = eventTicketAudit(event);
-  const soldValidated = Number(split.soldValidated || 0);
   const pneInserted = Number(event.pne?.inserted || 0);
   const pneConverted = Number(event.pne?.converted || 0);
   const eventPromoterRows = promoterRanking([event]);
@@ -4638,10 +4637,6 @@ function renderDetail() {
   const sociosRows = eventPromoterRows.filter((row) => row.category === "socios");
   const rpTotals = eventCategoryTotals(rpRows);
   const sociosTotals = eventCategoryTotals(sociosRows);
-  const linkSalesRepasse = rpRows.reduce((sum, row) => sum + eventSalesRepasse(row), 0);
-  const courtesyRepasse = rpRows.reduce((sum, row) => sum + eventValidationRepasse(row, "courtesyValidated"), 0);
-  const liberationRepasse = rpRows.reduce((sum, row) => sum + eventValidationRepasse(row, "liberationValidated"), 0);
-  const pneRepasse = rpRows.reduce((sum, row) => sum + eventValidationRepasse(row, "pneConverted"), 0);
   return `
     <section class="grid">
       <div class="toolbar event-overview-heading">
@@ -4659,14 +4654,13 @@ function renderDetail() {
         ${metric("Check-ins", int(event.validated), `${pct(rate)} de presenca`)}
       </div>
       <div class="section-title event-origin-heading">
-        <h2>Origens e repasses</h2>
-        <p>Distribuicao operacional dos ingressos por categoria.</p>
+        <h2>Categorias e repasse</h2>
+        <p>Cortesias, liberacoes, PNE e grupos sem pagamento.</p>
       </div>
       <div class="event-category-summary" aria-label="Resumo por origem dos ingressos">
-        ${metric("Ingressos vendidos", int(event.sold), `${int(soldValidated)} validados · ${money(linkSalesRepasse)} repasse de RPs`)}
-        ${metric("Cortesias", int(split.courtesy), `${int(split.courtesyValidated)} validadas · ${money(courtesyRepasse)} repasse de RPs`)}
-        ${metric("Liberacoes", int(split.liberation), `${int(split.liberationValidated)} validadas · ${money(liberationRepasse)} repasse de RPs`)}
-        ${metric("PNE", int(pneInserted), `${int(pneConverted)} convertidos · ${money(pneRepasse)} repasse de RPs`)}
+        ${metric("Cortesias", int(split.courtesy), `${int(split.courtesyValidated)} validadas`)}
+        ${metric("Liberacoes", int(split.liberation), `${int(split.liberationValidated)} validadas`)}
+        ${metric("PNE", int(pneInserted), `${int(pneConverted)} convertidos`)}
         ${metric("RPs", money(rpTotals.repasse), `${int(rpTotals.issued)} ingressos · ${int(rpTotals.validated)} validados`)}
         ${metric("Socios", int(sociosTotals.issued), `${int(sociosTotals.validated)} validados · ${money(0)} repasse`)}
       </div>

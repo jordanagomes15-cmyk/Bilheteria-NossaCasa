@@ -983,7 +983,7 @@ h3 {
 
 .event-category-summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: var(--space-3);
 }
 
@@ -3385,6 +3385,10 @@ tr:last-child td {
 }
 
 @media (max-width: 1280px) {
+  .event-category-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .event-overview-metrics {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
