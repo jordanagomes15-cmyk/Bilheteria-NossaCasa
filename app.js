@@ -176,7 +176,6 @@ const state = {
   detailTab: "batches",
   pneSearch: "",
   promoterSplit: loadPromoterSplit(),
-  query: "",
   expandedAudienceKey: "",
   mailingEventId: "all",
   mailingPage: 1,
@@ -1099,10 +1098,9 @@ function exportSettlementCsv() {
 }
 
 function rankingRowsForEvents(events = filteredEvents()) {
-  const query = normalizeText(state.query);
   return sortRankingRows(
     promoterRanking(events)
-      .filter((row) => normalizeText(row.name).includes(query))
+      .filter((row) => promoterMatchesSearch(row, state.promoterLinkSearch))
   );
 }
 
@@ -1285,8 +1283,8 @@ function shareCell(value, total) {
 
 function promoterRanking(events = filteredEvents()) {
   const map = new Map();
-  const addRow = (event, name, data) => {
-    const key = normalizeText(name);
+  const addRow = (event, name, data, source = "gandaya") => {
+    const key = normalizeCodeName(name);
     if (!key) return;
     if (!map.has(key)) {
       map.set(key, {
@@ -1296,6 +1294,10 @@ function promoterRanking(events = filteredEvents()) {
         validated: 0,
         soldValidated: 0,
         complimentaryValidated: 0,
+        gandayaCourtesyIssued: 0,
+        gandayaCourtesyValidated: 0,
+        pneInserted: 0,
+        pneConverted: 0,
         linkCourtesyIssued: 0,
         linkCourtesyValidated: 0,
         revenue: 0,
@@ -1315,10 +1317,45 @@ function promoterRanking(events = filteredEvents()) {
     row.validated += validated;
     row.soldValidated += soldValidated;
     row.complimentaryValidated += complimentaryValidated;
+    row.gandayaCourtesyIssued += source === "gandaya" ? complimentary : 0;
+    row.gandayaCourtesyValidated += source === "gandaya" ? complimentaryValidated : 0;
+    row.pneInserted += source === "pne" ? complimentary : 0;
+    row.pneConverted += source === "pne" ? complimentaryValidated : 0;
     row.linkCourtesyIssued += linkCourtesy.issued;
     row.linkCourtesyValidated += linkCourtesy.validated;
     row.revenue += revenue;
-    row.events.push({ id: event.id, name: event.name, ...data, sold, complimentary, validated, soldValidated, complimentaryValidated, linkCourtesyIssued: linkCourtesy.issued, linkCourtesyValidated: linkCourtesy.validated, revenue });
+    let eventRow = row.events.find((item) => item.id === event.id);
+    if (!eventRow) {
+      eventRow = {
+        id: event.id,
+        name: event.name,
+        sold: 0,
+        complimentary: 0,
+        validated: 0,
+        soldValidated: 0,
+        complimentaryValidated: 0,
+        gandayaCourtesyIssued: 0,
+        gandayaCourtesyValidated: 0,
+        pneInserted: 0,
+        pneConverted: 0,
+        linkCourtesyIssued: 0,
+        linkCourtesyValidated: 0,
+        revenue: 0
+      };
+      row.events.push(eventRow);
+    }
+    eventRow.sold += sold;
+    eventRow.complimentary += complimentary;
+    eventRow.validated += validated;
+    eventRow.soldValidated += soldValidated;
+    eventRow.complimentaryValidated += complimentaryValidated;
+    eventRow.gandayaCourtesyIssued += source === "gandaya" ? complimentary : 0;
+    eventRow.gandayaCourtesyValidated += source === "gandaya" ? complimentaryValidated : 0;
+    eventRow.pneInserted += source === "pne" ? complimentary : 0;
+    eventRow.pneConverted += source === "pne" ? complimentaryValidated : 0;
+    eventRow.linkCourtesyIssued += linkCourtesy.issued;
+    eventRow.linkCourtesyValidated += linkCourtesy.validated;
+    eventRow.revenue += revenue;
   };
   events.forEach((event) => {
     Object.entries(event.promoters || {}).forEach(([name, data]) => {
@@ -1328,6 +1365,22 @@ function promoterRanking(events = filteredEvents()) {
         return;
       }
       addRow(event, name, data);
+    });
+    (event.pne?.people || []).forEach((person) => {
+      const inserted = Number(person.inserted || 0);
+      const converted = Number(person.converted || 0);
+      if (!inserted && !converted) return;
+      addRow(
+        event,
+        person.name,
+        {
+          displayName: person.name,
+          complimentary: inserted,
+          complimentaryValidated: converted,
+          validated: converted
+        },
+        "pne"
+      );
     });
   });
   return [...map.values()].sort((a, b) => b.revenue - a.revenue || b.sold - a.sold || b.validated - a.validated);
@@ -1962,6 +2015,19 @@ function salesCodeBatchRows(row, eventRow) {
         b.complimentaryValidated - a.complimentaryValidated ||
         a.label.localeCompare(b.label)
     );
+  const pneInserted = Number(eventRow.pneInserted || 0);
+  const pneConverted = Number(eventRow.pneConverted || 0);
+  if (pneInserted || pneConverted) {
+    promoterBatchRows.push({
+      label: "PNE",
+      sold: 0,
+      soldValidated: 0,
+      complimentary: pneInserted,
+      complimentaryValidated: pneConverted,
+      revenue: 0,
+      revenueEstimated: false
+    });
+  }
   if (promoterBatchRows.length) return promoterBatchRows;
 
   const grouped = new Map();
@@ -3246,7 +3312,7 @@ function salesCodeDrawerContext() {
   const currentEvent = selectedEvent();
   const isDetail = state.view === "detail" && currentEvent;
   const scopeEvents = isDetail ? [currentEvent] : filteredEvents();
-  const rows = state.view === "commissioners" ? promoterRanking(scopeEvents) : isDetail ? eventPromoters(currentEvent) : promoterRanking(scopeEvents);
+  const rows = promoterRanking(scopeEvents);
   const row = rows.find((item) => salesCodeKey(item.name) === state.salesCodeDrawerKey);
   if (!row) return null;
   const totalRevenue = isDetail
@@ -3302,9 +3368,12 @@ function renderCourtesyLinkTable(rows, options = {}) {
               const expanded = state.salesCodeDrawerKey === key;
               const rate = safeRate(row.complimentaryValidated, row.complimentary);
               const linkCourtesyNote = row.linkCourtesyIssued ? `<small>Cortesia F/M: ${int(row.linkCourtesyValidated)} de ${int(row.linkCourtesyIssued)} val.</small>` : "";
+              const sourceNote = row.pneInserted
+                ? `<small>Gandaya: ${int(row.gandayaCourtesyValidated)} val. · PNE: ${int(row.pneConverted)} conv.</small>`
+                : "";
               return `
                 <tr class="sales-code-row ${expanded ? "is-expanded" : ""}" data-sales-code="${esc(key)}" data-code-mode="courtesy" title="Clique para ver detalhes">
-                  <td data-label="Link/comissario"><strong>${esc(row.name)}</strong><span class="row-hint">${expanded ? "Detalhes abertos" : "Ver detalhes"}</span>${linkCourtesyNote}</td>
+                  <td data-label="Link/comissario"><strong>${esc(row.name)}</strong><span class="row-hint">${expanded ? "Detalhes abertos" : "Ver detalhes"}</span>${sourceNote}${linkCourtesyNote}</td>
                   <td data-label="Cortesias emitidas"><span class="cell-value">${int(row.complimentary)}</span></td>
                   <td data-label="Validadas"><span class="cell-value">${int(row.complimentaryValidated)}</span></td>
                   <td data-label="% validacao">${rateCell(row.complimentaryValidated, row.complimentary, true, compact ? "rate-only" : "count-rate")}</td>
@@ -3374,7 +3443,6 @@ function renderCommissioners() {
         <div class="toolbar">
           <div class="section-title"><h2>Ranking completo</h2><p>Receita, vendidos, cortesias e check-ins por RP.</p></div>
           <div class="mailing-actions">
-            <input class="search" id="rankSearch" value="${esc(state.query)}" placeholder="Buscar comissario" />
             <button class="secondary" data-action="export-ranking">Exportar ranking (CSV)</button>
           </div>
         </div>
@@ -4414,7 +4482,7 @@ function eventPromoters(event) {
 
 function renderEventPromoterSplit(event) {
   const query = normalizeText(state.promoterLinkSearch);
-  const rows = eventPromoters(event).filter((row) => promoterMatchesSearch(row, query));
+  const rows = promoterRanking([event]).filter((row) => promoterMatchesSearch(row, query));
   const salesRows = rows.filter((row) => row.revenue > 0 || row.sold > 0);
   const courtesyRows = rows.filter((row) => row.complimentary > 0);
   return `
@@ -4448,7 +4516,7 @@ function renderEventPromoterSplit(event) {
           title="Arraste para redimensionar"
         ></button>
         <div class="promoter-pane">
-          <div class="section-title inline-section"><h3>Cortesias por link</h3><p>Validadas em quantidade e percentual.</p></div>
+          <div class="section-title inline-section"><h3>Cortesias por link</h3><p>Gandaya e PNE consolidados, com fontes identificadas.</p></div>
           ${renderCourtesyLinkTable(courtesyRows)}
         </div>
       </div>
@@ -4492,7 +4560,7 @@ function renderGlobalPromoterSplit(events) {
           title="Arraste para redimensionar"
         ></button>
         <div class="promoter-pane">
-          <div class="section-title inline-section"><h3>Cortesias por comissario</h3><p>Emitidas e validadas somadas no recorte.</p></div>
+          <div class="section-title inline-section"><h3>Cortesias por comissario</h3><p>Gandaya e PNE consolidados, com fontes identificadas.</p></div>
           ${renderCourtesyLinkTable(courtesyRows)}
         </div>
       </div>
@@ -4814,10 +4882,6 @@ function bindActions() {
     button.addEventListener("click", () => {
       decideAccessRequest(Number(button.dataset.issue), "denied");
     });
-  });
-  document.getElementById("rankSearch")?.addEventListener("input", (event) => {
-    state.query = event.target.value;
-    renderKeepingFocus("rankSearch");
   });
   document.querySelectorAll("[data-ranking-sort]").forEach((button) => {
     button.addEventListener("click", () => {
