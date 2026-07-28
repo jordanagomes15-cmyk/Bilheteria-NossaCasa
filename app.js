@@ -1,4 +1,4 @@
-const PROMOTER_SPLIT_KEY = "nossa-casa-promoter-split-v1";
+const PROMOTER_SPLIT_KEY = "nossa-casa-promoter-split-v2";
 const SIDEBAR_COLLAPSED_KEY = "nossa-casa-sidebar-collapsed-v1";
 const embeddedData = globalThis.NOSSA_CASA_DATA || null;
 
@@ -244,9 +244,9 @@ function loadEvents() {
 function loadPromoterSplit() {
   try {
     const saved = Number(localStorage.getItem(PROMOTER_SPLIT_KEY));
-    return Number.isFinite(saved) ? Math.min(78, Math.max(22, saved)) : 63;
+    return Number.isFinite(saved) ? Math.min(60, Math.max(40, saved)) : 50;
   } catch {
-    return 63;
+    return 50;
   }
 }
 
@@ -4879,13 +4879,13 @@ function renderGlobalPromoterSplit(events) {
             <span>Buscar comissario</span>
             <input class="search" id="promoterLinkSearch" value="${esc(state.promoterLinkSearch)}" placeholder="Digite o nome, apelido ou codigo" autocomplete="off" />
           </label>
-          <div class="detail-metrics promoter-link-summary">
+          <div class="detail-metrics promoter-link-summary global-promoter-link-summary">
             <span><b>${int(salesRows.length)}</b><small>Comissarios com venda</small></span>
             <span><b>${int(courtesyRows.length)}</b><small>Comissarios com cortesia</small></span>
           </div>
         </div>
       </div>
-      <div class="grid two promoter-split" style="--promoter-left:${state.promoterSplit}%">
+      <div class="grid two promoter-split global-promoter-split" style="--promoter-left:${state.promoterSplit}%">
         <div class="promoter-pane">
           <div class="section-title inline-section"><h3>Vendas por comissario</h3><p>Faturamento e ingressos somados no recorte.</p></div>
           ${renderSalesLinkTable(salesRows, totalRevenue, { condensed: true })}
@@ -5479,7 +5479,7 @@ function bindHorizontalDetailScroll() {
 }
 
 function setPromoterSplit(value, container) {
-  state.promoterSplit = Math.round(Math.min(78, Math.max(22, value)));
+  state.promoterSplit = Math.round(Math.min(60, Math.max(40, value)));
   container?.style.setProperty("--promoter-left", `${state.promoterSplit}%`);
   try {
     localStorage.setItem(PROMOTER_SPLIT_KEY, String(state.promoterSplit));

@@ -1615,10 +1615,74 @@ h3 {
   align-self: end;
 }
 
+.detail-metrics.global-promoter-link-summary {
+  grid-template-columns: repeat(2, minmax(150px, 1fr));
+  max-width: 520px;
+  justify-self: end;
+}
+
 .promoter-split {
   grid-template-columns: minmax(260px, var(--promoter-left, 63%)) 18px minmax(260px, 1fr);
   gap: 12px;
   align-items: start;
+}
+
+.global-promoter-split {
+  grid-template-columns: minmax(0, var(--promoter-left, 50%)) 18px minmax(0, 1fr);
+}
+
+.global-promoter-split .sales-link-table table,
+.global-promoter-split .courtesy-link-table table {
+  min-width: 720px;
+}
+
+.global-promoter-split .sales-link-table th,
+.global-promoter-split .sales-link-table td,
+.global-promoter-split .courtesy-link-table th,
+.global-promoter-split .courtesy-link-table td {
+  padding-inline: var(--space-3);
+}
+
+.global-promoter-split .condensed-sales-table .name-col {
+  width: 30%;
+}
+
+.global-promoter-split .condensed-sales-table .money-col {
+  width: 19%;
+}
+
+.global-promoter-split .condensed-sales-table .count-col {
+  width: 14%;
+}
+
+.global-promoter-split .condensed-sales-table .percent-col {
+  width: 18%;
+}
+
+.global-promoter-split .courtesy-link-table .name-col {
+  width: 34%;
+}
+
+.global-promoter-split .courtesy-link-table .count-col {
+  width: 14%;
+}
+
+.global-promoter-split .courtesy-link-table .money-col {
+  width: 18%;
+}
+
+.global-promoter-split .courtesy-link-table .percent-col {
+  width: 20%;
+}
+
+.global-promoter-split .rate-cell {
+  min-width: 0;
+  width: 100%;
+}
+
+.global-promoter-split th {
+  line-height: 1.2;
+  white-space: normal;
 }
 
 .promoter-pane {
@@ -1777,6 +1841,21 @@ h3 {
   }
 
   .promoter-split .split-resizer {
+    display: none;
+  }
+
+  .detail-metrics.global-promoter-link-summary {
+    max-width: none;
+    justify-self: stretch;
+  }
+}
+
+@media (max-width: 1600px) {
+  .global-promoter-split {
+    grid-template-columns: 1fr;
+  }
+
+  .global-promoter-split .split-resizer {
     display: none;
   }
 }
